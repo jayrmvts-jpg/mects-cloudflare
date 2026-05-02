@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS SET...GO - World Class VSM Engine</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- ExcelJS, jsPDF, html2canvas (Master Class PDF Stack) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* Smooth Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Print Specific Overrides ensuring perfect A4 Landscape */
+        @media print {
+            body { background: white !important; }
+            .no-print { display: none !important; }
+        }
+        
+        .pdf-mode input, .pdf-mode select, .pdf-mode textarea {
+            appearance: none;
+            -webkit-appearance: none;
+            border: none !important;
+            background: transparent !important;
+            color: inherit !important;
+            padding: 0 !important;
+            resize: none !important;
+            box-shadow: none !important;
+        }
+        
+        .page-break-avoid {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* Modal Animations */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, Fragment } = React;
+
+        // --- SVG Icons ---
+        const IconWrapper = ({ children, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Zap = (p) => <IconWrapper {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></IconWrapper>;
+        const Calculator = (p) => <IconWrapper {...p}><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></IconWrapper>;
+        const Box = (p) => <IconWrapper {...p}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></IconWrapper>;
+        const ShieldCheck = (p) => <IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></IconWrapper>;
+        const IndianRupee = (p) => <IconWrapper {...p}><path d="M6 3h12"></path><path d="M6 8h12"></path><path d="m6 13 8.5 8"></path><path d="M6 13h3c2.24 0 4-1.79 4-4s-1.76-4-4-4H6"></path></IconWrapper>;
+        const Workflow = (p) => <IconWrapper {...p}><rect x="3" y="3" width="6" height="6" rx="1"></rect><path d="M6 9v3a2 2 0 0 0 2 2h4"></path><rect x="15" y="15" width="6" height="6" rx="1"></rect><path d="M21 9V6a2 2 0 0 0-2-2h-4"></path><rect x="3" y="15" width="6" height="6" rx="1"></rect></IconWrapper>;
+        const BarChart3 = (p) => <IconWrapper {...p}><path d="M3 3v18h18"></path><rect x="7" y="10" width="4" height="7" rx="1"></rect><rect x="15" y="5" width="4" height="12" rx="1"></rect></IconWrapper>;
+        const TrendingUp = (p) => <IconWrapper {...p}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></IconWrapper>;
+        const Microscope = (p) => <IconWrapper {...p}><path d="M6 18h8"></path><path d="M3 22h18"></path><path d="M14 22a7 7 0 1 0 0-14h-1"></path><path d="M9 14h2"></path><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"></path><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"></path></IconWrapper>;
+        const Target = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></IconWrapper>;
+        const Database = (p) => <IconWrapper {...p}><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></IconWrapper>;
+        const Truck = (p) => <IconWrapper {...p}><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></IconWrapper>;
+        const Users = (p) => <IconWrapper {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconWrapper>;
+        const FileText = (p) => <IconWrapper {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></IconWrapper>;
+        const AlertTriangle = (p) => <IconWrapper {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></IconWrapper>;
+        const CheckCircle = (p) => <IconWrapper {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></IconWrapper>;
+        const Download = (p) => <IconWrapper {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconWrapper>;
+        const Printer = (p) => <IconWrapper {...p}><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></IconWrapper>;
+        const Trash2 = (p) => <IconWrapper {...p}><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></IconWrapper>;
+        const PlusCircle = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></IconWrapper>;
+        const ChevronDown = (p) => <IconWrapper {...p}><polyline points="6 9 12 15 18 9"></polyline></IconWrapper>;
+        const Info = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></IconWrapper>;
+        const Globe = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></IconWrapper>;
+        const Layers = (p) => <IconWrapper {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></IconWrapper>;
+        const Clock = (p) => <IconWrapper {...p}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></IconWrapper>;
+        const Activity = (p) => <IconWrapper {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></IconWrapper>;
+        const BookOpen = (p) => <IconWrapper {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></IconWrapper>;
+        const X = (p) => <IconWrapper {...p}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconWrapper>;
+        const RefreshCw = (p) => <IconWrapper {...p}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconWrapper>;
+        const Sliders = (p) => <IconWrapper {...p}><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></IconWrapper>;
+        const CheckSquare = (p) => <IconWrapper {...p}><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></IconWrapper>;
+
+        // --- Library Data ---
+        const metricLibrary = {
+            basic_flow: {
+                title: "1. Basic Flow & Time", icon: <Zap/>,
+                metrics: [
+                    { id: 'takt', name: 'Takt Time', formula: '(Available Time) / (Demand)', target: 'Pace Synchronicity', description: 'USE: Sets the operational pace. PURPOSE: Synchronizes production rate with customer demand rate.' },
+                    { id: 'ct', name: 'Cycle Time (CT)', formula: 'Max(Observed Time per Unit)', target: 'Below Takt Time', description: 'USE: Measures the time to complete one task. PURPOSE: Identifies if a process can meet Takt Time.' },
+                    { id: 'lt', name: 'Lead Time (LT)', formula: 'Σ (Inventory / Daily Demand) + Σ VA', target: 'Minimum Duration', description: 'USE: Total time a product takes to go through the system. PURPOSE: Understand the customer waiting period.' },
+                    { id: 'work_content', name: 'Total Work Content', formula: 'Σ (Manual Time + Machine Time)', target: 'Total Effort', description: 'USE: Sum of all work required to build a product. PURPOSE: Establish baseline effort.' },
+                    { id: 'waiting', name: 'Waiting Time', formula: 'Idle Time between Processes', target: 'Zero Waste', description: 'USE: Identifies delay queues. PURPOSE: Expose unbalanced lines and mismatched cycle times.' }
+                ]
+            },
+            capacity: {
+                title: "2. Capacity & Load", icon: <Calculator/>,
+                metrics: [
+                    { id: 'utilization', name: 'Capacity Utilization %', formula: 'Max Cycle Time / Takt Time', target: 'Optimum: 85%', description: 'USE: Measures how much potential output is actually being used. PURPOSE: Identify over/under-utilized assets.' },
+                    { id: 'bottleneck', name: 'Bottleneck ID', formula: 'Max(CT) vs Takt', target: 'Constraint Mgt', description: 'USE: Locates the slowest step in the process. PURPOSE: Direct improvement efforts.' },
+                    { id: 'balancing', name: 'Line Balancing Efficiency', formula: 'Total Work / (Stations * Bottleneck)', target: '> 90%', description: 'USE: Checks if work is evenly distributed. PURPOSE: Ensure operators have equal workload.' },
+                    { id: 'workforce', name: 'Workforce Requirement', formula: 'Total Work Content / Takt Time', target: 'Right-Sizing', description: 'USE: Calculates theoretical headcount needed. PURPOSE: Match labor availability with demand.' }
+                ]
+            },
+            inventory: {
+                title: "3. Inventory & Flow", icon: <Box/>,
+                metrics: [
+                    { id: 'wip', name: 'WIP Quantity', formula: 'Count of Units in Process', target: 'One Piece Flow', description: 'USE: Counts half-finished goods on the floor. PURPOSE: Highlights trapped capital.' },
+                    { id: 'littles_law', name: 'Theoretical WIP (Little’s Law)', formula: 'Throughput × Lead Time', target: 'Flow Physics', description: 'USE: Mathematical relationship of flow. PURPOSE: Predict Lead Time based on current WIP.' },
+                    { id: 'inv_turns', name: 'Inventory Turnover', formula: 'COGS / Average Inventory', target: 'High Freq', description: 'USE: Measures how often inventory is sold. PURPOSE: Indicate liquidity.' },
+                    { id: 'flow_eff', name: 'Flow Efficiency %', formula: '(VA Time / Lead Time) * 100', target: '> 25%', description: 'USE: Ratio of actual working time vs waiting time. PURPOSE: Focus on eliminating delays.' }
+                ]
+            },
+            quality: {
+                title: "4. Quality & Defects", icon: <ShieldCheck/>,
+                metrics: [
+                    { id: 'fpy', name: 'First Pass Yield (Min)', formula: 'Minimum Yield across Steps', target: '> 98%', description: 'USE: Quality metric for the lowest performing station. PURPOSE: Measure units that pass without rework.' },
+                    { id: 'rty', name: 'Rolled Throughput Yield (RTY)', formula: 'Π (Step Yields)', target: 'Capability', description: 'USE: True probability of a unit passing defect-free. PURPOSE: Expose cumulative rework.' },
+                    { id: 'total_defects', name: 'Total Defects Captured', formula: 'Demand × (1 - RTY)', target: 'Zero', description: 'USE: Absolute count of defective units. PURPOSE: Quantify physical volume of failures.' },
+                    { id: 'dpmu', name: 'DPMU (Defects Per Million)', formula: '(1 - RTY) * 1,000,000', target: '< 3.4', description: 'USE: Standardized defect tracking metric per unit produced. PURPOSE: Drives Six Sigma improvement.' },
+                    { id: 'scrap_rate', name: 'Scrap Rate %', formula: '(Scrap / Total) * 100', target: 'Minimize', description: 'USE: Tracks completely lost material. PURPOSE: Identify non-recoverable failures.' }
+                ]
+            },
+            financial: {
+                title: "5. Cost & Financials", icon: <IndianRupee/>,
+                metrics: [
+                    { id: 'va_cost', name: 'Value Added Cost', formula: 'VA Time * Labor Rate', target: 'Primary', description: 'USE: Cost of time transforming the product. PURPOSE: Isolate cost customers pay for.' },
+                    { id: 'nva_cost', name: 'Non-VA Cost', formula: 'Waste Time * Labor Rate', target: 'Elimination', description: 'USE: Cost of delays and waiting. PURPOSE: Quantify financial impact of process waste.' },
+                    { id: 'scrap_cost', name: 'Total Scrap Cost', formula: 'Total Defects * Unit Cost', target: 'Zero', description: 'USE: Financial penalty of poor quality. PURPOSE: Attach a dollar amount to system defects.' },
+                    { id: 'blocked_cap', name: 'Working Capital Blocked', formula: 'Inventory Value * Holding %', target: 'Cash Flow', description: 'USE: Financial burden of holding WIP. PURPOSE: Show finance how issues tie up cash.' }
+                ]
+            },
+            strategic: {
+                title: "6. Strategic & System", icon: <TrendingUp/>,
+                metrics: [
+                    { id: 'oee', name: 'OEE (Overall Equip Eff)', formula: 'Availability x Perf x Quality', target: '85%', description: 'USE: Gold standard for equipment productivity. PURPOSE: Combine downtime, speed, quality.' },
+                    { id: 'availability', name: 'Availability (A)', formula: 'Average Process Uptime %', target: '> 90%', description: 'USE: Measures actual uptime. PURPOSE: Exposes breakdown and setup losses.' },
+                    { id: 'performance', name: 'Performance (P)', formula: 'Total VA / (Num Processes × Max CT)', target: '> 95%', description: 'USE: Measures running speed vs capacity limits. PURPOSE: Exposes minor stops.' },
+                    { id: 'c2c', name: 'Cash-to-Cash Cycle', formula: 'Lead Time + Days AR - Days AP', target: 'Min Days', description: 'USE: Supply chain financial metric. PURPOSE: Measure raw material to customer cash flow.' },
+                    { id: 'dock2dock', name: 'Dock-to-Dock Time', formula: 'Total Lead Time + 5% Buffer', target: 'Velocity', description: 'USE: Macro-level Lead Time. PURPOSE: Track material velocity from receiving to shipping.' }
+                ]
+            },
+            gemba_process: {
+                title: "GEMBA Diagnostics", icon: <Target/>,
+                metrics: [
+                    { id: 'gemba_manual', name: 'Total Manual Time', formula: 'Σ Human Processing Time', target: 'Minimize', description: 'USE: Measures operator touch time directly from Gemba observation.' },
+                    { id: 'gemba_machine', name: 'Total Machine Time', formula: 'Σ Automated Processing Time', target: 'Optimize', description: 'USE: Measures equipment run time directly from Gemba observation.' },
+                    { id: 'gemba_rework', name: 'Average Rework Rate %', formula: '(Rework Units / Total Units)', target: '0%', description: 'USE: Quantifies hidden factory waste caught on the floor.' },
+                    { id: 'gemba_batch', name: 'Average Batch Size', formula: 'Average Units per Run', target: 'Size of 1', description: 'USE: Monitors production lot sizes. PURPOSE: Expose overproduction.' },
+                    { id: 'gemba_labor_util', name: 'Gemba Labor Utilization %', formula: '(Total Labor × Demand) / (Total Ops × Avail Time)', target: '> 85%', description: 'USE: Tracks workforce efficiency against total daily capacity.' }
+                ]
+            }
+        };
+
+        const getPresetData = (name) => JSON.parse(JSON.stringify(industryPresets[name] || industryPresets["User Defined / Custom"]));
+
+        const industryPresets = {
+            "User Defined / Custom": { 
+                globals: { shifts: "", hoursPerShift: "", breaks: "", demand: "", days: "", laborRate: "", unitCost: "", containerSize: "", daysAR: "", daysAP: "", setupMins: "", ctStdDev: "", suppName: "", suppLT: "", suppFreq: "", suppLot: "", suppOTD: "", suppDefect: "", custName: "", custVariation: "", custFreq: "", custSL: "", invSafety: "", invFG: "", invRM: "" }, 
+                processes: [{ name: "Custom Step", wip: "", ct: "", up: "", yield: "", defects: "", ops: "", manualCt: "", machineCt: "", batchSize: "", rework: "" }]
+            },
+            "Automotive Assembly": { 
+                globals: { shifts: 2, hoursPerShift: 10, breaks: 60, demand: 4400, days: 20, laborRate: 35, unitCost: 25000, containerSize: 1, daysAR: 30, daysAP: 60, setupMins: 15, ctStdDev: 0.2, suppName: "Steel Dynamics", suppLT: 3, suppFreq: 4, suppLot: 1000, suppOTD: 98, suppDefect: 1, custName: "Dealerships", custVariation: 5, custFreq: "Daily", custSL: 99, invSafety: 200, invFG: 500, invRM: 1000 }, 
+                processes: [
+                    { name: "Body Shop", wip: 40, ct: 60, up: 95, yield: 99, defects: 44, ops: 12, manualCt: 10, machineCt: 50, batchSize: 1, rework: 1 },
+                    { name: "Paint Shop", wip: 80, ct: 120, up: 90, yield: 92, defects: 352, ops: 8, manualCt: 20, machineCt: 100, batchSize: 5, rework: 8 },
+                    { name: "Final Trim", wip: 20, ct: 55, up: 98, yield: 99, defects: 44, ops: 45, manualCt: 45, machineCt: 10, batchSize: 1, rework: 1 }
+                ]
+            },
+            "Air Compressors": { 
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 45, demand: 300, days: 22, laborRate: 65, unitCost: 1500, containerSize: 10, daysAR: 45, daysAP: 60, setupMins: 240, ctStdDev: 5, suppName: "Atlas Metals", suppLT: 14, suppFreq: 1, suppLot: 50, suppOTD: 95, suppDefect: 2, custName: "Pneumatics Inc", custVariation: 10, custFreq: "Weekly", custSL: 98, invSafety: 20, invFG: 50, invRM: 100 }, 
+                processes: [
+                    { name: "Motor Assembly", wip: 15, ct: 1800, up: 90, yield: 98, defects: 6, ops: 2, manualCt: 1500, machineCt: 300, batchSize: 5, rework: 2 },
+                    { name: "Pump Machining", wip: 25, ct: 4500, up: 85, yield: 95, defects: 15, ops: 3, manualCt: 500, machineCt: 4000, batchSize: 10, rework: 5 },
+                    { name: "Tank Fab", wip: 10, ct: 3600, up: 88, yield: 96, defects: 12, ops: 2, manualCt: 1600, machineCt: 2000, batchSize: 5, rework: 4 }
+                ]
+            },
+            "Vacuum Solutions": { 
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 45, demand: 120, days: 22, laborRate: 80, unitCost: 3500, containerSize: 5, daysAR: 60, daysAP: 30, setupMins: 480, ctStdDev: 10, suppName: "Aero Valves", suppLT: 30, suppFreq: 0.5, suppLot: 20, suppOTD: 90, suppDefect: 1, custName: "Tech Labs", custVariation: 25, custFreq: "Monthly", custSL: 95, invSafety: 5, invFG: 10, invRM: 30 }, 
+                processes: [
+                    { name: "Engineering", wip: 5, ct: 28800, up: 100, yield: 90, defects: 12, ops: 1, manualCt: 28000, machineCt: 800, batchSize: 1, rework: 10 },
+                    { name: "Fabrication", wip: 10, ct: 14400, up: 85, yield: 95, defects: 6, ops: 3, manualCt: 6000, machineCt: 8400, batchSize: 2, rework: 5 },
+                    { name: "Validation", wip: 2, ct: 7200, up: 98, yield: 99, defects: 1, ops: 2, manualCt: 3600, machineCt: 3600, batchSize: 1, rework: 1 }
+                ]
+            },
+            "General Manufacturing": { 
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 60, demand: 1000, days: 22, laborRate: 25, unitCost: 45, containerSize: 100, daysAR: 30, daysAP: 45, setupMins: 45, ctStdDev: 1.5, suppName: "Global Parts", suppLT: 7, suppFreq: 2, suppLot: 500, suppOTD: 98, suppDefect: 0.5, custName: "Retail Dist.", custVariation: 15, custFreq: "Weekly", custSL: 99, invSafety: 100, invFG: 300, invRM: 500 }, 
+                processes: [
+                    { name: "Assembly", wip: 100, ct: 300, up: 90, yield: 98, defects: 20, ops: 4, manualCt: 280, machineCt: 20, batchSize: 50, rework: 2 },
+                    { name: "Quality Check", wip: 20, ct: 120, up: 100, yield: 99, defects: 10, ops: 1, manualCt: 90, machineCt: 30, batchSize: 1, rework: 1 },
+                    { name: "Packaging", wip: 50, ct: 90, up: 100, yield: 100, defects: 0, ops: 2, manualCt: 70, machineCt: 20, batchSize: 20, rework: 0 }
+                ]
+            },
+            "Call Center": { 
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 90, demand: 15000, days: 30, laborRate: 18, unitCost: 5, containerSize: 1, daysAR: 15, daysAP: 30, setupMins: 0, ctStdDev: 0.5, suppName: "Telecom ISP", suppLT: 1, suppFreq: 7, suppLot: 9999, suppOTD: 99.9, suppDefect: 0.1, custName: "Subscribers", custVariation: 40, custFreq: "Daily", custSL: 90, invSafety: 0, invFG: 0, invRM: 0 }, 
+                processes: [
+                    { name: "IVR/Routing", wip: 200, ct: 15, up: 99.9, yield: 95, defects: 750, ops: 0, manualCt: 0, machineCt: 15, batchSize: 1, rework: 5 },
+                    { name: "Agent Talk Time", wip: 50, ct: 420, up: 85, yield: 90, defects: 1500, ops: 150, manualCt: 400, machineCt: 20, batchSize: 1, rework: 10 },
+                    { name: "After-Call Work", wip: 10, ct: 180, up: 100, yield: 100, defects: 0, ops: 150, manualCt: 160, machineCt: 20, batchSize: 1, rework: 0 }
+                ]
+            },
+            "Information Technology (IT)": { 
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 45, demand: 500, days: 30, laborRate: 45, unitCost: 150, containerSize: 5, daysAR: 30, daysAP: 30, setupMins: 15, ctStdDev: 3, suppName: "Cloud AWS", suppLT: 1, suppFreq: 7, suppLot: 1, suppOTD: 99.9, suppDefect: 0.5, custName: "Internal Staff", custVariation: 30, custFreq: "Daily", custSL: 95, invSafety: 0, invFG: 5, invRM: 50 }, 
+                processes: [
+                    { name: "Ticket Triage", wip: 100, ct: 300, up: 100, yield: 95, defects: 25, ops: 2, manualCt: 250, machineCt: 50, batchSize: 10, rework: 5 },
+                    { name: "L1 Support", wip: 50, ct: 900, up: 100, yield: 85, defects: 75, ops: 5, manualCt: 800, machineCt: 100, batchSize: 1, rework: 15 },
+                    { name: "L2 Tech Resolution", wip: 20, ct: 3600, up: 100, yield: 90, defects: 50, ops: 3, manualCt: 3000, machineCt: 600, batchSize: 1, rework: 10 },
+                    { name: "QA / Ticket Closure", wip: 10, ct: 300, up: 100, yield: 100, defects: 0, ops: 1, manualCt: 200, machineCt: 100, batchSize: 5, rework: 0 }
+                ]
+            },
+            "Human Resources (HR)": { 
+                globals: { shifts: 1, hoursPerShift: 8, breaks: 60, demand: 20, days: 22, laborRate: 35, unitCost: 500, containerSize: 1, daysAR: 0, daysAP: 30, setupMins: 60, ctStdDev: 15, suppName: "LinkedIn/Indeed", suppLT: 5, suppFreq: 7, suppLot: 100, suppOTD: 95, suppDefect: 40, custName: "Hiring Mgrs", custVariation: 50, custFreq: "Weekly", custSL: 85, invSafety: 0, invFG: 2, invRM: 500 }, 
+                processes: [
+                    { name: "Candidate Sourcing", wip: 200, ct: 900, up: 100, yield: 50, defects: 10, ops: 3, manualCt: 800, machineCt: 100, batchSize: 20, rework: 50 },
+                    { name: "Screening Calls", wip: 50, ct: 1800, up: 100, yield: 40, defects: 12, ops: 2, manualCt: 1700, machineCt: 100, batchSize: 1, rework: 60 },
+                    { name: "Interviewing", wip: 20, ct: 3600, up: 100, yield: 30, defects: 14, ops: 5, manualCt: 3500, machineCt: 100, batchSize: 1, rework: 70 },
+                    { name: "Onboarding Process", wip: 5, ct: 14400, up: 100, yield: 98, defects: 0, ops: 1, manualCt: 7200, machineCt: 7200, batchSize: 5, rework: 2 }
+                ]
+            },
+            "Sales Operations": { 
+                globals: { shifts: 1, hoursPerShift: 8, breaks: 60, demand: 100, days: 22, laborRate: 40, unitCost: 120, containerSize: 10, daysAR: 30, daysAP: 30, setupMins: 30, ctStdDev: 5, suppName: "Marketing DB", suppLT: 2, suppFreq: 5, suppLot: 1000, suppOTD: 95, suppDefect: 30, custName: "B2B Prospects", custVariation: 20, custFreq: "Daily", custSL: 90, invSafety: 0, invFG: 10, invRM: 1000 }, 
+                processes: [
+                    { name: "Lead Generation", wip: 500, ct: 300, up: 100, yield: 80, defects: 20, ops: 5, manualCt: 150, machineCt: 150, batchSize: 100, rework: 20 },
+                    { name: "Qualification", wip: 100, ct: 900, up: 100, yield: 60, defects: 40, ops: 3, manualCt: 800, machineCt: 100, batchSize: 1, rework: 40 },
+                    { name: "Pitch/Demo", wip: 50, ct: 3600, up: 100, yield: 50, defects: 50, ops: 4, manualCt: 3000, machineCt: 600, batchSize: 1, rework: 50 },
+                    { name: "Negotiation/Close", wip: 20, ct: 7200, up: 100, yield: 90, defects: 10, ops: 2, manualCt: 6000, machineCt: 1200, batchSize: 1, rework: 10 }
+                ]
+            },
+            "Textile & Garment Mfg": {
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 60, demand: 5000, days: 24, laborRate: 15, unitCost: 20, containerSize: 100, daysAR: 45, daysAP: 30, setupMins: 45, ctStdDev: 2, suppName: "Fabric Co.", suppLT: 10, suppFreq: 1, suppLot: 2000, suppOTD: 90, suppDefect: 3, custName: "Retail Brand X", custVariation: 25, custFreq: "Weekly", custSL: 95, invSafety: 500, invFG: 1500, invRM: 3000 },
+                processes: [
+                    { name: "Cutting", wip: 800, ct: 45, up: 95, yield: 98, defects: 100, ops: 3, manualCt: 15, machineCt: 30, batchSize: 200, rework: 2 },
+                    { name: "Sewing", wip: 1200, ct: 180, up: 85, yield: 92, defects: 400, ops: 15, manualCt: 160, machineCt: 20, batchSize: 50, rework: 8 },
+                    { name: "Finishing & QC", wip: 300, ct: 60, up: 98, yield: 99, defects: 50, ops: 5, manualCt: 50, machineCt: 10, batchSize: 100, rework: 1 }
+                ]
+            },
+            "Food & Beverage Processing": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 45, demand: 20000, days: 30, laborRate: 22, unitCost: 4, containerSize: 500, daysAR: 15, daysAP: 45, setupMins: 90, ctStdDev: 0.5, suppName: "AgriFarms", suppLT: 2, suppFreq: 7, suppLot: 5000, suppOTD: 98, suppDefect: 5, custName: "Supermarkets", custVariation: 10, custFreq: "Daily", custSL: 99, invSafety: 1000, invFG: 4000, invRM: 8000 },
+                processes: [
+                    { name: "Mixing", wip: 5000, ct: 12, up: 95, yield: 99, defects: 200, ops: 2, manualCt: 2, machineCt: 10, batchSize: 1000, rework: 1 },
+                    { name: "Bottling", wip: 1000, ct: 5, up: 88, yield: 97, defects: 600, ops: 4, manualCt: 1, machineCt: 4, batchSize: 1, rework: 3 },
+                    { name: "Packaging", wip: 2000, ct: 8, up: 98, yield: 99.5, defects: 100, ops: 6, manualCt: 4, machineCt: 4, batchSize: 24, rework: 0.5 }
+                ]
+            },
+            "Pharmaceutical Packaging": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 60, demand: 50000, days: 20, laborRate: 30, unitCost: 15, containerSize: 1000, daysAR: 60, daysAP: 30, setupMins: 180, ctStdDev: 0.1, suppName: "BioChem Corp", suppLT: 15, suppFreq: 1, suppLot: 20000, suppOTD: 99, suppDefect: 0.1, custName: "Pharmacies", custVariation: 5, custFreq: "Weekly", custSL: 100, invSafety: 5000, invFG: 15000, invRM: 25000 },
+                processes: [
+                    { name: "Blister Packing", wip: 8000, ct: 2, up: 90, yield: 99.8, defects: 100, ops: 2, manualCt: 0.2, machineCt: 1.8, batchSize: 1000, rework: 0.2 },
+                    { name: "Cartoning", wip: 2000, ct: 4, up: 95, yield: 99.5, defects: 250, ops: 3, manualCt: 1, machineCt: 3, batchSize: 50, rework: 0.5 },
+                    { name: "Serialization", wip: 500, ct: 1, up: 99, yield: 100, defects: 0, ops: 1, manualCt: 0.1, machineCt: 0.9, batchSize: 1, rework: 0 }
+                ]
+            },
+            "Electronics PCB Assembly": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 45, demand: 8000, days: 22, laborRate: 28, unitCost: 75, containerSize: 50, daysAR: 45, daysAP: 60, setupMins: 120, ctStdDev: 1.2, suppName: "Silicon Comps", suppLT: 25, suppFreq: 0.5, suppLot: 10000, suppOTD: 92, suppDefect: 2, custName: "Tech OEMs", custVariation: 30, custFreq: "Monthly", custSL: 98, invSafety: 1000, invFG: 2000, invRM: 15000 },
+                processes: [
+                    { name: "SMT Pick & Place", wip: 1500, ct: 35, up: 85, yield: 98, defects: 160, ops: 1, manualCt: 5, machineCt: 30, batchSize: 100, rework: 2 },
+                    { name: "Reflow Soldering", wip: 400, ct: 120, up: 98, yield: 99, defects: 80, ops: 1, manualCt: 0, machineCt: 120, batchSize: 50, rework: 1 },
+                    { name: "AOI Inspection", wip: 100, ct: 25, up: 99, yield: 97, defects: 240, ops: 2, manualCt: 15, machineCt: 10, batchSize: 1, rework: 3 }
+                ]
+            },
+            "Furniture & Woodworking": {
+                globals: { shifts: 1, hoursPerShift: 8, breaks: 60, demand: 800, days: 20, laborRate: 24, unitCost: 150, containerSize: 10, daysAR: 30, daysAP: 30, setupMins: 45, ctStdDev: 15, suppName: "Timber Intl.", suppLT: 10, suppFreq: 1, suppLot: 400, suppOTD: 85, suppDefect: 5, custName: "Home Stores", custVariation: 20, custFreq: "Weekly", custSL: 90, invSafety: 100, invFG: 250, invRM: 600 },
+                processes: [
+                    { name: "Cutting / Routing", wip: 150, ct: 300, up: 90, yield: 95, defects: 40, ops: 2, manualCt: 100, machineCt: 200, batchSize: 20, rework: 5 },
+                    { name: "Sanding / Prep", wip: 80, ct: 450, up: 95, yield: 98, defects: 16, ops: 3, manualCt: 400, machineCt: 50, batchSize: 10, rework: 2 },
+                    { name: "Assembly & Finish", wip: 40, ct: 600, up: 98, yield: 99, defects: 8, ops: 4, manualCt: 550, machineCt: 50, batchSize: 1, rework: 1 }
+                ]
+            },
+            "Plastics Injection Molding": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 45, demand: 100000, days: 28, laborRate: 18, unitCost: 1.5, containerSize: 1000, daysAR: 45, daysAP: 60, setupMins: 240, ctStdDev: 0.1, suppName: "Polymer Chem", suppLT: 7, suppFreq: 2, suppLot: 50000, suppOTD: 98, suppDefect: 0.5, custName: "Auto Tier 2", custVariation: 15, custFreq: "Weekly", custSL: 99, invSafety: 10000, invFG: 25000, invRM: 50000 },
+                processes: [
+                    { name: "Material Drying", wip: 5000, ct: 0.5, up: 99, yield: 100, defects: 0, ops: 0.5, manualCt: 0, machineCt: 0.5, batchSize: 5000, rework: 0 },
+                    { name: "Injection Molding", wip: 2000, ct: 1.2, up: 85, yield: 96, defects: 4000, ops: 1, manualCt: 0.1, machineCt: 1.1, batchSize: 32, rework: 4 },
+                    { name: "Trimming / QA", wip: 500, ct: 2.5, up: 98, yield: 99, defects: 1000, ops: 2, manualCt: 2, machineCt: 0.5, batchSize: 100, rework: 1 }
+                ]
+            },
+            "Healthcare ER Triage": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 30, demand: 4500, days: 30, laborRate: 85, unitCost: 1200, containerSize: 1, daysAR: 90, daysAP: 30, setupMins: 5, ctStdDev: 600, suppName: "Med Supplies", suppLT: 2, suppFreq: 3, suppLot: 500, suppOTD: 99, suppDefect: 0.1, custName: "Patients", custVariation: 40, custFreq: "Random", custSL: 85, invSafety: 0, invFG: 0, invRM: 200 },
+                processes: [
+                    { name: "Registration", wip: 15, ct: 300, up: 100, yield: 99, defects: 45, ops: 2, manualCt: 250, machineCt: 50, batchSize: 1, rework: 1 },
+                    { name: "Nurse Triage", wip: 25, ct: 600, up: 100, yield: 95, defects: 225, ops: 4, manualCt: 550, machineCt: 50, batchSize: 1, rework: 5 },
+                    { name: "Physician Consult", wip: 10, ct: 1200, up: 100, yield: 90, defects: 450, ops: 3, manualCt: 1100, machineCt: 100, batchSize: 1, rework: 10 }
+                ]
+            },
+            "Logistics & Fulfillment": {
+                globals: { shifts: 2, hoursPerShift: 10, breaks: 60, demand: 30000, days: 26, laborRate: 20, unitCost: 8, containerSize: 50, daysAR: 15, daysAP: 45, setupMins: 10, ctStdDev: 15, suppName: "Various Brands", suppLT: 5, suppFreq: 5, suppLot: 2000, suppOTD: 85, suppDefect: 2, custName: "End Consumers", custVariation: 60, custFreq: "Daily", custSL: 97, invSafety: 5000, invFG: 0, invRM: 100000 },
+                processes: [
+                    { name: "Inbound Receiving", wip: 4000, ct: 45, up: 95, yield: 99, defects: 300, ops: 5, manualCt: 30, machineCt: 15, batchSize: 100, rework: 1 },
+                    { name: "Pick & Pack", wip: 1500, ct: 120, up: 98, yield: 98, defects: 600, ops: 25, manualCt: 100, machineCt: 20, batchSize: 1, rework: 2 },
+                    { name: "Outbound Ship", wip: 800, ct: 30, up: 99, yield: 99.5, defects: 150, ops: 4, manualCt: 15, machineCt: 15, batchSize: 50, rework: 0.5 }
+                ]
+            },
+            "Construction Materials": {
+                globals: { shifts: 2, hoursPerShift: 10, breaks: 60, demand: 15000, days: 24, laborRate: 22, unitCost: 45, containerSize: 100, daysAR: 60, daysAP: 30, setupMins: 180, ctStdDev: 30, suppName: "Quarry Co", suppLT: 3, suppFreq: 2, suppLot: 2000, suppOTD: 90, suppDefect: 5, custName: "Builders", custVariation: 20, custFreq: "Weekly", custSL: 92, invSafety: 2000, invFG: 5000, invRM: 8000 },
+                processes: [
+                    { name: "Crushing/Milling", wip: 3000, ct: 18, up: 80, yield: 95, defects: 750, ops: 2, manualCt: 2, machineCt: 16, batchSize: 500, rework: 5 },
+                    { name: "Kiln Heating", wip: 1000, ct: 45, up: 95, yield: 98, defects: 300, ops: 1, manualCt: 0, machineCt: 45, batchSize: 1000, rework: 2 },
+                    { name: "Cooling & Bagging", wip: 500, ct: 20, up: 90, yield: 99, defects: 150, ops: 3, manualCt: 5, machineCt: 15, batchSize: 100, rework: 1 }
+                ]
+            },
+            "Metal Fabrication & Welding": {
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 45, demand: 2500, days: 22, laborRate: 35, unitCost: 350, containerSize: 5, daysAR: 45, daysAP: 45, setupMins: 90, ctStdDev: 45, suppName: "Steel Mill", suppLT: 14, suppFreq: 1, suppLot: 500, suppOTD: 95, suppDefect: 2, custName: "Heavy Mach OEMs", custVariation: 15, custFreq: "Monthly", custSL: 96, invSafety: 200, invFG: 400, invRM: 1000 },
+                processes: [
+                    { name: "Laser Cutting", wip: 300, ct: 180, up: 90, yield: 98, defects: 50, ops: 1, manualCt: 30, machineCt: 150, batchSize: 20, rework: 2 },
+                    { name: "Bending / Brake", wip: 150, ct: 240, up: 95, yield: 95, defects: 125, ops: 2, manualCt: 120, machineCt: 120, batchSize: 10, rework: 5 },
+                    { name: "Welding & Finish", wip: 50, ct: 900, up: 98, yield: 92, defects: 200, ops: 5, manualCt: 800, machineCt: 100, batchSize: 1, rework: 8 }
+                ]
+            },
+            "Chemical Processing": {
+                globals: { shifts: 3, hoursPerShift: 8, breaks: 30, demand: 80000, days: 30, laborRate: 40, unitCost: 12, containerSize: 1000, daysAR: 60, daysAP: 60, setupMins: 480, ctStdDev: 5, suppName: "Bulk Chems", suppLT: 20, suppFreq: 0.5, suppLot: 40000, suppOTD: 92, suppDefect: 1, custName: "Industrial", custVariation: 10, custFreq: "Monthly", custSL: 98, invSafety: 10000, invFG: 20000, invRM: 50000 },
+                processes: [
+                    { name: "Reactor Stage 1", wip: 15000, ct: 0.8, up: 95, yield: 98, defects: 1600, ops: 1, manualCt: 0.1, machineCt: 0.7, batchSize: 5000, rework: 2 },
+                    { name: "Distillation", wip: 5000, ct: 1.5, up: 98, yield: 99, defects: 800, ops: 1, manualCt: 0.1, machineCt: 1.4, batchSize: 5000, rework: 1 },
+                    { name: "Drumming & Pack", wip: 2000, ct: 1.2, up: 90, yield: 99.5, defects: 400, ops: 3, manualCt: 0.5, machineCt: 0.7, batchSize: 50, rework: 0.5 }
+                ]
+            },
+            "Commercial Printing": {
+                globals: { shifts: 2, hoursPerShift: 8, breaks: 45, demand: 50000, days: 22, laborRate: 25, unitCost: 0.5, containerSize: 1000, daysAR: 30, daysAP: 45, setupMins: 60, ctStdDev: 0.5, suppName: "Paper Mills", suppLT: 10, suppFreq: 2, suppLot: 20000, suppOTD: 95, suppDefect: 2, custName: "Publishers", custVariation: 30, custFreq: "Weekly", custSL: 96, invSafety: 5000, invFG: 10000, invRM: 30000 },
+                processes: [
+                    { name: "Pre-Press & Plate", wip: 2000, ct: 5, up: 98, yield: 99, defects: 500, ops: 2, manualCt: 4, machineCt: 1, batchSize: 1000, rework: 1 },
+                    { name: "Offset Printing", wip: 8000, ct: 0.2, up: 85, yield: 95, defects: 2500, ops: 3, manualCt: 0.05, machineCt: 0.15, batchSize: 5000, rework: 5 },
+                    { name: "Binding & Trim", wip: 4000, ct: 0.8, up: 92, yield: 98, defects: 1000, ops: 4, manualCt: 0.4, machineCt: 0.4, batchSize: 500, rework: 2 }
+                ]
+            }
+        };
+
+        function getStatusColor(type, value) {
+            if (value === "" || value === undefined || value === null) return "bg-slate-50 border-slate-300 text-slate-800";
+            const v = parseFloat(value);
+            if (isNaN(v)) return "bg-slate-50 border-slate-300 text-slate-800";
+
+            if (type === 'yield') {
+                if (v >= 98) return "bg-emerald-50 border-emerald-200 text-emerald-700"; 
+                if (v >= 90) return "bg-amber-50 border-amber-200 text-amber-700"; 
+                return "bg-red-50 border-red-200 text-red-700"; 
+            }
+            if (type === 'uptime') {
+                if (v >= 95) return "bg-indigo-50 border-indigo-200 text-indigo-700"; 
+                if (v >= 85) return "bg-amber-50 border-amber-200 text-amber-700"; 
+                return "bg-red-50 border-red-200 text-red-700"; 
+            }
+            if (type === 'rework') {
+                if (v <= 1) return "bg-emerald-50 border-emerald-200 text-emerald-700"; 
+                if (v <= 5) return "bg-amber-50 border-amber-200 text-amber-700"; 
+                return "bg-red-50 border-red-200 text-red-700"; 
+            }
+            return "bg-slate-50 border-slate-300 text-slate-800"; 
+        }
+
+        function getKPITextColor(type, value) {
+            const v = parseFloat(value);
+            if (isNaN(v)) return "text-slate-600";
+            
+            if (type === 'oee') {
+                if (v >= 85) return "text-emerald-500";
+                if (v >= 70) return "text-amber-500";
+                return "text-red-500";
+            }
+            if (type === 'rty') {
+                if (v >= 90) return "text-yellow-400";
+                if (v >= 80) return "text-amber-400";
+                return "text-red-400";
+            }
+            return "text-blue-600"; 
+        }
+
+        const TooltipLabel = ({ label, tooltip, colorClass = "text-slate-500", isPdf = false }) => (
+            <div className={`relative ${isPdf ? '' : 'group cursor-help'} flex items-center mb-1.5`}>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${isPdf ? '' : 'border-b border-dotted border-slate-400'} ${colorClass}`}>
+                    {label}
+                </span>
+                {!isPdf && (
+                    <div className="absolute bottom-full left-0 mb-2 w-56 p-2.5 bg-slate-800 text-white text-[11px] rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 font-normal normal-case leading-relaxed">
+                        {tooltip}
+                        <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                    </div>
+                )}
+            </div>
+        );
+
+        function App() {
+            const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+            const [showMectopedia, setShowMectopedia] = useState(false);
+            const [showCapaModal, setShowCapaModal] = useState(false);
+            const [inputErrors, setInputErrors] = useState([]);
+            const [dismissedAlerts, setDismissedAlerts] = useState([]);
+            
+            const [selectedIndustry, setSelectedIndustry] = useState("User Defined / Custom");
+            const [scenario, setScenario] = useState("Baseline");
+            const [activeCategory, setActiveCategory] = useState("basic_flow");
+            const [activeMetricId, setActiveMetricId] = useState("takt");
+            const [timeUnit, setTimeUnit] = useState("Seconds");
+            
+            const [printMessage, setPrintMessage] = useState("");
+
+            const [globals, setGlobals] = useState(getPresetData("User Defined / Custom").globals);
+            const [processes, setProcesses] = useState(getPresetData("User Defined / Custom").processes);
+            
+            const [capaItems, setCapaItems] = useState([
+                { id: 1, problem: "", rootCause: "", action: "", owner: "", deadline: "", status: "Open" }
+            ]);
+
+            const unitLabel = timeUnit === "Minutes" ? "Min" : "Sec";
+
+            useEffect(() => { 
+                if (metricLibrary[activeCategory] && metricLibrary[activeCategory].metrics.length > 0) {
+                    setActiveMetricId(metricLibrary[activeCategory].metrics[0].id); 
+                }
+            }, [activeCategory]);
+
+            const showInputError = (msg) => {
+                const id = Date.now() + Math.random();
+                setInputErrors(prev => [...prev, { id, msg }]);
+                setTimeout(() => {
+                    setInputErrors(prev => prev.filter(e => e.id !== id));
+                }, 4000);
+            };
+
+            const validateNumeric = (val, fieldName, maxVal = null) => {
+                if (val === '') return true;
+                if (!/^\d*\.?\d*$/.test(val)) {
+                    showInputError(`Invalid character in ${fieldName}. Only positive numerical values allowed.`);
+                    return false;
+                }
+                if (maxVal !== null && parseFloat(val) > maxVal) {
+                    showInputError(`${fieldName} cannot exceed ${maxVal}.`);
+                    return false;
+                }
+                return true;
+            };
+
+            const handleOpenCapa = () => {
+                if (selectedIndustry === "User Defined / Custom" && !globals.demand) {
+                    showInputError("Please update the data values.");
+                    return;
+                }
+                setShowCapaModal(true);
+            };
+
+            const rawAlerts = useMemo(() => {
+                const alerts = [];
+                const d = parseFloat(globals.demand);
+                const s = parseFloat(globals.shifts);
+                const h = parseFloat(globals.hoursPerShift);
+
+                if (globals.demand !== "" && (isNaN(d) || d <= 0)) alerts.push({ id: 'dem', type: 'error', msg: "Critical: Customer Demand is Zero/Invalid! Takt Time cannot be established." });
+                if (globals.shifts !== "" && globals.hoursPerShift !== "" && (isNaN(s) || s <= 0 || isNaN(h) || h <= 0)) alerts.push({ id: 'time', type: 'error', msg: "Critical: Available Shift Time is Zero! Operations are halted." });
+
+                let highWip = false, lowYield = false, highSetup = false;
+                
+                if (parseFloat(globals.setupMins) > 120) highSetup = true;
+
+                processes.forEach(p => {
+                    if (parseFloat(p.wip) > 1000) highWip = true;
+                    if (parseFloat(p.yield) < 80 && p.yield !== "") lowYield = true;
+                });
+
+                if (highWip) alerts.push({ id: 'wip', type: 'warn', msg: "Warning: Excessive WIP bottleneck detected. Flow efficiency at risk." });
+                if (lowYield) alerts.push({ id: 'yld', type: 'warn', msg: "Warning: Severe Quality Drop! Station yield has fallen below 80%." });
+                if (highSetup) alerts.push({ id: 'set', type: 'warn', msg: "Warning: High Changeover Time. Recommend SMED intervention." });
+
+                return alerts;
+            }, [globals, processes]);
+
+            useEffect(() => {
+                const currentIds = rawAlerts.map(a => a.id);
+                setDismissedAlerts(prev => prev.filter(id => currentIds.includes(id)));
+            }, [rawAlerts]);
+
+            const activeAlerts = rawAlerts.filter(a => !dismissedAlerts.includes(a.id));
+
+            const dynamicRecommendations = useMemo(() => {
+                let recs = [];
+                let botName = "the bottleneck";
+                
+                let maxCT = 0;
+                processes.forEach((p, idx) => {
+                    const ct = parseFloat(p.ct) || 0;
+                    if (ct > maxCT) {
+                        maxCT = ct;
+                        botName = p.name || `Step ${idx + 1}`;
+                    }
+                });
+
+                if (activeAlerts.find(a => a.id === 'wip')) {
+                    recs.push({ type: 'WIP Constraint', text: `Implement Kanban supermarkets upstream of ${botName} to control overproduction and cap WIP buildup.` });
+                }
+                if (activeAlerts.find(a => a.id === 'yld')) {
+                    recs.push({ type: 'Quality Bleed', text: `Initiate immediate Root Cause Analysis (Fishbone/5-Why) on high-defect stations to arrest scrap in ${selectedIndustry}.` });
+                }
+                if (activeAlerts.find(a => a.id === 'set')) {
+                    recs.push({ type: 'Agility Block', text: `Apply SMED (Single-Minute Exchange of Die) techniques to externalize setup tasks and reduce changeover time.` });
+                }
+                if (activeAlerts.find(a => a.id === 'dem') || activeAlerts.find(a => a.id === 'time')) {
+                    recs.push({ type: 'System Failure', text: `Critical system parameters missing. Verify Customer Demand and Shift Availability inputs immediately.` });
+                }
+                if (recs.length === 0) {
+                    recs.push({ type: 'Continuous Improvement', text: `System operating within optimal thresholds for ${selectedIndustry}. Focus on micro-kaizens and sustaining 5S standards.` });
+                }
+                return recs;
+            }, [activeAlerts, selectedIndustry, processes]);
+
+            useEffect(() => {
+                const dem = parseFloat(globals.demand);
+                if (dem > 0) {
+                    setProcesses(prev => prev.map(p => {
+                        if (p.yield !== "") {
+                            return { ...p, defects: Math.max(0, dem * (100 - parseFloat(p.yield)) / 100).toFixed(0) };
+                        }
+                        return p;
+                    }));
+                }
+            }, [globals.demand]);
+
+            const handleTimeUnitChange = (e) => {
+                const newUnit = e.target.value;
+                if (newUnit === timeUnit) return;
+                const multiplier = newUnit === 'Minutes' ? (1 / 60) : 60;
+                setProcesses(processes.map(p => ({
+                    ...p,
+                    ct: p.ct !== "" ? (parseFloat(p.ct) * multiplier).toFixed(1).replace(/\.0$/, '') : "",
+                    manualCt: p.manualCt !== "" ? (parseFloat(p.manualCt) * multiplier).toFixed(1).replace(/\.0$/, '') : "",
+                    machineCt: p.machineCt !== "" ? (parseFloat(p.machineCt) * multiplier).toFixed(1).replace(/\.0$/, '') : ""
+                })));
+                setTimeUnit(newUnit);
+            };
+
+            const handleClearAll = () => {
+                if (window.confirm("Are you sure you want to clear ALL data? This will reset the platform to a blank state.")) {
+                    const blank = getPresetData("User Defined / Custom");
+                    setSelectedIndustry("User Defined / Custom");
+                    setScenario("Baseline");
+                    setGlobals(blank.globals);
+                    setProcesses(blank.processes);
+                    setCapaItems([{ id: Date.now(), problem: "", rootCause: "", action: "", owner: "", deadline: "", status: "Open" }]);
+                    setDismissedAlerts([]); 
+                }
+            };
+
+            const sm = {
+                ct: scenario === 'Best Case' ? 0.85 : scenario === 'Catastrophic' ? 1.50 : 1,
+                up: scenario === 'Best Case' ? 1.10 : scenario === 'Catastrophic' ? 0.70 : 1,
+                yld: scenario === 'Best Case' ? 1.05 : scenario === 'Catastrophic' ? 0.70 : 1,
+                setup: scenario === 'Best Case' ? 0.75 : scenario === 'Catastrophic' ? 2.00 : 1,
+                rew: scenario === 'Best Case' ? 0.50 : scenario === 'Catastrophic' ? 2.50 : 1
+            };
+
+            const safeNum = (val) => isNaN(val) || !isFinite(val) ? 0 : val;
+
+            const results = useMemo(() => {
+                const s = parseFloat(globals.shifts) || 0;
+                const h = parseFloat(globals.hoursPerShift) || 0;
+                const b = parseFloat(globals.breaks) || 0; 
+                const dem = parseFloat(globals.demand) || 0;
+                const day = parseFloat(globals.days) || 0;
+                
+                const availTime = s * ((h * (timeUnit==='Minutes'?60:3600)) - (b * (timeUnit==='Minutes'?1:60))); 
+                const dailyDem = day > 0 ? dem / day : 0;
+                const takt = dailyDem > 0 ? availTime / dailyDem : 0;
+
+                let tVA=0, tWIP=0, tLabor=0, mCT=0, rYld=1, sYld=0, aUp=0, tOps=0, gMan=0, gMach=0, gRew=0, gBat=0;
+                let bName = "None";
+
+                processes.forEach((p, idx) => {
+                    const ct = p.ct !== "" ? (parseFloat(p.ct) || 0) * sm.ct : 0;
+                    const ops = parseFloat(p.ops)||0; 
+                    const yld = p.yield !== "" ? Math.min(1, ((parseFloat(p.yield) || 0) / 100) * sm.yld) : 1; 
+                    const up = p.up !== "" ? Math.min(1, ((parseFloat(p.up) || 0) / 100) * sm.up) : 1;
+                    const rew = p.rework !== "" ? (parseFloat(p.rework) || 0) * sm.rew : 0;
+
+                    tVA+=ct; tWIP+=parseFloat(p.wip)||0; tLabor+=(ct*ops); tOps+=ops;
+                    gMan+=parseFloat(p.manualCt)||0; gMach+=parseFloat(p.machineCt)||0; gRew+=rew; gBat+=parseFloat(p.batchSize)||0;
+                    rYld *= yld; sYld += yld; aUp += up;
+                    if(ct>mCT){ mCT=ct; bName=p.name||`Step ${idx+1}`; }
+                });
+
+                const numP = processes.length || 1;
+                let minYield = 1;
+                if (processes.length > 0) {
+                    minYield = Math.min(...processes.map(p => p.yield !== "" ? Math.min(1, ((parseFloat(p.yield) || 0) / 100) * sm.yld) : 1));
+                }
+                
+                const ltDays = safeNum((dailyDem>0?tWIP/dailyDem:0) + (availTime>0?tVA/availTime:0));
+                const pce = safeNum((ltDays>0&&availTime>0)?(tVA/(ltDays*availTime))*100:0);
+                const oeePerf = safeNum((numP>0 && mCT>0)?(tVA/(numP*mCT)):0);
+                const oee = safeNum((aUp/numP) * oeePerf * rYld * 100); 
+
+                const fmtH = safeNum(tVA / (timeUnit==='Minutes'?60:3600));
+                const waitH = safeNum(Math.max(0, (ltDays*availTime)-tVA) / (timeUnit==='Minutes'?60:3600));
+
+                const trueSetupMins = safeNum((parseFloat(globals.setupMins) || 0) * sm.setup);
+
+                return {
+                    takt: safeNum(takt).toFixed(1) + ` ${unitLabel}`, 
+                    ct: safeNum(mCT).toFixed(1) + ` ${unitLabel}`,
+                    lt: safeNum(ltDays).toFixed(2) + ' Days', 
+                    work_content: safeNum(tVA).toFixed(1) + ` ${unitLabel}`,
+                    waiting: safeNum(Math.max(0, (ltDays*availTime)-tVA)).toFixed(1) + ` ${unitLabel}`,
+                    co_time: safeNum(trueSetupMins * (timeUnit==='Minutes'?1:60)).toFixed(1) + ` ${unitLabel}`, 
+                    smed_ratio: takt>0 ? safeNum(((trueSetupMins*(timeUnit==='Minutes'?1:60))/takt)*100).toFixed(1)+'%' : '0%',
+                    utilization: takt>0 ? safeNum(mCT/takt*100).toFixed(1)+'%' : '0%',
+                    bottleneck: bName, 
+                    balancing: mCT>0 ? safeNum((tVA/(numP*mCT))*100).toFixed(1)+'%' : '0%',
+                    workforce: takt>0 ? safeNum(tVA/takt).toFixed(1)+' Heads' : '0', 
+                    wip: safeNum(tWIP).toFixed(0)+' Units',
+                    littles_law: safeNum(dailyDem*ltDays).toFixed(0)+' Units', 
+                    inv_turns: tWIP>0 ? safeNum((dem*12)/tWIP).toFixed(1)+' Turns/Yr' : '∞',
+                    flow_eff: safeNum(pce).toFixed(2)+'%', 
+                    fpy: safeNum(minYield*100).toFixed(1)+'%', 
+                    rty: safeNum(rYld*100).toFixed(1)+'%',
+                    total_defects: safeNum(dem*(1-rYld)).toFixed(0)+' Units', 
+                    dpmu: safeNum((1-rYld)*1000000).toFixed(0),
+                    scrap_rate: safeNum((1-rYld)*100).toFixed(1)+'%', 
+                    va_cost: '₹'+safeNum(fmtH*parseFloat(globals.laborRate||0)).toFixed(2),
+                    nva_cost: '₹'+safeNum(waitH*parseFloat(globals.laborRate||0)).toFixed(2), 
+                    scrap_cost: '₹'+safeNum((dem*(1-rYld))*parseFloat(globals.unitCost||0)).toFixed(2),
+                    blocked_cap: '₹'+safeNum(tWIP*parseFloat(globals.unitCost||0)*0.15).toFixed(0), 
+                    epei: safeNum(trueSetupMins/60).toFixed(2)+' Hrs',
+                    kanban: safeNum(Math.ceil((dailyDem*ltDays*1.1)/parseFloat(globals.containerSize||50))).toFixed(0)+' Bins',
+                    pitch: safeNum((takt/(timeUnit==='Minutes'?1:60))*parseFloat(globals.containerSize||1)).toFixed(1)+' Mins',
+                    cov: safeNum(tVA>0?parseFloat(globals.ctStdDev||0)/(tVA/numP):0).toFixed(2), 
+                    service_lvl: safeNum(rYld*100*0.95).toFixed(1)+'%',
+                    oee: safeNum(oee).toFixed(1)+'%', 
+                    availability: safeNum(aUp/numP*100).toFixed(1)+'%', 
+                    performance: safeNum(oeePerf*100).toFixed(1)+'%',
+                    quality_oee: safeNum(rYld*100).toFixed(1)+'%', 
+                    c2c: safeNum(ltDays+parseFloat(globals.daysAR||0)-parseFloat(globals.daysAP||0)).toFixed(1)+' Days',
+                    dock2dock: safeNum(ltDays*1.05).toFixed(1)+' Days', 
+                    std_time: safeNum(tVA*1.15).toFixed(1)+` ${unitLabel}`,
+                    ops_util: (tOps>0&&availTime>0)?safeNum(((tLabor*dailyDem)/(tOps*availTime))*100).toFixed(1)+'%':'0%',
+                    handoff: safeNum(Math.max(0, (ltDays*availTime)-tVA)/numP).toFixed(1)+` ${unitLabel}`,
+                    gemba_manual: safeNum(gMan).toFixed(1)+` ${unitLabel}`, 
+                    gemba_machine: safeNum(gMach).toFixed(1)+` ${unitLabel}`,
+                    gemba_rework: safeNum(gRew/numP).toFixed(1)+'%', 
+                    gemba_batch: safeNum(gBat/numP).toFixed(0)+' Units',
+                    gemba_labor_util: (tOps>0&&availTime>0)?safeNum(((tLabor*dailyDem)/(tOps*availTime))*100).toFixed(1)+'%':'0%',
+                    gemba_inv_safety: safeNum(parseFloat(globals.invSafety)||0).toString() + ' Units',
+                    gemba_inv_fg: safeNum(parseFloat(globals.invFG)||0).toString() + ' Units',
+                    gemba_inv_rm: safeNum(parseFloat(globals.invRM)||0).toString() + ' Units',
+                    gemba_inv_total_turns: (() => {
+                        const totalInv = tWIP + (parseFloat(globals.invFG) || 0) + (parseFloat(globals.invRM) || 0);
+                        return totalInv > 0 ? safeNum((dem * 12) / totalInv).toFixed(1) + ' Turns' : '∞';
+                    })(),
+                    gemba_supp_lt: safeNum(parseFloat(globals.suppLT)||0).toString() + ' Days',
+                    gemba_supp_freq: safeNum(parseFloat(globals.suppFreq)||0).toString() + ' / Wk',
+                    gemba_supp_otd: safeNum(parseFloat(globals.suppOTD)||0).toString() + '%',
+                    gemba_supp_defects: safeNum(parseFloat(globals.suppDefect)||0).toString() + '%',
+                    gemba_cust_vol: safeNum(dem).toString() + ' Units',
+                    gemba_cust_var: safeNum(parseFloat(globals.custVariation)||0).toString() + '%',
+                    gemba_cust_sl: safeNum(parseFloat(globals.custSL)||0).toString() + '%',
+                    
+                    raw_lt: safeNum(ltDays).toFixed(2), 
+                    raw_pce: safeNum(pce).toFixed(2), 
+                    raw_labor: safeNum(tLabor).toFixed(1), 
+                    raw_fpy: safeNum(minYield*100).toFixed(1), 
+                    raw_rty: safeNum(rYld*100).toFixed(1), 
+                    raw_oee: safeNum(oee).toFixed(1),
+                    bottleneck: bName
+                };
+            }, [globals, processes, timeUnit, scenario]);
+
+            const execSummary = useMemo(() => {
+                const scrap = results.scrap_cost || "₹0.00";
+                const rty = results.raw_rty || "0.0";
+                const pce = results.raw_pce || "0.0";
+                const oee = results.raw_oee || "0.0";
+                const bot = results.bottleneck || "None";
+                const defects = results.total_defects || "0 Units";
+                const blockedCap = results.blocked_cap || "₹0";
+                
+                let text = `Diagnostic Evaluation: Based on the current Value Stream mapping, the system is operating at an Overall Equipment Effectiveness (OEE) of ${oee}%. `;
+                text += `The constraint (bottleneck) has been identified at ${bot}, pacing the entire line to a Flow Efficiency of ${pce}%. `;
+                if (parseFloat(rty) < 95) {
+                    text += `Quality is a critical risk factor; a Rolled Throughput Yield of ${rty}% means the system is bleeding ${defects} monthly, generating a direct financial loss of ${scrap}. `;
+                } else {
+                    text += `Quality remains stable with an RTY of ${rty}%, generating minimal scrap liability (${scrap}). `;
+                }
+                text += `Working capital currently trapped in systemic inventory is calculated at ${blockedCap}. Focus improvement efforts on the CAPA items below to accelerate velocity and reduce defects.`;
+                
+                return text;
+            }, [results]);
+
+            const dynamicMectopedia = useMemo(() => [
+                { term: "Takt Time", def: "The calculated ideal pace of production required to meet customer demand exactly on time.", analogy: "The heartbeat or metronome of a factory.", formula: "(Available Working Time) / (Demand)", live: results.takt },
+                { term: "Cycle Time (CT)", def: "The actual time it takes to successfully complete one single process or step.", analogy: "The time it takes a chef to cook and plate one single burger.", formula: "Max(Observed Time per Unit)", live: results.ct },
+                { term: "Manual Touch Time (Man CT)", def: "The specific amount of time a human operator is physically working on the unit.", analogy: "A surgeon actively performing an operation.", formula: "Σ Human Processing Time", live: results.gemba_manual },
+                { term: "Machine Cycle Time (Mach CT)", def: "The time a machine operates autonomously to process a unit without human intervention.", analogy: "A washing machine running its cycle while you walk away.", formula: "Σ Automated Processing Time", live: results.gemba_machine },
+                { term: "Lead Time (LT)", def: "The total holistic time a product takes to travel through the entire system, including all waiting and queues.", analogy: "The total time from ordering at a drive-thru until receiving your food.", formula: "Σ (Inventory / Daily Demand) + Σ (VA Time)", live: results.lt },
+                { term: "WIP (Work In Process)", def: "Items that have entered the production process but are not yet finished goods.", analogy: "Cars currently stuck in traffic between intersections.", formula: "Count of units physically on the floor between processes", live: results.wip },
+                { term: "Uptime % (Availability)", def: "The percentage of scheduled time that the equipment is actually available to operate.", analogy: "A bus that runs 9 hours out of its 10-hour shift without breaking down has 90% uptime.", formula: "(Operating Time - Downtime) / Scheduled Time", live: results.availability },
+                { term: "First Pass Yield (FPY)", def: "The percentage of units that complete a process perfectly the very first time without rework. This engine tracks the lowest-performing station as the bottleneck.", analogy: "Passing a driving test flawlessly on the first attempt.", formula: "Min(Station Yields)", live: results.fpy },
+                { term: "Rolled Throughput Yield (RTY)", def: "The true probability of a unit passing through the entire process without any defects or rework.", analogy: "Beating a 10-level video game without taking a single point of damage.", formula: "Yield 1 × Yield 2 × ... × Yield N", live: results.rty },
+                { term: "Defects & Scrap", def: "Products that fail to meet quality standards and must be discarded or reworked.", analogy: "Burnt toast that has to be thrown in the trash.", formula: "Demand × (1 - RTY)", live: results.total_defects },
+                { term: "Rework Rate %", def: "The percentage of items that require correction before they can move to the next step.", analogy: "Having to re-iron a shirt because it still has wrinkles.", formula: "(Reworked Units / Total Units) × 100", live: results.gemba_rework },
+                { term: "Batch Size", def: "The number of units processed together before being moved to the next operation.", analogy: "Baking a tray of 12 cookies instead of 1 cookie at a time.", formula: "Units grouped per transfer", live: results.gemba_batch },
+                { term: "OEE (Overall Equipment Effectiveness)", def: "The gold standard metric combining Availability, Performance, and Quality into one percentage.", analogy: "A student's final grade factoring attendance, speed, and accuracy.", formula: "Availability × Performance × Quality", live: results.oee },
+                { term: "Flow Efficiency", def: "The ratio of Value-Added time (actually working) compared to the Total Lead Time (which includes waiting).", analogy: "Going to a theme park for 5 hours but only spending 25 minutes riding.", formula: "(Total Value-Added Time / Lead Time) × 100", live: results.flow_eff },
+                { term: "Capacity Utilization", def: "Measures how much of the process's maximum potential output is actually being used.", analogy: "A 50-seat restaurant serving 40 customers is at 80% utilization.", formula: "(Bottleneck Cycle Time / Takt Time) × 100", live: results.utilization },
+                { term: "Labor Utilization", def: "Tracks workforce efficiency against the total daily capacity.", analogy: "A worker actively stocking shelves 7 hours out of an 8 hour shift.", formula: "(Total Labor Content × Daily Demand) / (Total Operators × Available Time)", live: results.gemba_labor_util },
+                { term: "SMED (Changeover Time)", def: "Single-Minute Exchange of Die. The time taken to switch a machine from making Product A to Product B.", analogy: "A Formula 1 pit stop.", formula: "Internal Setup Time + External Setup Time", live: results.co_time },
+                { term: "Kanban", def: "A visual signaling system used to trigger action or production based on actual pull/demand.", analogy: "The 'Empty' line on a milk jug telling you to buy more.", formula: "((Daily Demand × Lead Time) × Safety Factor) / Container Size", live: results.kanban },
+                { term: "Bottleneck", def: "The specific stage in a process that has the longest cycle time, dictating the maximum speed of the system.", analogy: "The narrow neck of an hourglass restricting sand flow.", formula: "Process with Max(Cycle Time)", live: results.bottleneck },
+                { term: "Inventory Turns", def: "How many times a company's inventory is sold and replaced over a year.", analogy: "A grocery store restocking its milk aisle completely twice a week.", formula: "(Annual Demand) / (Average Total Inventory)", live: results.inv_turns },
+                { term: "Blocked Capital", def: "The amount of cash tied up in physical inventory sitting on the floor.", analogy: "Leaving cash in a locked safe where it can't earn interest.", formula: "Total WIP × Unit Cost × Holding %", live: results.blocked_cap }
+            ], [results]);
+
+            const handleExportExcel = async () => {
+                if (typeof window.ExcelJS === 'undefined') {
+                    setPrintMessage("Excel library not loaded. Refreshing page may help.");
+                    setTimeout(() => setPrintMessage(""), 4000);
+                    return;
+                }
+                setPrintMessage("Generating Dynamic Formula-Driven Excel. Please wait...");
+                try {
+                    const workbook = new window.ExcelJS.Workbook();
+                    
+                    const parseSimpleNum = (val) => {
+                        if (val === undefined || val === null || val === "") return "";
+                        const num = Number(val);
+                        return isNaN(num) ? val : num;
+                    };
+
+                    const headStyle = (row, bg) => {
+                        row.eachCell(c => { c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:bg}}; c.font = {bold:true, color:{argb:'FFFFFFFF'}}; c.alignment={horizontal:'center', vertical:'middle'}; });
+                    };
+
+                    const styleTableRow = (row, isHeader, bgColor) => {
+                        row.eachCell(c => {
+                            if(bgColor) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                            if(isHeader) c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                            c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+                            c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        });
+                    };
+
+                    const addSectionHeader = (sheet, title, color, colSpan) => {
+                        const row = sheet.addRow([title]);
+                        sheet.mergeCells(row.number, 1, row.number, colSpan);
+                        row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+                        row.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+                        row.height = 25;
+                        row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+                    };
+
+                    const wsSum = workbook.addWorksheet('1. Summary & KPIs');
+                    wsSum.columns = [{ width: 35 }, { width: 25 }, { width: 20 }];
+                    let r = wsSum.addRow(['MECTS SET...GO - VSM/VPM ENGINE']);
+                    wsSum.mergeCells(r.number, 1, r.number, 3);
+                    r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
+                    r.getCell(1).font = { bold: true, color: { argb: 'FFFACC15' }, size: 16 };
+                    r.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+                    r.height = 35;
+
+                    wsSum.addRow([]);
+                    wsSum.addRow(['Industry Segment', selectedIndustry]).font = { bold: true };
+                    wsSum.addRow(['Simulation Scenario', scenario]).font = { bold: true };
+                    wsSum.addRow(['Base Time Unit', timeUnit]).font = { bold: true };
+                    wsSum.addRow(['Export Date', new Date().toLocaleString()]).font = { bold: true };
+                    wsSum.addRow([]);
+
+                    r = wsSum.addRow(['CORE KPI RESULTS']);
+                    wsSum.mergeCells(r.number, 1, r.number, 2);
+                    r.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
+                    r.getCell(1).font = { bold: true, color: { argb: 'FF854D0E' }, size: 14 };
+                    r.height = 25;
+
+                    const kpiHRow = wsSum.addRow(['Metric', 'Calculated Value']);
+                    kpiHRow.eachCell(c => { 
+                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCA8A04' } }; 
+                        c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; 
+                    });
+
+                    const prEnd = 100; 
+                    const H_MULT = timeUnit === 'Minutes' ? 60 : 3600;
+                    const B_MULT = timeUnit === 'Minutes' ? 1 : 60;
+
+                    const F_NumProc = `MAX(1, COUNT('3. Value Process Flow'!C3:C${prEnd}))`;
+                    const F_AvailTime = `('2. Global & Gemba Data'!A3*('2. Global & Gemba Data'!B3*${H_MULT}-'2. Global & Gemba Data'!C3*${B_MULT}))`;
+                    const F_DailyDem = `IF('2. Global & Gemba Data'!E3>0,'2. Global & Gemba Data'!D3/'2. Global & Gemba Data'!E3,0)`;
+                    const F_Takt = `IF(${F_DailyDem}>0,${F_AvailTime}/${F_DailyDem},0)`;
+                    const F_TotalVA = `SUM('3. Value Process Flow'!C3:C${prEnd})`;
+                    const F_TotalWIP = `SUM('3. Value Process Flow'!B3:B${prEnd})`;
+                    const F_MaxCT = `MAX('3. Value Process Flow'!C3:C${prEnd})`;
+                    const F_LTDays = `(IF(${F_DailyDem}>0,${F_TotalWIP}/${F_DailyDem},0)+IF(${F_AvailTime}>0,${F_TotalVA}/${F_AvailTime},0))`;
+                    const F_ProdYld = `IF(COUNT('3. Value Process Flow'!E3:E${prEnd})=0, 1, PRODUCT('3. Value Process Flow'!E3:E${prEnd})/POWER(100,COUNT('3. Value Process Flow'!E3:E${prEnd})))`;
+                    const F_MinYld = `IF(COUNT('3. Value Process Flow'!E3:E${prEnd})=0, 1, MIN('3. Value Process Flow'!E3:E${prEnd})/100)`;
+                    const F_AvgUp = `IFERROR(AVERAGE('3. Value Process Flow'!D3:D${prEnd})/100, 1)`;
+                    const F_TotalOps = `SUM('3. Value Process Flow'!G3:G${prEnd})`;
+                    const F_TotalLabor = `SUMPRODUCT('3. Value Process Flow'!C3:C${prEnd}, '3. Value Process Flow'!G3:G${prEnd})`;
+
+                    const excelFormulas = {
+                        takt: `${F_Takt}`,
+                        ct: `${F_MaxCT}`,
+                        lt: `${F_LTDays}`,
+                        work_content: `${F_TotalVA}`,
+                        waiting: `MAX(0, (${F_LTDays}*${F_AvailTime})-${F_TotalVA})`,
+                        co_time: `('2. Global & Gemba Data'!K3 * ${timeUnit === 'Minutes' ? 1 : 60})`,
+                        smed_ratio: `IF(${F_Takt}>0, ('2. Global & Gemba Data'!K3 * ${timeUnit === 'Minutes' ? 1 : 60})/${F_Takt}, 0)`,
+                        utilization: `IF(${F_Takt}>0, ${F_MaxCT}/${F_Takt}, 0)`,
+                        balancing: `IF(${F_MaxCT}>0, ${F_TotalVA}/(${F_NumProc}*${F_MaxCT}), 0)`,
+                        workforce: `IF(${F_Takt}>0, ${F_TotalVA}/${F_Takt}, 0)`,
+                        wip: `${F_TotalWIP}`,
+                        littles_law: `(${F_DailyDem}*${F_LTDays})`, 
+                        inv_turns: `IF(${F_TotalWIP}>0, ('2. Global & Gemba Data'!D3*12)/${F_TotalWIP}, "∞")`,
+                        flow_eff: `IF((${F_LTDays}*${F_AvailTime})>0, ${F_TotalVA}/(${F_LTDays}*${F_AvailTime}), 0)`,
+                        fpy: `${F_MinYld}`,
+                        rty: `${F_ProdYld}`,
+                        total_defects: `'2. Global & Gemba Data'!D3 * (1 - ${F_ProdYld})`,
+                        dpmu: `(1 - ${F_ProdYld}) * 1000000`,
+                        scrap_rate: `1 - ${F_ProdYld}`,
+                        va_cost: `(${F_TotalVA}/${H_MULT})*'2. Global & Gemba Data'!F3`,
+                        nva_cost: `(MAX(0, (${F_LTDays}*${F_AvailTime})-${F_TotalVA})/${H_MULT})*'2. Global & Gemba Data'!F3`,
+                        scrap_cost: `('2. Global & Gemba Data'!D3 * (1 - ${F_ProdYld})) * '2. Global & Gemba Data'!G3`,
+                        blocked_cap: `(${F_TotalWIP}*'2. Global & Gemba Data'!G3*0.15)`,
+                        epei: `('2. Global & Gemba Data'!K3 / 60)`,
+                        kanban: `CEILING((${F_DailyDem}*${F_LTDays}*1.1)/'2. Global & Gemba Data'!H3, 1)`,
+                        pitch: `(${F_Takt}/${timeUnit === 'Minutes' ? 1 : 60})*'2. Global & Gemba Data'!H3`,
+                        cov: `IF(${F_TotalVA}>0, '2. Global & Gemba Data'!L3 / (${F_TotalVA}/${F_NumProc}), 0)`,
+                        service_lvl: `${F_ProdYld} * 0.95`,
+                        availability: `${F_AvgUp}`,
+                        performance: `IF(${F_MaxCT}>0, ${F_TotalVA}/(${F_NumProc}*${F_MaxCT}), 0)`, 
+                        quality_oee: `${F_ProdYld}`,
+                        oee: `${F_AvgUp} * IF(${F_MaxCT}>0, ${F_TotalVA}/(${F_NumProc}*${F_MaxCT}), 0) * ${F_ProdYld}`, 
+                        c2c: `${F_LTDays} + '2. Global & Gemba Data'!I3 - '2. Global & Gemba Data'!J3`,
+                        dock2dock: `${F_LTDays} * 1.05`,
+                        std_time: `${F_TotalVA} * 1.15`,
+                        ops_util: `IF(AND(${F_TotalOps}>0, ${F_AvailTime}>0), (${F_TotalLabor}*${F_DailyDem})/(${F_TotalOps}*${F_AvailTime}), 0)`, 
+                        handoff: `MAX(0, (${F_LTDays}*${F_AvailTime})-${F_TotalVA})/${F_NumProc}`,
+                        gemba_manual: `SUM('3. Value Process Flow'!H3:H${prEnd})`,
+                        gemba_machine: `SUM('3. Value Process Flow'!I3:I${prEnd})`,
+                        gemba_rework: `IFERROR(AVERAGE('3. Value Process Flow'!K3:K${prEnd})/100, 0)`,
+                        gemba_batch: `IFERROR(AVERAGE('3. Value Process Flow'!J3:J${prEnd}), 0)`,
+                        gemba_labor_util: `IF(AND(${F_TotalOps}>0, ${F_AvailTime}>0), (${F_TotalLabor}*${F_DailyDem})/(${F_TotalOps}*${F_AvailTime}), 0)`,
+                        gemba_inv_safety: `'2. Global & Gemba Data'!A15`,
+                        gemba_inv_fg: `'2. Global & Gemba Data'!B15`,
+                        gemba_inv_rm: `'2. Global & Gemba Data'!C15`,
+                        gemba_inv_total_turns: `IF(SUM('2. Global & Gemba Data'!A15, '2. Global & Gemba Data'!B15, '2. Global & Gemba Data'!C15, ${F_TotalWIP})>0, ('2. Global & Gemba Data'!D3*12)/SUM('2. Global & Gemba Data'!A15, '2. Global & Gemba Data'!B15, '2. Global & Gemba Data'!C15, ${F_TotalWIP}), "∞")`,
+                        gemba_supp_lt: `'2. Global & Gemba Data'!B7`,
+                        gemba_supp_freq: `'2. Global & Gemba Data'!C7`,
+                        gemba_supp_otd: `'2. Global & Gemba Data'!E7 / 100`,
+                        gemba_supp_defects: `'2. Global & Gemba Data'!F7 / 100`,
+                        gemba_cust_vol: `'2. Global & Gemba Data'!D3`,
+                        gemba_cust_var: `'2. Global & Gemba Data'!B11 / 100`,
+                        gemba_cust_sl: `'2. Global & Gemba Data'!D11 / 100`
+                    };
+
+                    const Fmt = {
+                        takt: `#,##0.00 "${unitLabel}"`, ct: `#,##0.00 "${unitLabel}"`, lt: `#,##0.00 "Days"`,
+                        work_content: `#,##0.00 "${unitLabel}"`, waiting: `#,##0.00 "${unitLabel}"`, co_time: `#,##0.00 "${unitLabel}"`,
+                        smed_ratio: '0.00%', utilization: '0.00%', balancing: '0.00%', workforce: `#,##0.0 "Heads"`,
+                        wip: `#,##0 "Units"`, littles_law: `#,##0 "Units"`, inv_turns: `#,##0.0 "Turns/Yr"`,
+                        flow_eff: '0.00%', fpy: '0.00%', rty: '0.00%', total_defects: `#,##0 "Units"`, dpmu: `#,##0`,
+                        scrap_rate: '0.00%', va_cost: `"₹"#,##0.00`, nva_cost: `"₹"#,##0.00`, scrap_cost: `"₹"#,##0.00`,
+                        blocked_cap: `"₹"#,##0.00`, epei: `#,##0.00 "Hrs"`, kanban: `#,##0 "Bins"`, pitch: `#,##0.0 "Mins"`,
+                        cov: `0.00`, service_lvl: '0.00%', oee: '0.00%', availability: '0.00%', performance: '0.00%',
+                        quality_oee: '0.00%', c2c: `#,##0.0 "Days"`, dock2dock: `#,##0.0 "Days"`, std_time: `#,##0.00 "${unitLabel}"`,
+                        ops_util: '0.00%', handoff: `#,##0.00 "${unitLabel}"`, gemba_manual: `#,##0.00 "${unitLabel}"`,
+                        gemba_machine: `#,##0.00 "${unitLabel}"`, gemba_rework: '0.00%', gemba_batch: `#,##0 "Units"`,
+                        gemba_labor_util: '0.00%', gemba_inv_safety: `#,##0 "Units"`, gemba_inv_fg: `#,##0 "Units"`,
+                        gemba_inv_rm: `#,##0 "Units"`, gemba_inv_total_turns: `#,##0.0 "Turns"`, gemba_supp_lt: `#,##0 "Days"`,
+                        gemba_supp_freq: `#,##0 " / Wk"`, gemba_supp_otd: '0.00%', gemba_supp_defects: '0.00%',
+                        gemba_cust_vol: `#,##0 "Units"`, gemba_cust_var: '0.00%', gemba_cust_sl: '0.00%'
+                    };
+
+                    const kpiRows = [
+                        { name: "Total Lead Time", id: 'lt', res: results.raw_lt },
+                        { name: "Process Cycle Efficiency", id: 'flow_eff', res: results.raw_pce/100 },
+                        { name: "Total Labor Content", id: 'work_content', res: results.raw_labor }, 
+                        { name: "Rolled Throughput Yield", id: 'rty', res: results.raw_rty/100 },
+                        { name: "System Efficiency (OEE)", id: 'oee', res: results.raw_oee/100 }
+                    ];
+                    
+                    kpiRows.forEach(item => {
+                        const row = wsSum.addRow(['', '']);
+                        row.getCell(1).value = item.name;
+                        row.getCell(2).value = { formula: excelFormulas[item.id] || F_TotalLabor, result: item.res };
+                        if (item.id === 'work_content') row.getCell(2).numFmt = `#,##0.00 "${unitLabel}s"`;
+                        else if (Fmt[item.id]) row.getCell(2).numFmt = Fmt[item.id];
+
+                        row.getCell(1).font = { bold: true, color: { argb: 'FF92400E' } };
+                        row.getCell(2).font = { bold: true, size: 12, color: { argb: 'FFB45309' } };
+                        row.getCell(2).alignment = { horizontal: 'center' };
+                        row.eachCell(c => {
+                            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+                            c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
+                        });
+                    });
+
+                    const wsData = workbook.addWorksheet('2. Global & Gemba Data');
+                    wsData.columns = [{ width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }];
+                    
+                    addSectionHeader(wsData, 'GLOBAL INPUT PARAMETERS (Flow & Financials)', 'FF1E3A8A', 12);
+                    let hr = wsData.addRow(['Shifts', 'Hours/Shift', 'Breaks (m)', 'Demand/Mo', 'Days/Mo', 'Labor Rate/Hr', 'Unit Cost', 'Bin Size', 'Days A/R', 'Days A/P', 'Setup Mins', 'CT Std Dev']);
+                    styleTableRow(hr, true, 'FF3B82F6');
+                    
+                    let dr = wsData.addRow([
+                        parseSimpleNum(globals.shifts), parseSimpleNum(globals.hoursPerShift), parseSimpleNum(globals.breaks), 
+                        parseSimpleNum(globals.demand), parseSimpleNum(globals.days), parseSimpleNum(globals.laborRate), 
+                        parseSimpleNum(globals.unitCost), parseSimpleNum(globals.containerSize), parseSimpleNum(globals.daysAR), 
+                        parseSimpleNum(globals.daysAP), 
+                        parseSimpleNum(globals.setupMins !== "" ? parseFloat(globals.setupMins) * sm.setup : ""), 
+                        parseSimpleNum(globals.ctStdDev)
+                    ]);
+                    styleTableRow(dr, false, 'FFEFF6FF');
+                    wsData.addRow([]);
+
+                    addSectionHeader(wsData, 'GEMBA SUPPLIER DATA', 'FF064E3B', 6);
+                    hr = wsData.addRow(['Supplier Name', 'Supp Lead Time', 'Supp Freq', 'Supp Lot Size', 'OTD %', 'Defect Rate %']);
+                    styleTableRow(hr, true, 'FF10B981');
+                    dr = wsData.addRow([globals.suppName, parseSimpleNum(globals.suppLT), parseSimpleNum(globals.suppFreq), parseSimpleNum(globals.suppLot), parseSimpleNum(globals.suppOTD), parseSimpleNum(globals.suppDefect)]);
+                    styleTableRow(dr, false, 'FFF0FDF4');
+                    wsData.addRow([]);
+
+                    addSectionHeader(wsData, 'GEMBA CUSTOMER DATA', 'FF064E3B', 4);
+                    hr = wsData.addRow(['Customer Name', 'Cust Variation %', 'Cust Order Freq', 'Service Level %']);
+                    styleTableRow(hr, true, 'FF10B981');
+                    dr = wsData.addRow([globals.custName, parseSimpleNum(globals.custVariation), parseSimpleNum(globals.custFreq), parseSimpleNum(globals.custSL)]);
+                    styleTableRow(dr, false, 'FFF0FDF4');
+                    wsData.addRow([]);
+
+                    addSectionHeader(wsData, 'FACILITY INVENTORY', 'FF064E3B', 3);
+                    hr = wsData.addRow(['Safety Stock', 'FG Inventory', 'RM Inventory']);
+                    styleTableRow(hr, true, 'FF10B981');
+                    dr = wsData.addRow([parseSimpleNum(globals.invSafety), parseSimpleNum(globals.invFG), parseSimpleNum(globals.invRM)]);
+                    styleTableRow(dr, false, 'FFF0FDF4');
+                    wsData.addRow([]);
+
+                    const wsFlow = workbook.addWorksheet('3. Value Process Flow');
+                    wsFlow.columns = [
+                        { width: 25 }, { width: 12 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, 
+                        { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }
+                    ];
+                    addSectionHeader(wsFlow, 'VALUE PROCESS FLOW', 'FF0F172A', 11);
+                    hr = wsFlow.addRow(["Step Name", "WIP", `C/T (${unitLabel})`, "Uptime %", "Yield %", "Defects", "Operators", `Manual Time`, `Machine Time`, "Batch Size", "Rework %"]);
+                    styleTableRow(hr, true, 'FF334155');
+
+                    processes.forEach(p => {
+                        const ct = p.ct !== "" ? parseFloat(p.ct) * sm.ct : "";
+                        const up = p.up !== "" ? Math.min(100, parseFloat(p.up) * sm.up) : "";
+                        const yld = p.yield !== "" ? Math.min(100, parseFloat(p.yield) * sm.yld) : "";
+                        const rew = p.rework !== "" ? parseFloat(p.rework) * sm.rew : "";
+                        const def = (yld !== "" && globals.demand !== "") ? Math.max(0, globals.demand * (100 - yld) / 100) : "";
+
+                        const row = wsFlow.addRow([p.name, parseSimpleNum(p.wip), parseSimpleNum(ct), parseSimpleNum(up), parseSimpleNum(yld), parseSimpleNum(def), parseSimpleNum(p.ops), parseSimpleNum(p.manualCt), parseSimpleNum(p.machineCt), parseSimpleNum(p.batchSize), parseSimpleNum(rew)]);
+                        styleTableRow(row, false, 'FFF8FAFC');
+                        row.getCell(1).font = { bold: true };
+                        row.getCell(1).alignment = { horizontal: 'left' };
+                    });
+
+                    const wsMet = workbook.addWorksheet('4. Calculated Metrics');
+                    wsMet.columns = [{ width: 25 }, { width: 45 }, { width: 90 }, { width: 25 }];
+                    
+                    addSectionHeader(wsMet, 'ALL CALCULATED METRICS & FORMULAS', 'FF475569', 4);
+                    hr = wsMet.addRow(['Metric Name', 'Math Formula Used', 'Description', 'Calculated Result']);
+                    styleTableRow(hr, true, 'FF0F172A');
+                    
+                    Object.values(metricLibrary).forEach(category => {
+                        const catRow = wsMet.addRow([category.title.toUpperCase()]);
+                        wsMet.mergeCells(catRow.number, 1, catRow.number, 4);
+                        catRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+                        catRow.getCell(1).font = { bold: true, color: { argb: 'FF0F172A' }, size: 12 };
+                        catRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+                        
+                        category.metrics.forEach(m => {
+                            const mRow = wsMet.addRow(['', '', '', '']);
+                            mRow.getCell(1).value = m.name;
+                            mRow.getCell(3).value = m.description;
+                            
+                            const fStr = excelFormulas[m.id];
+                            if (fStr) {
+                                mRow.getCell(2).value = '=' + fStr; 
+                                let rValue = parseFloat(String(results[m.id] || '').replace(/[^0-9.-]/g, ''));
+                                if (Fmt[m.id] && Fmt[m.id].includes('%')) rValue = rValue / 100;
+                                mRow.getCell(4).value = { formula: fStr, result: isNaN(rValue) ? 0 : rValue };
+                            } else {
+                                mRow.getCell(2).value = "Static Output Value";
+                                const rawRes = String(results[m.id] || '');
+                                const numExtract = rawRes.replace(/[^0-9.-]/g, '');
+                                let num = parseFloat(numExtract);
+                                mRow.getCell(4).value = isNaN(num) ? rawRes : num;
+                            }
+                            
+                            if (Fmt[m.id]) mRow.getCell(4).numFmt = Fmt[m.id];
+
+                            mRow.getCell(1).font = { bold: true, color: { argb: 'FF1E293B' }, size: 11 };
+                            mRow.getCell(2).font = { color: { argb: 'FF0284C7' }, italic: true, size: 11 };
+                            mRow.getCell(3).font = { color: { argb: 'FF475569' }, size: 10 };
+                            mRow.getCell(4).font = { bold: true, color: { argb: 'FF0F172A' }, size: 12 };
+                            
+                            mRow.getCell(1).alignment = { vertical: 'middle', horizontal: 'right', wrapText: true };
+                            mRow.getCell(2).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                            mRow.getCell(3).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+                            mRow.getCell(4).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                            
+                            mRow.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+                            mRow.eachCell(c => { c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } } });
+
+                            const maxLen = Math.max(m.description.length / 60, (fStr || "").length / 35);
+                            mRow.height = Math.max(35, Math.ceil(maxLen) * 18);
+                        });
+                    });
+
+                    const wsCapa = workbook.addWorksheet('5. CAPA Tracker');
+                    wsCapa.columns = [{width: 40}, {width: 40}, {width: 40}, {width: 20}, {width: 20}, {width: 15}];
+                    addSectionHeader(wsCapa, 'CORRECTIVE & PREVENTIVE ACTION (CAPA) LOG', 'FF991B1B', 6);
+                    hr = wsCapa.addRow(['Problem / Defect', 'Root Cause', 'Action Plan', 'Owner', 'Deadline', 'Status']);
+                    styleTableRow(hr, true, 'FFDC2626');
+                    capaItems.forEach(c => {
+                        const row = wsCapa.addRow([c.problem, c.rootCause, c.action, c.owner, c.deadline, c.status]);
+                        styleTableRow(row, false, 'FFFEF2F2');
+                        row.getCell(6).font = { bold: true, color: { argb: c.status === 'Closed' ? 'FF059669' : c.status === 'WIP' ? 'FFD97706' : 'FFDC2626' } };
+                        row.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left' };
+                    });
+
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `MECTS_Training_Report_${new Date().getTime()}.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    setPrintMessage("Multi-Tab Formula Excel Report Exported Successfully!");
+                    setTimeout(() => setPrintMessage(""), 4000);
+                } catch (error) {
+                    console.error(error);
+                    setPrintMessage("Error generating Excel. Check console.");
+                    setTimeout(() => setPrintMessage(""), 4000);
+                }
+            };
+
+            const handleExportPDF = async () => {
+                if (!window.jspdf || !window.html2canvas) {
+                    setPrintMessage("PDF libraries loading. Please wait.");
+                    setTimeout(() => setPrintMessage(""), 4000);
+                    return;
+                }
+                
+                setIsGeneratingPDF(true);
+                setPrintMessage("Structuring Master Class PDF...");
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    
+                    const element = document.getElementById('pdf-content');
+                    
+                    const captureWidth = 1400;
+                    element.style.width = `${captureWidth}px`;
+                    element.style.maxWidth = `${captureWidth}px`;
+                    element.style.margin = '0 auto';
+                    
+                    const canvas = await window.html2canvas(element, {
+                        scale: 2,
+                        useCORS: true,
+                        windowWidth: captureWidth + 40,
+                        backgroundColor: '#ffffff'
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    
+                    const pdf = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                    
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    
+                    const margin = 10;
+                    const contentWidth = pdfWidth - (margin * 2);
+                    
+                    const imgHeightInMm = (canvas.height * contentWidth) / canvas.width;
+                    
+                    let heightLeft = imgHeightInMm;
+                    let position = margin;
+
+                    pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeightInMm);
+                    heightLeft -= (pdfHeight - margin);
+
+                    while (heightLeft > 0) {
+                        position = position - pdfHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, imgHeightInMm);
+                        heightLeft -= pdfHeight;
+                    }
+
+                    pdf.save(`MECTS_System_Audit_${Date.now()}.pdf`);
+                    
+                    element.style.width = '';
+                    element.style.maxWidth = '';
+                    element.style.margin = '';
+                    
+                    setIsGeneratingPDF(false);
+                    setPrintMessage("PDF Downloaded Successfully!");
+                    setTimeout(() => setPrintMessage(""), 3000);
+                    
+                } catch (error) {
+                    console.error(error);
+                    setIsGeneratingPDF(false);
+                    setPrintMessage("PDF Generation Failed.");
+                    setTimeout(() => setPrintMessage(""), 3000);
+                }
+            };
+
+            const activeMetric = metricLibrary[activeCategory]?.metrics.find(m => m.id === activeMetricId) || metricLibrary['basic_flow'].metrics[0];
+
+            useEffect(() => {
+                if (showCapaModal || showMectopedia) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = 'unset';
+                }
+                return () => { document.body.style.overflow = 'unset'; };
+            }, [showCapaModal, showMectopedia]);
+
+            return (
+                <div className={`min-h-screen relative overflow-hidden ${isGeneratingPDF ? 'bg-white' : 'bg-slate-50'}`}>
+                    
+                    {/* INPUT ERROR TOASTS */}
+                    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[150] space-y-2 pointer-events-none no-print flex flex-col items-center">
+                        {inputErrors.map(e => (
+                            <div key={e.id} className="fade-in bg-red-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold tracking-wide text-sm pointer-events-auto shadow-red-900/30 flex items-center gap-2">
+                                <AlertTriangle size={18} /> {e.msg}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* MECTOPEDIA MODAL OVERLAY */}
+                    {showMectopedia && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex justify-end no-print" onClick={() => setShowMectopedia(false)}>
+                            <div className="slide-in bg-white w-full md:w-[450px] h-full shadow-2xl flex flex-col border-l border-slate-200" onClick={e => e.stopPropagation()}>
+                                <div className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <BookOpen size={24} className="text-emerald-400" />
+                                        <h2 className="text-lg font-black tracking-widest uppercase">Mectopedia</h2>
+                                    </div>
+                                    <button onClick={() => setShowMectopedia(false)} className="text-slate-400 hover:text-white transition-colors"><X size={24}/></button>
+                                </div>
+                                <div className="p-6 overflow-y-auto space-y-8 pb-24 bg-slate-50 flex-1">
+                                    <p className="text-sm font-medium text-slate-500 italic border-l-4 border-emerald-400 pl-3">Your ultimate glossary for Industrial Execution & Lean Six Sigma Terminology.</p>
+                                    {dynamicMectopedia.map((item, idx) => (
+                                        <div key={idx} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                                            <h3 className="font-black text-indigo-700 text-base mb-2 uppercase tracking-wide">{item.term}</h3>
+                                            <p className="text-sm text-slate-700 mb-4 font-medium leading-relaxed">{item.def}</p>
+                                            <div className="mb-4 bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm">
+                                                <span className="font-black text-emerald-400 text-[10px] uppercase tracking-widest block mb-1 flex items-center gap-1"><Calculator size={12}/> Formula</span>
+                                                <span className="text-blue-300 font-mono font-bold tracking-tight mb-2 block">{item.formula}</span>
+                                                <div className="border-t border-slate-700 pt-2 mt-2 flex justify-between items-center">
+                                                    <span className="text-slate-400 text-[10px] uppercase">Live Result:</span>
+                                                    <span className="text-white font-black text-lg">{item.live}</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-sm">
+                                                <span className="font-black text-indigo-800 text-[10px] uppercase tracking-widest block mb-1">Analogy</span>
+                                                <span className="text-indigo-900 italic font-medium">{item.analogy}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CAPA MODAL OVERLAY */}
+                    {(showCapaModal || isGeneratingPDF) && (
+                        <div className={isGeneratingPDF ? "pt-8 page-break-avoid w-full" : "fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-print"} onClick={() => !isGeneratingPDF && setShowCapaModal(false)}>
+                            <div className={isGeneratingPDF ? "" : "min-h-screen px-4 text-center"}>
+                                {/* This element is to trick the browser into centering the modal contents. */}
+                                {!isGeneratingPDF && <span className="inline-block h-screen align-middle" aria-hidden="true">&#8203;</span>}
+                                
+                                <div className={`inline-block w-full max-w-[1400px] text-left align-middle bg-slate-50 transition-all ${isGeneratingPDF ? '' : 'my-8 rounded-2xl shadow-2xl overflow-hidden'}`} onClick={e => e.stopPropagation()}>
+                                    <div className={`p-6 text-white flex justify-between items-center shrink-0 ${isGeneratingPDF ? 'bg-slate-800 rounded-t-xl' : 'bg-slate-900'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <CheckSquare size={24} className="text-emerald-400" />
+                                            <h2 className="text-xl font-black tracking-widest uppercase">System Diagnostics & CAPA Log</h2>
+                                        </div>
+                                        {!isGeneratingPDF && <button onClick={() => setShowCapaModal(false)} className="text-slate-400 hover:text-white transition-colors"><X size={24}/></button>}
+                                    </div>
+                                    <div className={`p-6 md:p-8 ${isGeneratingPDF ? 'border-l border-r border-b border-slate-200 rounded-b-xl' : ''}`}>
+                                        
+                                        {/* AI Dynamic Recommendations */}
+                                        <div className="mb-8">
+                                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 mb-4 border-b-2 border-slate-200 pb-2">
+                                                <Activity size={18} className="text-indigo-600"/> Executive Action Plan
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {dynamicRecommendations.map((rec, i) => (
+                                                    <div key={i} className="bg-white border-l-4 border-indigo-500 p-4 rounded-r-xl shadow-sm">
+                                                        <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest block mb-1">{rec.type}</span>
+                                                        <p className="text-sm font-medium text-slate-700 leading-relaxed">{rec.text}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* CAPA Table */}
+                                        <div>
+                                            <div className="flex justify-between items-center border-b-2 border-slate-200 pb-2 mb-4">
+                                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                                    <AlertTriangle size={18} className="text-amber-600"/> Corrective Action Log
+                                                </h3>
+                                                {!isGeneratingPDF && (
+                                                    <button onClick={() => setCapaItems([...capaItems, { id: Date.now(), problem: "", rootCause: "", action: "", owner: "", deadline: "", status: "Open" }])}
+                                                            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+                                                        <PlusCircle size={14}/> ADD ACTION
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                                <table className="w-full text-left text-sm text-slate-600">
+                                                    <thead className="bg-slate-100 border-b border-slate-200 text-xs uppercase font-black text-slate-500">
+                                                        <tr>
+                                                            <th className="p-4">Problem / Defect</th>
+                                                            <th className="p-4">Root Cause</th>
+                                                            <th className="p-4">Action Plan</th>
+                                                            <th className="p-4 w-32">Owner</th>
+                                                            <th className="p-4 w-32">Deadline</th>
+                                                            <th className="p-4 w-24">Status</th>
+                                                            {!isGeneratingPDF && <th className="p-4 w-12"></th>}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {capaItems.map((c, i) => (
+                                                            <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? <div className="font-medium text-slate-800">{c.problem}</div> : 
+                                                                    <textarea className="w-full bg-transparent outline-none resize-none font-medium text-slate-800 focus:bg-white focus:ring-1 ring-slate-200 rounded p-1" rows="2" value={c.problem} onChange={(e)=>{const n=[...capaItems]; n[i].problem=e.target.value; setCapaItems(n)}} placeholder="Describe issue..."/>}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? <div>{c.rootCause}</div> : 
+                                                                    <textarea className="w-full bg-transparent outline-none resize-none focus:bg-white focus:ring-1 ring-slate-200 rounded p-1" rows="2" value={c.rootCause} onChange={(e)=>{const n=[...capaItems]; n[i].rootCause=e.target.value; setCapaItems(n)}} placeholder="Why did it happen?"/>}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? <div>{c.action}</div> : 
+                                                                    <textarea className="w-full bg-transparent outline-none resize-none focus:bg-white focus:ring-1 ring-slate-200 rounded p-1" rows="2" value={c.action} onChange={(e)=>{const n=[...capaItems]; n[i].action=e.target.value; setCapaItems(n)}} placeholder="Steps to resolve..."/>}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? <div className="font-semibold text-slate-800">{c.owner}</div> : 
+                                                                    <input type="text" className="w-full bg-transparent outline-none font-semibold text-slate-800 focus:bg-white focus:ring-1 ring-slate-200 rounded p-1" value={c.owner} onChange={(e)=>{const n=[...capaItems]; n[i].owner=e.target.value; setCapaItems(n)}} placeholder="Name"/>}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? <div className="font-mono text-xs">{c.deadline}</div> : 
+                                                                    <input type="date" className="w-full bg-transparent outline-none text-sm focus:bg-white focus:ring-1 ring-slate-200 rounded p-1" value={c.deadline} onChange={(e)=>{const n=[...capaItems]; n[i].deadline=e.target.value; setCapaItems(n)}}/>}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {isGeneratingPDF ? (
+                                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${c.status==='Closed'?'bg-emerald-100 text-emerald-800':c.status==='WIP'?'bg-amber-100 text-amber-800':'bg-red-100 text-red-800'}`}>{c.status}</span>
+                                                                    ) : (
+                                                                        <select className={`w-full bg-transparent outline-none font-bold text-xs p-1 rounded ${c.status==='Closed'?'text-emerald-600':c.status==='WIP'?'text-amber-600':'text-red-600'}`} value={c.status} onChange={(e)=>{const n=[...capaItems]; n[i].status=e.target.value; setCapaItems(n)}}>
+                                                                            <option value="Open">Open</option>
+                                                                            <option value="WIP">WIP</option>
+                                                                            <option value="Closed">Closed</option>
+                                                                        </select>
+                                                                    )}
+                                                                </td>
+                                                                {!isGeneratingPDF && (
+                                                                    <td className="p-3 text-right">
+                                                                        <button onClick={() => setCapaItems(capaItems.filter(item => item.id !== c.id))} className="text-slate-400 hover:text-red-500"><Trash2 size={16}/></button>
+                                                                    </td>
+                                                                )}
+                                                            </tr>
+                                                        ))}
+                                                        {capaItems.length === 0 && (
+                                                            <tr><td colSpan="7" className="p-6 text-center text-slate-400 font-bold">No CAPA items registered.</td></tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* COMMAND HEADER */}
+                    <header className={`bg-slate-900 text-white border-b-4 border-emerald-500 sticky top-0 z-50 ${isGeneratingPDF ? 'no-print' : 'shadow-xl'}`}>
+                        <div className="max-w-[1450px] mx-auto px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-black italic tracking-tighter text-emerald-400">MECTS SET...GO</h1>
+                                <p className="text-xs font-bold tracking-widest text-slate-300 uppercase mt-1">GEMBA Execution & Analytics Framework</p>
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={handleClearAll} className="bg-red-600 text-white px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 hover:bg-red-500 transition-colors shadow-lg shadow-red-900/50">
+                                    <RefreshCw size={16}/> CLEAR ALL
+                                </button>
+                                <button onClick={handleOpenCapa} className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-900/50">
+                                    <CheckSquare size={16}/> CAPA REPORT
+                                </button>
+                                <button onClick={() => setShowMectopedia(true)} className="bg-slate-700 text-white px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 hover:bg-slate-600 transition-colors border border-slate-600 hidden md:flex">
+                                    <BookOpen size={16}/> MECTOPEDIA
+                                </button>
+                                <button onClick={handleExportPDF} className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/50 hidden md:flex">
+                                    <Printer size={16}/> PDF
+                                </button>
+                                <button onClick={handleExportExcel} className="bg-slate-700 text-white px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 hover:bg-slate-600 transition-colors border border-slate-600 hidden md:flex">
+                                    <Download size={16}/> EXCEL
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {printMessage && !isGeneratingPDF && (
+                        <div className="bg-emerald-100 border-b border-emerald-300 text-emerald-900 px-6 py-2 text-center text-xs font-bold flex justify-center items-center gap-2">
+                            <Info size={14} /> {printMessage}
+                            <button onClick={() => setPrintMessage("")} className="ml-4 text-emerald-600 hover:text-emerald-900"><X size={14}/></button>
+                        </div>
+                    )}
+
+                    {/* MAIN WRAPPER FOR PDF CAPTURE */}
+                    <div id="pdf-content" className={`max-w-[1450px] mx-auto p-6 space-y-8 ${isGeneratingPDF ? 'pdf-mode' : ''}`}>
+                        
+                        {/* PDF PRINT HEADER */}
+                        {isGeneratingPDF && (
+                            <div className="pb-6 border-b-4 border-slate-900 mb-8 page-break-avoid">
+                                <h1 className="text-4xl font-black tracking-tighter text-slate-900">MECTS SET...GO</h1>
+                                <p className="text-sm font-bold tracking-widest text-slate-500 uppercase mt-1">Industrial Execution & GEMBA Diagnostics Report</p>
+                                <div className="mt-4 flex gap-6 text-sm font-bold text-slate-800 bg-slate-100 p-3 rounded-lg border border-slate-200">
+                                    <div>Segment: <span className="text-emerald-600">{selectedIndustry}</span></div>
+                                    <div>Scenario: <span className="text-emerald-600">{scenario}</span></div>
+                                    <div>Time Unit: <span className="text-emerald-600">{timeUnit}</span></div>
+                                    <div>Generated: <span className="text-emerald-600">{new Date().toLocaleDateString()}</span></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* SECTION 1: CONFIGURATION */}
+                        <section className="space-y-4 page-break-avoid">
+                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+                                <Calculator size={18} className="text-emerald-600"/> 1. Global Parameters & Settings
+                            </h2>
+                            
+                            {!isGeneratingPDF && (
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                                        <Globe size={20} className="text-slate-400"/>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Industry Segment</label>
+                                            <select className="w-full font-bold outline-none text-sm" value={selectedIndustry} onChange={(e) => {
+                                                const val = e.target.value;
+                                                setSelectedIndustry(val);
+                                                setGlobals(getPresetData(val).globals);
+                                                const m = timeUnit==='Minutes'?1/60:1;
+                                                setProcesses(getPresetData(val).processes.map(p=>({...p, ct:p.ct?p.ct*m:"", manualCt:p.manualCt?p.manualCt*m:"", machineCt:p.machineCt?p.machineCt*m:""})));
+                                            }}>
+                                                {Object.keys(industryPresets).map(k => <option key={k} value={k}>{k}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                                        <Sliders size={20} className={scenario === 'Catastrophic' ? 'text-red-500' : scenario === 'Best Case' ? 'text-emerald-500' : 'text-slate-400'}/>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Simulation Scenario</label>
+                                            <select 
+                                                className={`w-full font-bold outline-none text-sm ${scenario === 'Catastrophic' ? 'text-red-600' : scenario === 'Best Case' ? 'text-emerald-600' : 'text-indigo-700'}`} 
+                                                value={scenario} 
+                                                onChange={(e) => {
+                                                    setScenario(e.target.value);
+                                                }}
+                                            >
+                                                <option value="Baseline">Baseline (As-Is)</option>
+                                                <option value="Best Case">Best Case (Optimized)</option>
+                                                <option value="Catastrophic">Catastrophic (Worst Case)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                                        <Layers size={20} className="text-slate-400"/>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Metric Category Group</label>
+                                            <select className="w-full font-bold outline-none text-sm" value={activeCategory} onChange={(e) => setActiveCategory(e.target.value)}>
+                                                {Object.entries(metricLibrary).map(([key, cat]) => (
+                                                    <option key={key} value={key}>{cat.title}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
+                                        <Clock size={20} className="text-slate-400"/>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Base Time Unit</label>
+                                            <select className="w-full font-bold outline-none text-sm" value={timeUnit} onChange={handleTimeUnitChange}>
+                                                <option value="Seconds">Seconds (Sec)</option>
+                                                <option value="Minutes">Minutes (Min)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* INTERACTIVE METRIC EXPLORER (BLACK BOX) */}
+                            <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm page-break-avoid mb-6 relative">
+                                {scenario !== 'Baseline' && (
+                                    <div className={`absolute top-0 left-1/2 -translate-x-1/2 text-white text-[10px] font-black px-4 py-1 rounded-b-lg tracking-widest z-20 ${scenario === 'Catastrophic' ? 'bg-red-600' : 'bg-emerald-600'}`}>
+                                        {scenario.toUpperCase()} SIMULATION ACTIVE
+                                    </div>
+                                )}
+                                <div className="bg-slate-100 px-6 py-4 flex justify-between items-center border-b border-slate-200">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="bg-slate-900 text-emerald-400 p-2 rounded-lg"><Calculator size={20}/></div>
+                                        <div className="relative w-full max-w-sm">
+                                            {!isGeneratingPDF ? (
+                                                <Fragment>
+                                                    <select 
+                                                        value={activeMetricId}
+                                                        onChange={(e) => setActiveMetricId(e.target.value)}
+                                                        className="w-full bg-transparent text-xl font-black focus:outline-none cursor-pointer border-b-2 border-dashed border-slate-300 hover:border-slate-800 transition-colors appearance-none pr-8 relative z-10 text-slate-800"
+                                                    >
+                                                        {metricLibrary[activeCategory]?.metrics.map(m => (
+                                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-800 pointer-events-none z-0" size={20} />
+                                                </Fragment>
+                                            ) : (
+                                                <div className="text-xl font-black text-slate-800">{activeMetric?.name}</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0 ml-4">
+                                        <div className="text-[10px] font-black text-slate-500 uppercase">TARGET</div>
+                                        <div className="text-sm font-bold text-slate-800">{activeMetric?.target}</div>
+                                    </div>
+                                </div>
+                                <div className="p-6 md:p-10 bg-slate-900 text-white flex flex-col lg:flex-row justify-between items-start gap-8 border-b-8 border-emerald-500">
+                                    <div className="space-y-6 flex-1 w-full text-left">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl text-left flex flex-col justify-center">
+                                                <span className="text-xs font-black text-emerald-400 uppercase tracking-widest block mb-2 flex items-center gap-2">
+                                                    <Calculator size={14}/> Industrial Formula
+                                                </span>
+                                                <div className="text-lg md:text-xl font-mono font-bold break-words text-blue-300 tracking-tight leading-relaxed">{activeMetric?.formula}</div>
+                                            </div>
+                                            <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl flex items-start gap-4 text-left">
+                                                <Info size={24} className="text-indigo-400 shrink-0 mt-1" />
+                                                <div>
+                                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">Metric Description</span>
+                                                    <div className="text-sm font-medium text-slate-300 leading-relaxed space-y-2">
+                                                        {activeMetric?.description.split('. ').map((sentence, i) => (
+                                                            sentence ? <p key={i}>{sentence.trim() + (sentence.endsWith('.') ? '' : '.')}</p> : null
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="shrink-0 bg-slate-800 p-8 rounded-2xl border border-slate-700 w-full lg:w-auto text-left lg:text-right self-stretch flex flex-col justify-center">
+                                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest block mb-3">Calculated Result</span>
+                                        <div className="text-5xl font-black text-emerald-400">
+                                            {results[activeMetricId] || '0'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={`bg-white rounded-xl border border-slate-200 p-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 ${isGeneratingPDF ? '' : 'shadow-sm'}`}>
+                                {[
+                                    { label: "Shifts", key: "shifts", tip: "Shifts scheduled per day." },
+                                    { label: "Hrs/Shift", key: "hoursPerShift", tip: "Duration of a single shift." },
+                                    { label: "Breaks (m)", key: "breaks", tip: "Break/meal time per shift." },
+                                    { label: "Demand/Mo", key: "demand", tip: "Order quantity required per month." },
+                                    { label: "Days/Mo", key: "days", tip: "Active working days in a month." },
+                                    { label: "Labor Rate", key: "laborRate", tip: "Hourly cost per operator." },
+                                    { label: "Unit Cost", key: "unitCost", tip: "Manufactured cost per unit." },
+                                    { label: "Kanban Bin", key: "containerSize", tip: "Standard quantity per bin." },
+                                    { label: "Days A/R", key: "daysAR", tip: "Average Days Accounts Receivable." },
+                                    { label: "Days A/P", key: "daysAP", tip: "Average Days Accounts Payable." },
+                                    { label: "Setup Mins", key: "setupMins", tip: "Total changeover and line setup time." },
+                                    { label: "CT Std Dev", key: "ctStdDev", tip: "Cycle Time Standard Deviation." }
+                                ].map(f => (
+                                    <div key={f.key}>
+                                        <TooltipLabel label={f.label} tooltip={f.tip} isPdf={isGeneratingPDF} />
+                                        {isGeneratingPDF ? <div className="font-black text-slate-800 pt-1">{globals[f.key]||'-'}</div> :
+                                        <input type="text" inputMode="decimal" className="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 font-bold text-slate-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm" value={globals[f.key]} onChange={(e) => { if(validateNumeric(e.target.value, f.label)) setGlobals({...globals, [f.key]: e.target.value}); }} />}
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* SECTION 2: GEMBA MATRIX */}
+                        <section className="space-y-4">
+                            <div className="flex justify-between items-center border-b-2 border-slate-200 pb-2 page-break-avoid">
+                                <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                    <Target size={18} className="text-emerald-600"/> 2. Value Process Flow Matrix
+                                </h2>
+                                {!isGeneratingPDF && (
+                                    <button onClick={() => setProcesses([...processes, { name: "Step "+(processes.length+1), wip: "", ct: "", up: "", yield: "", defects: "", ops: "", manualCt:"", machineCt:"", batchSize:"", rework:"" }])}
+                                            className="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors">
+                                        + ADD PROCESS
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className={isGeneratingPDF ? 'grid grid-cols-3 gap-6 pb-4' : 'flex gap-4 overflow-x-auto scrollbar-hide pb-4'}>
+                                {processes.map((p, i) => (
+                                    <div key={i} className={`bg-white rounded-xl border border-slate-200 overflow-hidden page-break-avoid ${isGeneratingPDF ? 'shadow-sm' : 'flex-shrink-0 w-80 shadow-sm hover:shadow-md transition-shadow'}`}>
+                                        <div className="bg-slate-800 p-3 flex justify-between items-center border-b-4 border-emerald-500">
+                                            {isGeneratingPDF ? <div className="font-black text-white uppercase text-sm truncate">{p.name||'Step'}</div> :
+                                            <input type="text" className="bg-transparent text-white font-black uppercase text-sm w-full outline-none" value={p.name} onChange={(e) => { const n = [...processes]; n[i] = {...n[i], name: e.target.value}; setProcesses(n); }} placeholder="PROCESS NAME" />}
+                                            {!isGeneratingPDF && <button onClick={() => setProcesses(processes.filter((_, idx) => idx !== i))} className="text-slate-400 hover:text-red-400"><Trash2 size={14}/></button>}
+                                        </div>
+                                        <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-3 bg-slate-50 text-sm">
+                                            <div><TooltipLabel label="WIP Qty" tooltip="Work in Process" isPdf={isGeneratingPDF}/> {isGeneratingPDF ? <div className="font-bold text-slate-800">{p.wip||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.wip} onChange={(e)=>{if(validateNumeric(e.target.value, "WIP")) {const n=[...processes]; n[i] = {...n[i], wip: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Operators" tooltip="Staff assigned" isPdf={isGeneratingPDF}/> {isGeneratingPDF ? <div className="font-bold text-slate-800">{p.ops||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.ops} onChange={(e)=>{if(validateNumeric(e.target.value, "Operators")) {const n=[...processes]; n[i] = {...n[i], ops: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label={`C/T (${unitLabel})`} tooltip="Cycle Time" isPdf={isGeneratingPDF}/> {isGeneratingPDF ? <div className="font-bold text-slate-800">{p.ct||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.ct} onChange={(e)=>{if(validateNumeric(e.target.value, "Cycle Time")) {const n=[...processes]; n[i] = {...n[i], ct: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Uptime %" tooltip="Machine Uptime" isPdf={isGeneratingPDF} colorClass="text-indigo-600"/> {isGeneratingPDF ? <div className="font-bold text-indigo-700">{p.up||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-indigo-200 bg-transparent font-bold text-indigo-700 px-1" value={p.up} onChange={(e)=>{if(validateNumeric(e.target.value, "Uptime", 100)) {const n=[...processes]; n[i] = {...n[i], up: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Yield %" tooltip="First Pass Yield" isPdf={isGeneratingPDF} colorClass="text-emerald-600"/> {isGeneratingPDF ? <div className="font-bold text-emerald-700">{p.yield||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-emerald-200 bg-transparent font-bold text-emerald-700 px-1" value={p.yield} onChange={(e)=>{if(validateNumeric(e.target.value, "Yield", 100)) {const n=[...processes]; n[i] = {...n[i], yield: e.target.value}; if(e.target.value!==""&&globals.demand>0) n[i].defects=Math.max(0, globals.demand*(100-parseFloat(e.target.value))/100).toFixed(0); setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Defects" tooltip="Scrap Units" isPdf={isGeneratingPDF} colorClass="text-red-500"/> {isGeneratingPDF ? <div className="font-bold text-red-600">{p.defects||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-red-200 bg-transparent font-bold text-red-600 px-1" value={p.defects} onChange={(e)=>{if(validateNumeric(e.target.value, "Defects", globals.demand ? parseFloat(globals.demand) : null)) {const n=[...processes]; n[i] = {...n[i], defects: e.target.value}; if(e.target.value!==""&&globals.demand>0) n[i].yield=Math.max(0, ((globals.demand-parseFloat(e.target.value))/globals.demand)*100).toFixed(1); setProcesses(n);}}}/>}</div>
+                                            
+                                            {/* GEMBA Ext */}
+                                            <div className="col-span-2 border-t border-slate-200 my-1 pt-2"></div>
+                                            <div><TooltipLabel label={`Man CT (${unitLabel})`} tooltip="Manual Touch Time" isPdf={isGeneratingPDF} colorClass="text-slate-500"/> {isGeneratingPDF ? <div className="font-bold text-slate-700">{p.manualCt||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.manualCt} onChange={(e)=>{if(validateNumeric(e.target.value, "Manual CT")) {const n=[...processes]; n[i] = {...n[i], manualCt: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label={`Mach CT (${unitLabel})`} tooltip="Machine Run Time" isPdf={isGeneratingPDF} colorClass="text-slate-500"/> {isGeneratingPDF ? <div className="font-bold text-slate-700">{p.machineCt||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.machineCt} onChange={(e)=>{if(validateNumeric(e.target.value, "Machine CT")) {const n=[...processes]; n[i] = {...n[i], machineCt: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Batch Size" tooltip="Processing Lot" isPdf={isGeneratingPDF} colorClass="text-slate-500"/> {isGeneratingPDF ? <div className="font-bold text-slate-700">{p.batchSize||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-slate-300 bg-transparent font-bold px-1" value={p.batchSize} onChange={(e)=>{if(validateNumeric(e.target.value, "Batch Size")) {const n=[...processes]; n[i] = {...n[i], batchSize: e.target.value}; setProcesses(n);}}}/>}</div>
+                                            <div><TooltipLabel label="Rework %" tooltip="Correction loops" isPdf={isGeneratingPDF} colorClass="text-amber-600"/> {isGeneratingPDF ? <div className="font-bold text-amber-700">{p.rework||'-'}</div> : <input type="text" inputMode="decimal" className="w-full border-b border-amber-200 bg-transparent font-bold text-amber-700 px-1" value={p.rework} onChange={(e)=>{if(validateNumeric(e.target.value, "Rework", 100)) {const n=[...processes]; n[i] = {...n[i], rework: e.target.value}; setProcesses(n);}}}/>}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* SECTION 3: METRICS ENGINE & SUMMARY */}
+                        <section className="page-break-avoid space-y-6">
+                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b-2 border-slate-200 pb-2">
+                                <BarChart3 size={18} className="text-emerald-600"/> 3. Performance Analytics & Insights
+                            </h2>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* KPI Cards */}
+                                <div className="lg:col-span-1 space-y-4">
+                                    <div className="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-lg">
+                                        <TooltipLabel label="System Lead Time" tooltip="Total time through facility" colorClass="text-slate-400" isPdf={isGeneratingPDF}/>
+                                        <div className="text-3xl font-black text-emerald-400">{results.raw_lt} <span className="text-sm text-emerald-200/50 uppercase">Days</span></div>
+                                    </div>
+                                    <div className="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-lg">
+                                        <TooltipLabel label="Flow Efficiency" tooltip="Value Added Ratio" colorClass="text-slate-400" isPdf={isGeneratingPDF}/>
+                                        <div className="text-3xl font-black text-blue-400">{results.raw_pce}%</div>
+                                    </div>
+                                    <div className="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-lg">
+                                        <TooltipLabel label="Rolled Throughput Yield" tooltip="Total Defect-Free Probability" colorClass="text-slate-400" isPdf={isGeneratingPDF}/>
+                                        <div className="text-3xl font-black text-yellow-400">{results.raw_rty}%</div>
+                                    </div>
+                                </div>
+
+                                {/* Executive Summary */}
+                                <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 md:p-8 flex flex-col justify-center shadow-sm">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <FileText size={20} className="text-indigo-600"/>
+                                        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Executive Summarization</h3>
+                                    </div>
+                                    <p className="text-slate-600 leading-relaxed font-medium text-lg italic">
+                                        "{execSummary}"
+                                    </p>
+                                    <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-400">
+                                        <span>MECTS SET...GO ENGINE LOGIC</span>
+                                        <span className="bg-slate-100 px-2 py-1 rounded text-slate-600">AUTO-GENERATED</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

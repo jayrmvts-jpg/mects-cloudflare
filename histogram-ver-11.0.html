@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS | Advanced SPC & Variance Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .glass-panel { background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        
+        /* Toggle Switch CSS */
+        .toggle-checkbox:checked { right: 0; border-color: #4472C4; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #4472C4; }
+        .toggle-checkbox { right: 4px; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
+        .toggle-label { width: 36px; height: 20px; background-color: #cbd5e1; border-radius: 9999px; transition: all 0.3s; }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-slate-800 overflow-hidden">
+
+    <!-- Prominent Header -->
+    <header class="bg-[#1e293b] text-white shadow-md z-10 flex-shrink-0 border-b-4 border-[#4472C4]">
+        <div class="max-w-screen-2xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="bg-[#4472C4] p-2 rounded-lg shadow-inner">
+                    <i data-lucide="bar-chart-2" class="text-white w-8 h-8"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-widest text-white drop-shadow-md">MECTS....SET....GO</h1>
+                    <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest mt-1">CONTINUOUS & DISCRETE DATA VISUALIZATION PLATFORM</h2>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleDictionary()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 shadow-sm border border-indigo-400">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> STATISTICAL DICTIONARY
+                </button>
+                <div class="w-px h-8 bg-slate-600 mx-1"></div>
+                <button id="btnExportExcel" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 shadow-sm">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> EXCEL
+                </button>
+                <button id="btnExportPDF" class="bg-[#4472C4] hover:bg-[#345a9e] text-white px-4 py-2 rounded text-sm font-bold uppercase tracking-wider transition-colors flex items-center gap-2 shadow-sm">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> PDF REPORT
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden w-full max-w-screen-2xl mx-auto p-4 gap-4">
+        
+        <!-- Left Control Panel -->
+        <aside class="w-1/3 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2 pb-4">
+            
+            <!-- Industry Selector -->
+            <div class="glass-panel p-4 rounded-lg flex flex-col">
+                <h3 class="font-extrabold uppercase tracking-wide text-slate-800 mb-2 border-b pb-2 flex items-center gap-2">
+                    <i data-lucide="factory" class="w-4 h-4 text-[#4472C4]"></i> INDUSTRIAL SEGMENT
+                </h3>
+                <label class="block text-[11px] font-bold uppercase tracking-wide text-slate-700 mb-1">SELECT SCENARIO TO LOAD EDITABLE DATA</label>
+                <select id="industrySelect" class="w-full bg-slate-50 border border-slate-300 rounded px-3 py-2 text-sm font-semibold focus:ring-1 focus:ring-[#4472C4] outline-none mb-3">
+                    <!-- Populated via JS -->
+                </select>
+
+                <!-- Dynamic Simulation Parameters -->
+                <div id="generatorControls" class="border-t border-slate-100 pt-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wide text-slate-800 block mb-2" title="Generated datasets will be precisely scaled to match these numbers">EXACT GENERATOR TARGETS (SIMULATION)</span>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">EXACT MEAN (μ)</label>
+                            <input type="number" id="genMean" step="any" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none disabled:opacity-50 disabled:bg-slate-50">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">EXACT STDDEV (σ)</label>
+                            <input type="number" id="genStd" step="any" min="0.001" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none disabled:opacity-50 disabled:bg-slate-50">
+                        </div>
+                    </div>
+                    <button id="btnRegenerate" class="w-full text-[11px] font-bold uppercase tracking-wider bg-slate-600 text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> RE-ROLL & SCALE EXACT DATA
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Input Area -->
+            <div class="glass-panel p-4 rounded-lg flex-1 flex flex-col min-h-[200px]">
+                <div class="flex justify-between items-center mb-2 border-b pb-2">
+                    <h3 class="font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2">
+                        <i data-lucide="table" class="w-4 h-4 text-[#4472C4]"></i> RAW DATA INPUT
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <button id="btnClearData" class="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors" title="Clear all text to paste your own">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> CLEAR DATA
+                        </button>
+                    </div>
+                </div>
+                <textarea id="customDataInput" class="w-full flex-1 bg-slate-50 border border-slate-300 rounded p-3 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none resize-none custom-scrollbar whitespace-pre" spellcheck="false" placeholder="Format Example:&#10;NASHIK&#09;22&#10;VELLORE&#09;24&#10;&#10;Paste your names and values here..."></textarea>
+                <div id="inputErrorMsg" class="hidden text-xs font-bold text-red-500 mt-2"></div>
+            </div>
+
+            <!-- Advanced Configuration -->
+            <div class="glass-panel p-4 rounded-lg">
+                <h3 class="font-extrabold uppercase tracking-wide text-slate-800 mb-3 border-b pb-2 flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-4 h-4 text-[#4472C4]"></i> SPC & HISTOGRAM CONTROLS
+                </h3>
+                
+                <!-- Bins -->
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wide text-slate-700 mb-1" title="Number of columns">BIN QTY</label>
+                        <input type="number" id="binCountInput" value="6" min="2" max="100" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wide text-slate-700 mb-1" title="Starting value of the first bin">BIN START</label>
+                        <input type="number" id="binStartInput" placeholder="Auto" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                    </div>
+                    <div>
+                        <label class="flex justify-between items-end text-[11px] font-bold uppercase tracking-wide text-slate-700 mb-1" title="Frequency / width of each bin range">
+                            <span>BIN WIDTH</span>
+                            <span id="calculatedBinEnd" class="text-slate-500 font-mono text-[9px] bg-slate-100 px-1 rounded">END: --</span>
+                        </label>
+                        <input type="number" id="binWidthInput" placeholder="Auto" min="0.001" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                    </div>
+                </div>
+
+                <!-- Overrides -->
+                <div class="mb-4 border-t border-slate-100 pt-3">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wide text-slate-800 block mb-2" title="Overrides calculated sample statistics for traffic lights & limits">KNOWN PROCESS PARAMETERS (OVERRIDES)</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">HISTORICAL MEAN (μ)</label>
+                            <input type="number" id="overrideMeanInput" placeholder="Auto Sample Mean" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">HISTORICAL STDDEV (σ)</label>
+                            <input type="number" id="overrideStdInput" placeholder="Auto Sample StdDev" min="0.001" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limits -->
+                <div class="mb-4 border-t border-slate-100 pt-3">
+                    <div class="flex flex-col mb-2">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wide text-slate-800 mb-1">CONTROL LIMITS (LCL / UCL)</span>
+                        <div class="flex gap-2">
+                            <button id="btnAutoLimitsBasic" class="flex-1 text-[9px] font-bold uppercase tracking-wider bg-slate-600 text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors" title="Captures exact Minimum and Maximum of current data">CAPTURE MIN/MAX (BASIC)</button>
+                            <button id="btnAutoLimitsAdv" class="flex-1 text-[9px] font-bold uppercase tracking-wider bg-[#4472C4] text-white px-2 py-1.5 rounded hover:bg-[#345a9e] transition-colors" title="Calculates Mean ± 3σ">CAPTURE ±3σ (ADV)</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">LOWER LIMIT (LCL)</label>
+                            <input type="number" id="lclInput" placeholder="LCL" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">UPPER LIMIT (UCL)</label>
+                            <input type="number" id="uclInput" placeholder="UCL" step="any" class="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-sm font-mono focus:ring-1 focus:ring-[#4472C4] outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toggles -->
+                <div class="space-y-3 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold uppercase tracking-wide text-slate-700 cursor-pointer" for="toggleCurve">SHOW BELL CURVE OVERLAY</label>
+                        <div class="relative inline-block w-9 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="toggleCurve" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggleCurve" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold uppercase tracking-wide text-slate-700 cursor-pointer" for="togglePercent">RELATIVE FREQUENCY (%)</label>
+                        <div class="relative inline-block w-9 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="togglePercent" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="togglePercent" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label class="text-[11px] font-bold uppercase tracking-wide text-slate-700 cursor-pointer" title="Forces the bar chart to start at zero, showing absolute magnitude rather than zooming into variance." for="toggleZeroBase">START Y-AXIS AT ZERO</label>
+                        <div class="relative inline-block w-9 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" name="toggle" id="toggleZeroBase" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                            <label for="toggleZeroBase" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Right Visualization Panel -->
+        <section class="w-2/3 flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-4 pr-2">
+            
+            <!-- Top Metrics Grid -->
+            <div class="glass-panel p-4 rounded-lg flex flex-col gap-3 border-l-4 border-[#4472C4]">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800">PROCESS STATISTICAL METRICS</h3>
+                    <span id="dataStats" class="text-[11px] text-slate-600 font-mono bg-slate-100 px-2 py-1 rounded font-bold">MIN: -- | MAX: --</span>
+                </div>
+                <div class="grid grid-cols-4 gap-2 text-xs font-mono bg-slate-50 p-2 rounded border border-slate-200">
+                    <div class="flex flex-col group relative">
+                        <span class="text-slate-600 font-bold uppercase text-[10px] flex items-center gap-1 cursor-help">MEAN (μ) <i data-lucide="info" class="w-3 h-3"></i></span>
+                        <strong id="statMean" class="text-slate-800 text-sm mt-0.5">--</strong>
+                        <div class="absolute top-full mt-1 hidden group-hover:block w-48 bg-slate-800 text-white font-sans font-normal text-[10px] p-2 rounded z-10 shadow-lg tracking-normal">Mathematical average. Shows "(SET)" if overridden manually.</div>
+                    </div>
+                    <div class="flex flex-col group relative">
+                        <span class="text-slate-600 font-bold uppercase text-[10px] flex items-center gap-1 cursor-help">STDDEV (σ) <i data-lucide="info" class="w-3 h-3"></i></span>
+                        <strong id="statStd" class="text-slate-800 text-sm mt-0.5">--</strong>
+                        <div class="absolute top-full mt-1 hidden group-hover:block w-48 bg-slate-800 text-white font-sans font-normal text-[10px] p-2 rounded z-10 shadow-lg tracking-normal">Standard Deviation. Shows "(SET)" if overridden manually.</div>
+                    </div>
+                    <div class="flex flex-col group relative">
+                        <span class="text-slate-600 font-bold uppercase text-[10px] flex items-center gap-1 cursor-help">SKEWNESS <i data-lucide="info" class="w-3 h-3"></i></span>
+                        <strong id="statSkew" class="text-slate-800 text-sm mt-0.5">--</strong>
+                        <div class="absolute top-full mt-1 hidden group-hover:block w-48 bg-slate-800 text-white font-sans font-normal text-[10px] p-2 rounded z-10 shadow-lg tracking-normal">0 is perfect symmetry. >0 leans left (long right tail). <0 leans right. High values indicate systematic bias. Requires n ≥ 3.</div>
+                    </div>
+                    <div class="flex flex-col group relative">
+                        <span class="text-slate-600 font-bold uppercase text-[10px] flex items-center gap-1 cursor-help">KURTOSIS <i data-lucide="info" class="w-3 h-3"></i></span>
+                        <strong id="statKurt" class="text-slate-800 text-sm mt-0.5">--</strong>
+                        <div class="absolute top-full mt-1 hidden group-hover:block w-48 bg-slate-800 text-white font-sans font-normal text-[10px] p-2 rounded z-10 shadow-lg tracking-normal">Measures the "peakedness". >0 means sharp peaks and fat tails. <0 means a flat distribution. Requires n ≥ 4.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Histogram Container (Continuous) -->
+            <div id="chartContainerHist" class="glass-panel p-5 rounded-lg flex flex-col hidden transition-all border-t-4 border-indigo-500">
+                
+                <h2 class="text-lg font-extrabold tracking-wide text-slate-800 border-b-2 border-slate-100 pb-2 mb-4 uppercase flex items-center gap-2">
+                    <i data-lucide="bar-chart" class="text-indigo-500 w-5 h-5"></i>
+                    HISTOGRAM CHART AND ANALYSIS
+                </h2>
+
+                <div id="plotHistogram" class="w-full flex-1 min-h-[250px]"></div>
+                
+                <!-- Dynamic Bin Ranges Distribution Box -->
+                <div id="binDistributionBox" class="hidden mt-4 pt-3">
+                    <strong class="text-slate-800 font-extrabold text-[11px] uppercase tracking-wide flex items-center gap-1.5 mb-3">
+                        <i data-lucide="layers" class="w-4 h-4 text-[#4472C4]"></i> FREQUENCY DISTRIBUTION (DATAVALUE RANGES)
+                    </strong>
+                    <div id="binDistributionContent" class="flex flex-wrap gap-2 text-xs"></div>
+                </div>
+
+                <!-- Dedicated Continuous Interpretation Box (Positioned BELOW the Chart) -->
+                <div id="continuousInterpretationBox" class="hidden mt-6 relative">
+                    <div id="contBoxStyle" class="p-6 rounded-xl text-sm flex flex-col items-center justify-center text-center transition-colors duration-300 border shadow-md bg-white border-t-4">
+                        <div id="contIconWrapper" class="shrink-0 mb-4"></div>
+                        <div class="w-full px-2 md:px-8 flex flex-col items-center justify-center gap-4" id="continuousExplainText">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <button onclick="copyTextToClipboard('continuousExplainText')" class="absolute top-4 right-4 text-slate-400 hover:text-[#4472C4] transition-colors bg-white p-1.5 rounded border border-slate-200 shadow-sm" title="Copy Analysis to Clipboard">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bar Chart Container (Discrete) -->
+            <div id="chartContainerBar" class="glass-panel p-5 rounded-lg flex flex-col hidden transition-all border-t-4 border-emerald-500">
+
+                <h2 class="text-lg font-extrabold tracking-wide text-slate-800 border-b-2 border-slate-100 pb-2 mb-4 uppercase flex items-center gap-2">
+                    <i data-lucide="activity" class="text-emerald-500 w-5 h-5"></i>
+                    DISCRETE CATEGORY ANALYSIS
+                </h2>
+
+                <div id="plotBar" class="w-full flex-1 min-h-[250px]"></div>
+
+                <!-- Dedicated Discrete Interpretation Box (Positioned BELOW the Chart) -->
+                <div id="discreteInterpretationBox" class="hidden mt-6 relative">
+                    <div id="discBoxStyle" class="p-6 rounded-xl text-sm flex flex-col items-center justify-center text-center transition-colors duration-300 border shadow-md bg-white border-t-4">
+                        <div id="discreteIconWrapper" class="shrink-0 mb-4"></div>
+                        <div class="w-full px-2 md:px-8 flex flex-col items-center justify-center gap-4" id="discreteExplainText">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <button onclick="copyTextToClipboard('discreteExplainText')" class="absolute top-4 right-4 text-slate-400 hover:text-[#4472C4] transition-colors bg-white p-1.5 rounded border border-slate-200 shadow-sm" title="Copy Analysis to Clipboard">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Dynamic Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Statistical Dictionary Modal -->
+    <div id="dictionaryModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-5xl max-h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+            <!-- Modal Header -->
+            <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                <h2 class="text-xl font-bold tracking-wide uppercase flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-6 h-6"></i> STATISTICAL DICTIONARY & CONCEPTS
+                </h2>
+                <button onclick="toggleDictionary()" class="text-indigo-200 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-4 bg-slate-50">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- Continuous vs Discrete -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-l-4 border-l-indigo-500">
+                        <div>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="bar-chart" class="w-5 h-5 text-indigo-500"></i> CONTINUOUS DATA (HISTOGRAM)</h3>
+                            <p class="text-sm text-slate-600 mb-3">Data that is measured on a continuous, infinite scale. It represents "how much" of something. The Histogram groups these infinite decimals into chunks called "Bins".</p>
+                            <div class="bg-indigo-50 p-3 rounded text-xs border-l-2 border-indigo-400">
+                                <strong>EXAMPLE:</strong> The exact fill volume of a soda bottle (330.12ml, 329.84ml). We bucket them into ranges like [329.00 - 330.00] to see the distribution shape.
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="activity" class="w-5 h-5 text-emerald-500"></i> DISCRETE DATA (BAR CHART)</h3>
+                            <p class="text-sm text-slate-600 mb-3">Data that is counted in distinct, separate, un-mergeable categories. It answers "how many" items fall under a specific label.</p>
+                            <div class="bg-emerald-50 p-3 rounded text-xs border-l-2 border-emerald-400">
+                                <strong>EXAMPLE:</strong> The number of defective fans produced by Factory A vs Factory B. A fan is either Factory A or B; there are no continuous "in-between" decimals.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sigma Zones -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm col-span-1 md:col-span-2 border-l-4 border-l-yellow-400">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="target" class="w-5 h-5 text-yellow-500"></i> SIGMA ZONES (2σ vs 3σ) & OUTLIERS</h3>
+                        <p class="text-sm text-slate-600 mb-3">
+                            In a healthy, normal process, <strong>95%</strong> of data falls within ±2 Sigma, and <strong>99.7%</strong> falls within ±3 Sigma. <br><br>
+                            • <strong>Warning Zone (Yellow):</strong> Items strictly between 2σ and 3σ. The process is drifting but hasn't failed.<br>
+                            • <strong>Critical Zone (Red):</strong> Items beyond 3σ. This is a statistical anomaly requiring immediate investigation.
+                        </p>
+                        <div class="bg-yellow-50 p-3 rounded text-xs border-l-2 border-yellow-400 text-slate-800">
+                            <strong>HOW TO SPOT IT ON THE CURVE (ANALOGY):</strong> Imagine a highway. The Mean is the center dotted line. The <strong>2-Sigma Limits</strong> are the outer painted lanes. The <strong>3-Sigma Limits</strong> are the concrete guardrails.<br><br>
+                            If you look at the Bell Curve overlay on the Histogram, driving on the outer painted lines (Yellow Warning) means you are drifting out of the main "hump" of the curve. Hitting the concrete guardrail (Red Alert) means a data bar has completely detached and is sitting far outside the visible bell shape. A crash has occurred!
+                        </div>
+                    </div>
+
+                    <!-- Mean -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><span class="text-indigo-500 text-xl font-serif italic">μ</span> MEAN (AVERAGE)</h3>
+                        <p class="text-sm text-slate-600 mb-3">The mathematical center or balancing point of your dataset. Calculated by adding all values and dividing by the count.</p>
+                        <div class="bg-slate-100 p-3 rounded text-xs border-l-2 border-slate-400">
+                            <strong>ANALOGY:</strong> Think of it as the balancing point (fulcrum) on a seesaw. If you have heavy weights on one side, you need to shift the center to keep it balanced.
+                        </div>
+                    </div>
+
+                    <!-- Standard Deviation -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><span class="text-indigo-500 text-xl font-serif italic">σ</span> STANDARD DEVIATION</h3>
+                        <p class="text-sm text-slate-600 mb-3">A measure of how "spread out" or volatile your data is around the Mean. A lower number indicates high consistency.</p>
+                        <div class="bg-slate-100 p-3 rounded text-xs border-l-2 border-slate-400">
+                            <strong>ANALOGY:</strong> Throwing darts. If all darts hit the bullseye, standard deviation is near zero. If they are scattered randomly across the board, it is very high.
+                        </div>
+                    </div>
+
+                    <!-- Skewness -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="trending-up" class="w-5 h-5 text-indigo-500"></i> SKEWNESS</h3>
+                        <p class="text-sm text-slate-600 mb-3">Measures the asymmetry of your Bell Curve. <br>• <strong>0</strong> is perfectly balanced.<br>• <strong>> 0 (Positive)</strong> means the tail pulls to the right.<br>• <strong>< 0 (Negative)</strong> means the tail pulls to the left.</p>
+                        <div class="bg-slate-100 p-3 rounded text-xs border-l-2 border-slate-400">
+                            <strong>ANALOGY:</strong> A slide at a playground. If it's steep on the left and has a long, slow slope to the right, that is "Positive Skew". It usually means a physical barrier is preventing data from dropping below a certain limit (like 0 seconds).
+                        </div>
+                    </div>
+
+                    <!-- Kurtosis -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="mountain" class="w-5 h-5 text-indigo-500"></i> KURTOSIS</h3>
+                        <p class="text-sm text-slate-600 mb-3">Measures the "peakedness" and the heaviness of the tails (outliers).<br>• <strong>High Kurtosis</strong> = Sharp peak, fat tails (more extreme outliers).<br>• <strong>Low Kurtosis</strong> = Flat, plateau-like curve.</p>
+                        <div class="bg-slate-100 p-3 rounded text-xs border-l-2 border-slate-400">
+                            <strong>ANALOGY:</strong> Comparing buildings. High kurtosis is a tall, incredibly sharp skyscraper (90% of your data is perfect, but the remaining 10% are extreme, dangerous outliers). Low kurtosis is a flat, sprawling warehouse (very predictable, but mediocre across the board).
+                        </div>
+                    </div>
+
+                    <!-- LCL / UCL -->
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm col-span-1 md:col-span-2">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wide text-slate-800 flex items-center gap-2 mb-2"><i data-lucide="move-horizontal" class="w-5 h-5 text-indigo-500"></i> CONTROL LIMITS (LCL/UCL)</h3>
+                        <p class="text-sm text-slate-600 mb-3">The absolute Upper and Lower boundaries of acceptable process variation. In standard Six Sigma, these are automatically set at exactly <strong>±3 Standard Deviations</strong> from the Mean, but you can override them with custom boundaries.</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <!-- Modal Footer -->
+            <div class="bg-white px-6 py-4 border-t flex justify-end">
+                <button onclick="toggleDictionary()" class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded text-sm font-bold uppercase tracking-wider transition-colors shadow-sm">
+                    UNDERSTOOD
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // System state
+        let isAppLoaded = false;
+
+        // Standard Traffic Light Colors
+        const COLOR_GREEN = '#22c55e'; 
+        const COLOR_YELLOW = '#eab308'; 
+        const COLOR_RED = '#ef4444'; 
+        const EXCEL_GRID = '#D9D9D9';
+
+        // Modal Toggle
+        function toggleDictionary() {
+            const modal = document.getElementById('dictionaryModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // God Mode XSS HTML Sanitizer
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>'"]/g, match => {
+                const escape = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+                return escape[match];
+            });
+        }
+        
+        // Copy Feature for Interpretations
+        function copyTextToClipboard(elementId) {
+            const textElement = document.getElementById(elementId);
+            if(textElement) {
+                const pureText = textElement.innerText || textElement.textContent;
+                navigator.clipboard.writeText(pureText).then(() => {
+                    const oldStatus = isAppLoaded;
+                    isAppLoaded = true;
+                    showToast("ANALYSIS COPIED TO CLIPBOARD!", "success");
+                    isAppLoaded = oldStatus;
+                }).catch(() => {
+                    const oldStatus = isAppLoaded;
+                    isAppLoaded = true;
+                    showToast("FAILED TO COPY TEXT.", "error");
+                    isAppLoaded = oldStatus;
+                });
+            }
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+            if (!isAppLoaded) return; 
+
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const styles = {
+                error: 'bg-red-50 border-red-500 text-red-800 pointer-events-auto',
+                success: 'bg-green-50 border-green-500 text-green-800 pointer-events-auto',
+                warning: 'bg-yellow-50 border-yellow-500 text-yellow-800 pointer-events-auto',
+                info: 'bg-blue-50 border-blue-500 text-blue-800 pointer-events-auto'
+            };
+            
+            const icons = {
+                error: 'alert-octagon',
+                success: 'check-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded border-l-4 shadow-lg bg-white transition-all duration-300 transform translate-x-full ${styles[type]}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type]}" class="w-5 h-5 shrink-0"></i>
+                <span class="text-[13px] font-bold uppercase tracking-wide">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons({root: toast});
+            
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full'));
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // 20 Industrial Segments Generator
+        const industries = [
+            { name: "USER INPUTS", param: "Values", unit: "", isCustom: true, data: "" },
+            { name: "ELECTRONICS: SOLDER THICKNESS", param: "Thickness", unit: "µm", prefix: "PCB_Board_", mean: 125, std: 3.5 },
+            { name: "REGIONAL FAN PRODUCTION (EXAMPLE)", param: "Fans", unit: "Units", isCustom: true, data: "NASHIK\t22\nVELLORE\t24\nMUMBAI\t44\nVIZAG\t29\nNAGPUR\t34\nRANCHI\t35\nDELHI\t38" },
+            { name: "SEMICONDUCTOR: WAFER DEPTH", param: "Depth", unit: "nm", prefix: "Wafer_", mean: 300, std: 1.2 },
+            { name: "AUTOMOTIVE: BOLT TORQUE", param: "Torque", unit: "Nm", prefix: "Joint_", mean: 120, std: 4.5 },
+            { name: "PHARMACEUTICAL: PILL WEIGHT", param: "Weight", unit: "mg", prefix: "Batch_", mean: 500, std: 2.1 },
+            { name: "FOOD & BEVERAGE: FILL VOLUME", param: "Volume", unit: "ml", prefix: "Bottle_", mean: 330, std: 3.8 },
+            { name: "CHEMICAL PROCESSING: REACTOR TEMP", param: "Temp", unit: "°C", prefix: "Reactor_", mean: 180, std: 5.5 },
+            { name: "AEROSPACE: BLADE TOLERANCE", param: "Tolerance", unit: "mm", prefix: "Blade_", mean: 15.0, std: 0.05 },
+            { name: "TEXTILE: THREAD TENSION", param: "Tension", unit: "cN", prefix: "Spindle_", mean: 25.5, std: 1.1 },
+            { name: "OIL & GAS: PIPELINE PRESSURE", param: "Pressure", unit: "PSI", prefix: "Valve_", mean: 850, std: 12.0 },
+            { name: "MEDICAL DEVICE: STENT DIAMETER", param: "Diameter", unit: "mm", prefix: "Stent_", mean: 3.0, std: 0.03 },
+            { name: "METAL FABRICATION: WELD STRENGTH", param: "Strength", unit: "MPa", prefix: "Weld_", mean: 450, std: 15.0 },
+            { name: "PLASTIC MOLDING: COOLING TIME", param: "Time", unit: "sec", prefix: "Mold_", mean: 12.5, std: 0.8 },
+            { name: "PACKAGING: SEAL PRESSURE", param: "Pressure", unit: "kPa", prefix: "Seal_", mean: 105, std: 4.2 },
+            { name: "WATER TREATMENT: EFFLUENT PH", param: "pH", unit: "pH", prefix: "Sample_", mean: 7.2, std: 0.2 },
+            { name: "ENERGY: OUTPUT VOLTAGE", param: "Voltage", unit: "kV", prefix: "Grid_", mean: 220, std: 1.8 },
+            { name: "TELECOM: SIGNAL ATTENUATION", param: "Loss", unit: "dB", prefix: "Fiber_", mean: 0.25, std: 0.02 },
+            { name: "MINING: ORE CONCENTRATION", param: "Conc.", unit: "%", prefix: "Site_", mean: 14.5, std: 1.5 },
+            { name: "AGRICULTURE: SOIL MOISTURE", param: "Moisture", unit: "%", prefix: "Plot_", mean: 35.0, std: 4.1 },
+            { name: "LOGISTICS: DELIVERY DEVIATION", param: "Time", unit: "hrs", prefix: "Route_", mean: 0.5, std: 2.2 }
+        ];
+
+        let currentData = [];
+        let currentSegment = industries[0]; 
+
+        function randn_bm(mean, stdDev) {
+            let u = 1 - Math.random(); let v = Math.random();
+            let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            return z * stdDev + mean;
+        }
+
+        function populateDropdown() {
+            const select = document.getElementById('industrySelect');
+            industries.forEach((ind, i) => {
+                let opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = ind.name;
+                if(i === 0) opt.selected = true;
+                select.appendChild(opt);
+            });
+            
+            select.addEventListener('change', (e) => {
+                currentSegment = industries[e.target.value];
+                const genMeanInput = document.getElementById('genMean');
+                const genStdInput = document.getElementById('genStd');
+                if (!currentSegment.isCustom) {
+                    genMeanInput.value = currentSegment.mean;
+                    genStdInput.value = currentSegment.std;
+                } else {
+                    genMeanInput.value = '';
+                    genStdInput.value = '';
+                }
+                loadSegmentData();
+                showToast(`LOADED SEGMENT: ${currentSegment.name}`, 'info');
+            });
+        }
+
+        function loadSegmentData() {
+            let textData = "";
+            const genMeanInput = document.getElementById('genMean');
+            const genStdInput = document.getElementById('genStd');
+            const btnRegenerate = document.getElementById('btnRegenerate');
+
+            if (currentSegment.isCustom) {
+                genMeanInput.disabled = true;
+                genStdInput.disabled = true;
+                btnRegenerate.disabled = true;
+                textData = currentSegment.data;
+            } else {
+                genMeanInput.disabled = false;
+                genStdInput.disabled = false;
+                btnRegenerate.disabled = false;
+                
+                let targetMean = parseFloat(genMeanInput.value);
+                let targetStd = parseFloat(genStdInput.value);
+                if (isNaN(targetMean)) targetMean = currentSegment.mean;
+                if (isNaN(targetStd) || targetStd <= 0) {
+                    targetStd = currentSegment.std;
+                    if(targetStd <= 0) targetStd = 0.01; 
+                }
+
+                let rawVals = [];
+                for (let i = 0; i < 25; i++) {
+                    let val = randn_bm(0, 1); 
+                    if (Math.random() < 0.05) val += (3.5 * (Math.random() > 0.5 ? 1 : -1));
+                    rawVals.push(val);
+                }
+
+                let rawSum = rawVals.reduce((a, b) => a + b, 0);
+                let rawMean = rawSum / 25;
+                let rawVar = rawVals.reduce((a, b) => a + Math.pow(b - rawMean, 2), 0) / 24;
+                let rawStd = Math.sqrt(rawVar);
+                if (rawStd === 0) rawStd = 1;
+
+                for (let i = 0; i < 25; i++) {
+                    let scaledVal = targetMean + (rawVals[i] - rawMean) * (targetStd / rawStd);
+                    let idx = i + 1;
+                    textData += `${currentSegment.prefix}${idx < 10 ? '0'+idx : idx}\t${scaledVal.toFixed(2)}`;
+                    if (idx < 25) textData += '\n';
+                }
+            }
+            
+            document.getElementById('customDataInput').value = textData;
+            
+            document.getElementById('binWidthInput').value = '';
+            document.getElementById('binStartInput').value = '';
+            document.getElementById('binCountInput').value = '6';
+            document.getElementById('overrideMeanInput').value = '';
+            document.getElementById('overrideStdInput').value = '';
+            document.getElementById('lclInput').value = '';
+            document.getElementById('uclInput').value = '';
+
+            handleInput();
+            autoCaptureLimitsBasic(true);
+        }
+
+        function parseData(rawText) {
+            let lines = rawText.split('\n');
+            const parsedData = [];
+            let idx = 1;
+
+            if (lines.length > 2500) {
+                lines.length = 2500;
+                const oldStatus = isAppLoaded;
+                isAppLoaded = true;
+                showToast('INPUT DATA CAPPED AT 2,500 ROWS FOR OPTIMAL PERFORMANCE.', 'warning');
+                isAppLoaded = oldStatus;
+            }
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const match = line.match(/^(.*?)\s+([-+]?[0-9]*\.?[0-9]+)$/);
+                
+                if (match && !isNaN(Number(match[2]))) {
+                    let val = Number(match[2]);
+                    if (isFinite(val)) { 
+                        parsedData.push({ label: match[1].trim(), value: val });
+                    }
+                } else {
+                    let nums = line.replace(/,/g, ' ').split(/\s+/);
+                    nums.forEach(n => {
+                        let val = Number(n);
+                        if (!isNaN(val) && n !== '' && isFinite(val)) {
+                            parsedData.push({ label: `Item_${idx++}`, value: val });
+                        }
+                    });
+                }
+            });
+            return parsedData;
+        }
+
+        function calculateStatistics(values) {
+            let n = values.length;
+            if(n === 0) return null;
+            let sum = values.reduce((a, b) => a + b, 0);
+            let mean = sum / n;
+            let variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (n > 1 ? n - 1 : 1);
+            let stdDev = Math.sqrt(variance);
+            let min = Math.min(...values);
+            let max = Math.max(...values);
+
+            let skewness = null;
+            let kurtosis = null;
+            
+            if (stdDev > 0) {
+                let sum3 = values.reduce((a, b) => a + Math.pow(b - mean, 3), 0);
+                let sum4 = values.reduce((a, b) => a + Math.pow(b - mean, 4), 0);
+                
+                if (n >= 3) {
+                    skewness = (n / ((n - 1) * (n - 2))) * sum3 / Math.pow(stdDev, 3);
+                }
+                if (n >= 4) {
+                    kurtosis = ((n * (n + 1)) / ((n - 1) * (n - 2) * (n - 3))) * sum4 / Math.pow(stdDev, 4) - (3 * Math.pow(n - 1, 2)) / ((n - 2) * (n - 3));
+                }
+            }
+
+            return { mean, stdDev, min, max, n, skewness, kurtosis };
+        }
+        
+        function autoCaptureLimitsBasic(silent = false) {
+            if (currentData.length === 0) return;
+            let stats = calculateStatistics(currentData.map(d => d.value));
+            document.getElementById('lclInput').value = stats.min.toFixed(2);
+            document.getElementById('uclInput').value = stats.max.toFixed(2);
+            if (!silent) showToast('LCL AND UCL BOUNDED TO STRICT MIN/MAX VALUES.', 'info');
+            renderCharts();
+        }
+
+        function autoCaptureLimitsAdv() {
+            if (currentData.length === 0) return;
+            let stats = calculateStatistics(currentData.map(d => d.value));
+            
+            let overrideMean = parseFloat(document.getElementById('overrideMeanInput').value);
+            let overrideStd = parseFloat(document.getElementById('overrideStdInput').value);
+            let analysisMean = !isNaN(overrideMean) ? overrideMean : stats.mean;
+            let analysisStd = (!isNaN(overrideStd) && overrideStd > 0) ? overrideStd : stats.stdDev;
+            
+            if (analysisStd <= 0) { 
+                showToast('VARIANCE MUST BE > 0 TO CALCULATE 3-SIGMA LIMITS.', 'error');
+                return;
+            }
+
+            let calculatedLcl = (analysisMean - (3 * analysisStd)).toFixed(2);
+            let calculatedUcl = (analysisMean + (3 * analysisStd)).toFixed(2);
+            
+            document.getElementById('lclInput').value = calculatedLcl;
+            document.getElementById('uclInput').value = calculatedUcl;
+            showToast('LCL AND UCL DYNAMICALLY CALCULATED USING ±3 SIGMA.', 'success');
+            renderCharts();
+        }
+
+        function clampAndValidateInputs() {
+            let requiresRerender = false;
+            const genStd = document.getElementById('genStd');
+            if (genStd.value !== '' && parseFloat(genStd.value) <= 0) {
+                genStd.value = '1.0';
+                showToast('TARGET STDDEV MUST BE > 0. CLAMPED TO 1.0', 'warning');
+            }
+            const overStd = document.getElementById('overrideStdInput');
+            if (overStd.value !== '' && parseFloat(overStd.value) <= 0) {
+                overStd.value = '';
+                showToast('HISTORICAL STDDEV MUST BE > 0. FIELD CLEARED.', 'error');
+            }
+            const binW = document.getElementById('binWidthInput');
+            
+            if (binW.value !== '' && parseFloat(binW.value) > 0 && currentData.length > 0) {
+                let stats = calculateStatistics(currentData.map(d => d.value));
+                let range = stats.max - stats.min;
+                let w = parseFloat(binW.value);
+                if (range / w > 150) {
+                     let safeWidth = Math.max(0.001, range / 20); 
+                     binW.value = safeWidth.toFixed(3); 
+                     showToast('BIN WIDTH TOO NARROW. AUTO-ADJUSTED TO PREVENT BROWSER CRASH.', 'warning');
+                }
+            } else if (binW.value !== '' && parseFloat(binW.value) <= 0) {
+                binW.value = '';
+                showToast('BIN WIDTH MUST BE > 0. AUTO-CALCULATING.', 'warning');
+            }
+
+            const binC = document.getElementById('binCountInput');
+            if (binC.value !== '') {
+                let v = parseInt(binC.value);
+                if (v < 2) { binC.value = 2; showToast('HISTOGRAM REQUIRES AT LEAST 2 BINS.', 'warning'); }
+                if (v > 100) { binC.value = 100; showToast('BIN QUANTITY CAPPED AT 100 TO PREVENT CRASHING.', 'warning'); }
+            }
+        }
+
+        function calculateCustomHistogram(data, stats, lcl, ucl, isPercent, analysisMean, analysisStd) {
+            let values = data.map(d => d.value);
+            let qtyInput = parseInt(document.getElementById('binCountInput').value);
+            let widthInput = parseFloat(document.getElementById('binWidthInput').value);
+            let startInput = parseFloat(document.getElementById('binStartInput').value);
+
+            let binCount = !isNaN(qtyInput) && qtyInput > 0 ? qtyInput : 6;
+            
+            let logicalStart = stats.min;
+            if(stats.max === stats.min && isNaN(startInput)) logicalStart = stats.min - 1; 
+
+            let start = !isNaN(startInput) ? startInput : logicalStart;
+            if (isNaN(startInput)) document.getElementById('binStartInput').placeholder = `Auto (${logicalStart.toFixed(2)})`;
+
+            let targetEnd = stats.max;
+            if(stats.max === stats.min && targetEnd === stats.max) targetEnd = stats.max + 1;
+            if(start >= targetEnd) targetEnd = start + 1; 
+
+            let width;
+            if (!isNaN(widthInput) && widthInput > 0) {
+                width = widthInput;
+                binCount = Math.ceil((targetEnd - start) / width);
+                if (binCount < 1) binCount = 1;
+                if (binCount > 100) binCount = 100;
+                document.getElementById('binCountInput').value = binCount;
+            } else {
+                width = (targetEnd - start) / binCount;
+                if (width <= 0) width = 1;
+            }
+
+            let binLabels = [];
+            let binCounts = new Array(binCount).fill(0);
+            let binColors = new Array(binCount).fill(COLOR_GREEN);
+
+            let precisionDecimals = width < 0.01 ? 4 : width < 0.1 ? 3 : 2;
+
+            for (let i = 0; i < binCount; i++) {
+                let binStart = start + (i * width);
+                let binEnd = binStart + width;
+                let formatStart = Number(binStart.toFixed(precisionDecimals));
+                let formatEnd = Number(binEnd.toFixed(precisionDecimals));
+                
+                let label = i === 0 ? `[${formatStart}, ${formatEnd}]` : `(${formatStart}, ${formatEnd}]`;
+                binLabels.push(label);
+
+                let valsInBin = values.filter(v => {
+                    let vR = Number(v.toFixed(5));
+                    let sR = Number(binStart.toFixed(5));
+                    let eR = Number(binEnd.toFixed(5));
+                    if (i === 0) return vR >= sR && vR <= eR;
+                    return vR > sR && vR <= eR;
+                });
+                
+                let count = valsInBin.length;
+                binCounts[i] = isPercent ? Number(((count / stats.n) * 100).toFixed(1)) : count;
+
+                if (analysisStd > 0) {
+                    let binStatus = COLOR_GREEN;
+                    
+                    if (valsInBin.length > 0) {
+                        valsInBin.forEach(v => {
+                            let dev = Math.abs(v - analysisMean);
+                            if ((!isNaN(lcl) && v < lcl) || (!isNaN(ucl) && v > ucl)) {
+                                binStatus = COLOR_RED;
+                            } else if (dev > 3 * analysisStd) {
+                                if (binStatus !== COLOR_RED) binStatus = COLOR_RED;
+                            } else if (dev > 2 * analysisStd) {
+                                if (binStatus === COLOR_GREEN) binStatus = COLOR_YELLOW;
+                            }
+                        });
+                    } else {
+                        let binCenter = (binStart + binEnd) / 2;
+                        let devCenter = Math.abs(binCenter - analysisMean);
+                        if ((!isNaN(lcl) && binCenter < lcl) || (!isNaN(ucl) && binCenter > ucl)) {
+                            binStatus = COLOR_RED;
+                        } else if (devCenter > 3 * analysisStd) {
+                            binStatus = COLOR_RED;
+                        } else if (devCenter > 2 * analysisStd) {
+                            binStatus = COLOR_YELLOW;
+                        }
+                    }
+                    binColors[i] = binStatus;
+                } else {
+                    binColors[i] = COLOR_GREEN; 
+                }
+            }
+            let finalEnd = start + (binCount * width);
+            return { labels: binLabels, counts: binCounts, colors: binColors, width: width, start: start, end: finalEnd };
+        }
+
+        function renderCharts() {
+            clampAndValidateInputs(); 
+
+            if (currentData.length === 0) {
+                Plotly.purge('plotHistogram');
+                Plotly.purge('plotBar');
+                document.getElementById('binDistributionBox').classList.add('hidden');
+                document.getElementById('continuousInterpretationBox').classList.add('hidden');
+                document.getElementById('discreteInterpretationBox').classList.add('hidden');
+                document.getElementById('chartContainerHist').classList.add('hidden');
+                document.getElementById('chartContainerBar').classList.add('hidden');
+                document.getElementById('calculatedBinEnd').innerText = `END: --`;
+                
+                document.getElementById('dataStats').innerText = "MIN: -- | MAX: --";
+                document.getElementById('statMean').innerHTML = "--";
+                document.getElementById('statStd').innerHTML = "--";
+                document.getElementById('statSkew').innerText = "--";
+                document.getElementById('statKurt').innerText = "--";
+                return;
+            }
+
+            document.getElementById('chartContainerHist').classList.remove('hidden');
+            document.getElementById('chartContainerBar').classList.remove('hidden');
+
+            let stats = calculateStatistics(currentData.map(d => d.value));
+            
+            let lclVal = document.getElementById('lclInput').value;
+            let uclVal = document.getElementById('uclInput').value;
+            let lcl = lclVal !== '' ? parseFloat(lclVal) : NaN;
+            let ucl = uclVal !== '' ? parseFloat(uclVal) : NaN;
+            
+            let overrideMeanVal = document.getElementById('overrideMeanInput').value;
+            let overrideStdVal = document.getElementById('overrideStdInput').value;
+            let overrideMean = overrideMeanVal !== '' ? parseFloat(overrideMeanVal) : NaN;
+            let overrideStd = overrideStdVal !== '' ? parseFloat(overrideStdVal) : NaN;
+            
+            let isMeanOverridden = !isNaN(overrideMean);
+            let isStdOverridden = !isNaN(overrideStd) && overrideStd > 0;
+            
+            let analysisMean = isMeanOverridden ? overrideMean : stats.mean;
+            let analysisStd = isStdOverridden ? overrideStd : stats.stdDev;
+            
+            let showCurve = document.getElementById('toggleCurve').checked;
+            let isPercent = document.getElementById('togglePercent').checked;
+            let useZeroBase = document.getElementById('toggleZeroBase').checked;
+
+            // TOP METRICS UPDATE
+            document.getElementById('dataStats').innerText = `MIN: ${stats.min.toFixed(2)} | MAX: ${stats.max.toFixed(2)}`;
+            document.getElementById('statMean').innerHTML = isMeanOverridden ? `${analysisMean.toFixed(2)} <span class="text-[#4472C4] text-[9px] font-bold uppercase">(SET)</span>` : stats.mean.toFixed(2);
+            document.getElementById('statStd').innerHTML = isStdOverridden ? `${analysisStd.toFixed(2)} <span class="text-[#4472C4] text-[9px] font-bold uppercase">(SET)</span>` : stats.stdDev.toFixed(2);
+            document.getElementById('statSkew').innerText = stats.skewness !== null ? stats.skewness.toFixed(3) : "N/A";
+            document.getElementById('statKurt').innerText = stats.kurtosis !== null ? stats.kurtosis.toFixed(3) : "N/A";
+
+            // --- 1. HISTOGRAM (Continuous) & INTERPRETATION ---
+            let histData = calculateCustomHistogram(currentData, stats, lcl, ucl, isPercent, analysisMean, analysisStd);
+            document.getElementById('calculatedBinEnd').innerText = `END: ${histData.end.toFixed(2)}`;
+
+            let tracesHist = [];
+            tracesHist.push({
+                x: histData.labels,
+                y: histData.counts,
+                type: 'bar',
+                text: isPercent ? histData.counts.map(c => `<b>${c}%</b>`) : histData.counts.map(c => `<b>${c}</b>`),
+                textposition: 'outside',
+                textfont: { size: 14, color: '#1e293b' },
+                marker: { color: histData.colors, line: { color: 'white', width: 1 } },
+                hoverinfo: 'x+y',
+                name: 'Data Bins',
+                cliponaxis: false
+            });
+
+            if (showCurve && analysisStd > 0) {
+                let curveX = [];
+                let curveY = [];
+                for (let i = 0; i < histData.labels.length; i++) {
+                    let bounds = histData.labels[i].replace(/[\[\]\(\)]/g, '').split(',').map(Number);
+                    let binCenter = (bounds[0] + bounds[1]) / 2;
+                    let pdf = (1 / (analysisStd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((binCenter - analysisMean) / analysisStd, 2));
+                    let yVal = isPercent ? (pdf * histData.width * 100) : (pdf * stats.n * histData.width);
+                    curveX.push(histData.labels[i]);
+                    curveY.push(yVal);
+                }
+                tracesHist.push({
+                    x: curveX,
+                    y: curveY,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { shape: 'spline', smoothing: 1.3, color: '#2563eb', width: 2, dash: 'dot' },
+                    marker: { size: 6, color: '#1e40af' },
+                    name: 'Normal Curve'
+                });
+            }
+
+            let yTitle = isPercent ? 'RELATIVE FREQUENCY (%)' : 'FREQUENCY COUNT';
+            
+            const layoutHist = {
+                margin: { t: 30, r: 20, l: 50, b: 20 }, 
+                xaxis: { showticklabels: false, showline: true, linecolor: EXCEL_GRID },
+                yaxis: { title: yTitle, tickfont: { color: '#595959' }, gridcolor: EXCEL_GRID, showline: true, linecolor: EXCEL_GRID, zeroline: false },
+                plot_bgcolor: 'white', paper_bgcolor: 'white',
+                showlegend: showCurve,
+                legend: { orientation: 'h', y: 1.1 }
+            };
+
+            Plotly.react('plotHistogram', tracesHist, layoutHist, {displayModeBar: false, responsive: true});
+
+            // POPULATE BIN DISTRIBUTION BOX
+            const binBox = document.getElementById('binDistributionBox');
+            const binContent = document.getElementById('binDistributionContent');
+            if (histData.labels.length > 0) {
+                binBox.classList.remove('hidden');
+                let binHtml = '';
+                histData.labels.forEach((label, idx) => {
+                    let color = histData.colors[idx];
+                    let freq = histData.counts[idx];
+                    binHtml += `
+                        <div class="px-2 py-1.5 bg-white border border-slate-200 rounded shadow-sm flex items-center gap-2" style="border-left-width: 4px; border-left-color: ${color};">
+                            <span class="font-mono text-slate-600">${label}</span>
+                            <strong class="text-slate-800 ml-1">FREQ: ${freq}${isPercent ? '%' : ''}</strong>
+                        </div>`;
+                });
+                binContent.innerHTML = binHtml;
+            } else {
+                binBox.classList.add('hidden');
+            }
+
+            // CONTINUOUS INTERPRETATION LOGIC
+            let outOfLimitsCount = 0;
+            let sigmaOutliers = 0;
+            let warnings = 0;
+
+            if (analysisStd > 0) {
+                currentData.forEach(d => {
+                    let dev = Math.abs(d.value - analysisMean);
+                    let isOutOfLimit = false;
+                    if (!isNaN(lcl) && d.value < lcl) isOutOfLimit = true;
+                    if (!isNaN(ucl) && d.value > ucl) isOutOfLimit = true;
+                    if (isOutOfLimit) { outOfLimitsCount++; } 
+                    else if (dev > 3 * analysisStd) { sigmaOutliers++; } 
+                    else if (dev > 2 * analysisStd) { warnings++; }
+                });
+            }
+
+            const contWrapper = document.getElementById('continuousInterpretationBox');
+            const contBoxStyle = document.getElementById('contBoxStyle');
+            const contIconWrapper = document.getElementById('contIconWrapper');
+            const contText = document.getElementById('continuousExplainText');
+
+            contWrapper.classList.remove('hidden');
+
+            let contMessage = "";
+            let contIconName = "activity";
+            let contIconColor = "text-slate-400";
+            let contBgClass = "";
+
+            if (stats.stdDev === 0 && !isStdOverridden) {
+                contBgClass = "border-t-blue-500 bg-blue-50/50";
+                contIconName = "shield";
+                contIconColor = "text-blue-600";
+                contMessage = `<div class="space-y-2"><p class="text-blue-800 text-lg font-bold tracking-widest uppercase">ZERO VARIANCE DETECTED</p><p class="text-blue-800 leading-relaxed">All ${stats.n} data points are exactly identical (${stats.mean}). Mathematical limits and standard deviation are non-applicable.</p></div>`;
+            } else if (outOfLimitsCount > 0) {
+                contBgClass = "border-t-red-500 bg-red-50/50";
+                contIconName = "x-octagon";
+                contIconColor = "text-red-500";
+                contMessage = `<div class="space-y-2"><p class="text-red-700 text-lg font-bold tracking-widest uppercase">CRITICAL OUTLIERS DETECTED (RED ZONE)</p><p class="text-red-700 leading-relaxed">${outOfLimitsCount} item(s) fall completely outside your defined Control Limits (LCL/UCL). This points to an assignable cause shifting the process output drastically.</p></div>`;
+            } else if (sigmaOutliers > 0) {
+                contBgClass = "border-t-red-500 bg-red-50/50";
+                contIconName = "alert-triangle";
+                contIconColor = "text-red-500";
+                contMessage = `<div class="space-y-2"><p class="text-red-700 text-lg font-bold tracking-widest uppercase">PROCESS IS UNSTABLE (RED ZONE)</p><p class="text-red-700 leading-relaxed">Detected ${sigmaOutliers} statistical outlier(s) exceeding the standard 3-Sigma control limit. Ensure there isn't extreme tool wear or raw material variance.</p></div>`;
+            } else if (warnings > 0) {
+                contBgClass = "border-t-yellow-500 bg-yellow-50/50";
+                contIconName = "alert-circle";
+                contIconColor = "text-yellow-600";
+                contMessage = `<div class="space-y-2"><p class="text-yellow-700 text-lg font-bold tracking-widest uppercase">PROCESS WARNING (YELLOW ZONE)</p><p class="text-yellow-700 leading-relaxed">Detected ${warnings} item(s) in the 2-Sigma to 3-Sigma warning range. The process is beginning to drift away from the central mean.</p></div>`;
+            } else {
+                contBgClass = "border-t-green-500 bg-green-50/50";
+                contIconName = "check-circle";
+                contIconColor = "text-green-600";
+                contMessage = `<div class="space-y-2"><p class="text-green-700 text-lg font-bold tracking-widest uppercase">PROCESS IS STABLE & IN CONTROL (GREEN ZONE)</p><p class="text-green-700 leading-relaxed">All ${stats.n} items are performing within normal ±2 Sigma variations and safely inside your defined control limits.</p></div>`;
+            }
+
+            contBoxStyle.className = `p-6 rounded-xl text-sm flex flex-col items-center justify-center text-center transition-colors duration-300 border shadow-md ${contBgClass}`;
+            contIconWrapper.innerHTML = `<i data-lucide="${contIconName}" class="w-10 h-10 ${contIconColor}"></i>`;
+
+            if (showCurve) {
+                let curveAnalysis = `<div class="w-24 h-px bg-slate-300 mx-auto my-1"></div>`;
+                curveAnalysis += `<div class="space-y-2 text-[#4472C4]"><p class="font-bold uppercase tracking-widest text-base">BELL CURVE ANALYSIS</p><p class="leading-relaxed">`;
+                if (analysisStd === 0) {
+                    curveAnalysis += `Curve generation disabled due to zero statistical variance.`;
+                } else {
+                    let skewMagnitude = Math.abs(stats.skewness);
+                    let kurtMagnitude = stats.kurtosis;
+                    
+                    if (stats.skewness === null) {
+                        curveAnalysis += `Insufficient data (n < 3) to render distribution shape interpretation.`;
+                    } else if (skewMagnitude > 1) {
+                        curveAnalysis += `The overlay reveals a highly skewed distribution. The process significantly deviates from an ideal normal curve, indicating potential systematic bias. `;
+                    } else if (skewMagnitude > 0.5) {
+                        curveAnalysis += `The overlay shows moderate skewness. Your data is slightly shifted from a perfect symmetrical bell shape. `;
+                    } else {
+                        curveAnalysis += `The overlay aligns well with your data, indicating a relatively symmetrical, normal distribution (ideal state). `;
+                    }
+                    
+                    if (stats.kurtosis !== null && kurtMagnitude > 1.5) {
+                        curveAnalysis += `Furthermore, the high kurtosis indicates "fat tails," meaning the process is prone to producing extreme, unpredictable outliers.`;
+                    }
+                }
+                curveAnalysis += `</p></div>`;
+                contMessage += curveAnalysis;
+            }
+            
+            contText.innerHTML = contMessage;
+
+            // --- 2. BAR CHART (Discrete) ---
+            let labelsDiscrete = currentData.map(d => d.label);
+            let valuesDiscrete = currentData.map(d => d.value);
+            
+            let parents = [];
+            let children = [];
+            
+            for (let label of labelsDiscrete) {
+                let match1 = label.match(/^(.*?)[-_\s]+([0-9]+[a-zA-Z0-9]*)$/);
+                let match2 = label.match(/^([a-zA-Z]+)(\d+)$/);
+                
+                if (match1 && match1[1].trim() !== "") {
+                    parents.push(`<b>${escapeHTML(match1[1].trim().toUpperCase())}</b>`);
+                    children.push(`<b>${escapeHTML(match1[2])}</b>`);
+                } else if (match2 && match2[1].trim() !== "") {
+                    parents.push(`<b>${escapeHTML(match2[1].toUpperCase())}</b>`);
+                    children.push(`<b>${escapeHTML(match2[2])}</b>`);
+                } else {
+                    parents.push(' '); 
+                    children.push(`<b>${escapeHTML(label)}</b>`);
+                }
+            }
+
+            let parentCounts = {};
+            parents.forEach(p => { if (p.trim() !== "") parentCounts[p] = (parentCounts[p] || 0) + 1; });
+            let useMultiCategory = Object.values(parentCounts).some(count => count > 1);
+            
+            let colorsDiscrete = valuesDiscrete.map(v => {
+                if ((!isNaN(lcl) && v < lcl) || (!isNaN(ucl) && v > ucl)) return COLOR_RED; 
+                if (analysisStd > 0) {
+                    let dev = Math.abs(v - analysisMean);
+                    if (dev > 3 * analysisStd) return COLOR_RED;
+                    if (dev > 2 * analysisStd) return COLOR_YELLOW;
+                }
+                return COLOR_GREEN;
+            });
+
+            let barShapes = [];
+            if (!isNaN(ucl)) barShapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: ucl, y1: ucl, line: { color: '#ef4444', width: 2, dash: 'dash' } });
+            if (!isNaN(lcl)) barShapes.push({ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: lcl, y1: lcl, line: { color: '#ef4444', width: 2, dash: 'dash' } });
+
+            let yPadding = analysisStd > 0 ? analysisStd * 2 : (Math.abs(stats.mean) * 0.1) || 10;
+            let yRangeMin = stats.min - yPadding;
+            let yRangeMax = stats.max + yPadding;
+            if (!isNaN(lcl) && lcl < yRangeMin) yRangeMin = lcl - yPadding;
+            if (!isNaN(ucl) && ucl > yRangeMax) yRangeMax = ucl + yPadding;
+            
+            if (useZeroBase) {
+                yRangeMin = Math.min(0, stats.min < 0 ? stats.min - yPadding : 0);
+            } else {
+                if (yRangeMin < 0 && stats.min >= 0) yRangeMin = 0; 
+            }
+
+            const traceBar = {
+                x: useMultiCategory ? [parents, children] : labelsDiscrete.map(escapeHTML),
+                y: valuesDiscrete,
+                type: 'bar',
+                text: valuesDiscrete.map(v => `<b>${v}</b>`), 
+                textposition: 'outside',
+                textfont: { size: 14, color: '#1e293b' },
+                marker: { color: colorsDiscrete },
+                hoverinfo: 'y', 
+                cliponaxis: false
+            };
+
+            let titleUnit2 = currentSegment.unit ? ` (${currentSegment.unit})` : "";
+            const layoutBar = {
+                margin: { t: 30, r: 20, l: 50, b: useMultiCategory ? 60 : 80 },
+                xaxis: { 
+                    title: '', 
+                    tickangle: useMultiCategory ? 0 : -45, 
+                    tickfont: { color: '#595959', size: 12 }, 
+                    showline: true, 
+                    linecolor: EXCEL_GRID,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: `VALUES${titleUnit2.toUpperCase()}`, 
+                    tickfont: { color: '#595959' }, 
+                    gridcolor: EXCEL_GRID, 
+                    showline: true, 
+                    linecolor: EXCEL_GRID, 
+                    zeroline: false,
+                    range: [yRangeMin, yRangeMax]
+                },
+                plot_bgcolor: 'white', paper_bgcolor: 'white',
+                shapes: barShapes,
+                bargap: 0.4 
+            };
+
+            if (!useMultiCategory) {
+                layoutBar.xaxis.tickmode = 'array';
+                layoutBar.xaxis.tickvals = labelsDiscrete.map(escapeHTML);
+                layoutBar.xaxis.ticktext = labelsDiscrete.map(l => `<b>${escapeHTML(l)}</b>`);
+            } else {
+                layoutBar.xaxis.type = 'multicategory'; 
+            }
+
+            Plotly.react('plotBar', [traceBar], layoutBar, {displayModeBar: false, responsive: true});
+
+            // --- DYNAMIC DISCRETE INTERPRETATION LOGIC ---
+            let maxObj = currentData.reduce((prev, current) => (prev.value > current.value) ? prev : current);
+            let minObj = currentData.reduce((prev, current) => (prev.value < current.value) ? prev : current);
+            
+            let redNames = [];
+            let yellowNames = [];
+            colorsDiscrete.forEach((color, idx) => {
+                if (color === COLOR_RED) redNames.push(labelsDiscrete[idx]);
+                if (color === COLOR_YELLOW) yellowNames.push(labelsDiscrete[idx]);
+            });
+
+            let redCount = redNames.length;
+            let yellowCount = yellowNames.length;
+
+            const discWrapper = document.getElementById('discreteInterpretationBox');
+            const discBoxStyle = document.getElementById('discBoxStyle');
+            const discIconWrapper = document.getElementById('discreteIconWrapper');
+            const discText = document.getElementById('discreteExplainText');
+
+            discWrapper.classList.remove('hidden');
+            
+            let discHtml = `<div class="space-y-2"><p class="text-slate-800 text-lg font-bold tracking-widest uppercase">DISCRETE ANALYSIS SUMMARY</p>`;
+            discHtml += `<p class="text-slate-700 leading-relaxed text-base">Across ${currentData.length} active categories, <strong>${escapeHTML(maxObj.label)}</strong> recorded the highest value (${maxObj.value}), while <strong>${escapeHTML(minObj.label)}</strong> recorded the lowest (${minObj.value}).</p></div>`;
+            discHtml += `<div class="w-24 h-px bg-slate-300 mx-auto my-1"></div>`;
+
+            let discIconName = "info";
+            let discIconColor = "text-slate-600";
+            let discBgClass = "border-t-slate-500 bg-slate-50/50";
+
+            if (stats.stdDev === 0 && !isStdOverridden) {
+                discBgClass = "border-t-blue-500 bg-blue-50/50";
+                discIconName = "shield";
+                discIconColor = "text-blue-600";
+                discHtml += `<div class="space-y-2"><p class="text-blue-800 text-lg font-bold tracking-widest uppercase">ZERO VARIANCE</p><p class="text-blue-800 leading-relaxed">All categories share identical measurements. Standard deviation calculations suspended.</p></div>`;
+            } else if (redCount > 0) {
+                discBgClass = "border-t-red-500 bg-red-50/50";
+                discIconName = "alert-triangle";
+                discIconColor = "text-red-500";
+                discHtml += `<div class="space-y-3"><p class="text-red-700 text-lg font-bold tracking-widest uppercase">CRITICAL ALERT (${redCount})</p><p class="text-red-700 leading-relaxed">The following categories exceeded control limits and require immediate review:</p><div class="bg-red-100 border border-red-200 px-6 py-2 rounded-lg inline-block mx-auto"><span class="text-red-800 font-mono text-base font-bold">${redNames.map(escapeHTML).join(', ')}</span></div></div>`;
+                if (yellowCount > 0) discHtml += `<div class="mt-2"><p class="text-yellow-700 text-xs uppercase font-bold tracking-widest">(Warning zone items: ${yellowNames.map(escapeHTML).join(', ')})</p></div>`;
+            } else if (yellowCount > 0) {
+                discBgClass = "border-t-yellow-500 bg-yellow-50/50";
+                discIconName = "alert-circle";
+                discIconColor = "text-yellow-600";
+                discHtml += `<div class="space-y-3"><p class="text-yellow-700 text-lg font-bold tracking-widest uppercase">PROCESS WARNING (${yellowCount})</p><p class="text-yellow-700 leading-relaxed">No strict limit violations, but these categories are drifting into the 2-Sigma warning zone:</p><div class="bg-yellow-100 border border-yellow-200 px-6 py-2 rounded-lg inline-block mx-auto"><span class="text-yellow-800 font-mono text-base font-bold">${yellowNames.map(escapeHTML).join(', ')}</span></div></div>`;
+            } else {
+                discBgClass = "border-t-green-500 bg-green-50/50";
+                discIconName = "check-circle";
+                discIconColor = "text-green-600";
+                discHtml += `<div class="space-y-2"><p class="text-green-700 text-lg font-bold tracking-widest uppercase">PROCESS STABLE</p><p class="text-green-700 leading-relaxed">All ${currentData.length} categories are performing perfectly within nominal thresholds (Green Zone).</p></div>`;
+            }
+
+            discBoxStyle.className = `p-6 rounded-xl text-sm flex flex-col items-center justify-center text-center transition-colors duration-300 border shadow-md ${discBgClass}`;
+            discIconWrapper.innerHTML = `<i data-lucide="${discIconName}" class="w-10 h-10 ${discIconColor}"></i>`;
+
+            if (!isNaN(lcl) || !isNaN(ucl)) {
+                let textParts = [];
+                if (!isNaN(lcl)) textParts.push(`LOWER LIMIT: ${lcl}`);
+                if (!isNaN(ucl)) textParts.push(`UPPER LIMIT: ${ucl}`);
+                discHtml += `<div class="mt-4 bg-slate-200/50 border border-slate-300 px-4 py-2 rounded-lg inline-block mx-auto"><p class="text-slate-600 font-bold uppercase text-[10px] tracking-widest"><em>*NOTE: CHART RED DOTTED LINES DENOTE EXPLICITLY DEFINED OVERRIDES (${textParts.join(' | ')}).</em></p></div>`;
+            }
+            
+            discText.innerHTML = discHtml;
+            
+            lucide.createIcons({ root: contIconWrapper });
+            lucide.createIcons({ root: discIconWrapper });
+        }
+
+        function handleInput() {
+            const rawText = document.getElementById('customDataInput').value;
+            const errorMsg = document.getElementById('inputErrorMsg');
+            
+            if (!rawText.trim()) {
+                currentData = [];
+                renderCharts();
+                return;
+            }
+
+            currentData = parseData(rawText);
+
+            if (currentData.length < 2) {
+                errorMsg.innerText = "PLEASE PROVIDE AT LEAST 2 VALID NUMERIC DATA POINTS.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            errorMsg.classList.add('hidden');
+            renderCharts();
+        }
+
+        // Export Functions
+        function exportToExcel() {
+            if (currentData.length === 0) {
+                const oldStatus = isAppLoaded;
+                isAppLoaded = true;
+                showToast("NO DATA AVAILABLE TO EXPORT.", "error");
+                isAppLoaded = oldStatus;
+                return;
+            }
+            
+            const oldStatus = isAppLoaded;
+            isAppLoaded = true;
+            showToast("GENERATING EXCEL FILE...", "info");
+            
+            const wb = XLSX.utils.book_new();
+            
+            const wsData = XLSX.utils.json_to_sheet(currentData);
+            XLSX.utils.book_append_sheet(wb, wsData, "Raw Data");
+            
+            let stats = calculateStatistics(currentData.map(d => d.value));
+            const statsArray = [
+                { Metric: "Min", Value: stats.min },
+                { Metric: "Max", Value: stats.max },
+                { Metric: "Mean (μ)", Value: stats.mean },
+                { Metric: "StdDev (σ)", Value: stats.stdDev },
+                { Metric: "Skewness", Value: stats.skewness !== null ? stats.skewness : "N/A" },
+                { Metric: "Kurtosis", Value: stats.kurtosis !== null ? stats.kurtosis : "N/A" },
+                { Metric: "Count (n)", Value: stats.n }
+            ];
+            const wsStats = XLSX.utils.json_to_sheet(statsArray);
+            XLSX.utils.book_append_sheet(wb, wsStats, "Statistics");
+
+            XLSX.writeFile(wb, 'MECTS_SPC_Data.xlsx');
+            showToast("EXCEL FILE SUCCESSFULLY DOWNLOADED.", "success");
+            isAppLoaded = oldStatus;
+        }
+
+        async function exportToPDF() {
+            if (currentData.length === 0) {
+                showToast("NO DATA AVAILABLE FOR PDF REPORT.", "error");
+                return;
+            }
+            
+            const oldStatus = isAppLoaded;
+            isAppLoaded = true;
+            showToast("GENERATING PDF REPORT...", "info");
+
+            // Helper to clean up UTF-8 characters that break standard jsPDF encoding
+            const sanitizeText = (txt) => {
+                if (!txt) return "";
+                return txt.replace(/μ/g, 'u')
+                          .replace(/σ/g, 's')
+                          .replace(/±/g, '+/-')
+                          .replace(/≥/g, '>=')
+                          .replace(/≤/g, '<=')
+                          .replace(/[\u2018\u2019]/g, "'")
+                          .replace(/[\u201C\u201D]/g, '"')
+                          .replace(/–/g, '-')
+                          .replace(/—/g, '-');
+            };
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            
+            const headerHeight = 20;
+
+            // Strict PDF Header - No bleeding, consistent on all pages.
+            const addPageHeader = (pdfDoc) => {
+                pdfDoc.setFillColor(30, 41, 59); // #1e293b
+                pdfDoc.rect(0, 0, pageWidth, headerHeight, 'F');
+                pdfDoc.setTextColor(255, 255, 255);
+                pdfDoc.setFont("helvetica", "bold");
+                pdfDoc.setFontSize(20);
+                pdfDoc.text("MECTS....SET....GO", 14, 13);
+                pdfDoc.setFontSize(10);
+                pdfDoc.setFont("helvetica", "normal");
+                pdfDoc.text("ADVANCED SPC & VARIANCE REPORT", pageWidth - 14, 12, { align: "right" });
+                pdfDoc.setTextColor(0, 0, 0); // reset
+            };
+
+            addPageHeader(doc);
+            
+            // God Mode: Optimized vertical space utilization
+            let yPos = headerHeight + 8;
+            
+            // Statistics Summary
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text("PROCESS STATISTICAL METRICS", 14, yPos);
+            yPos += 6;
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            let stats = calculateStatistics(currentData.map(d => d.value));
+            
+            doc.text(`COUNT (n): ${stats.n}`, 14, yPos);
+            doc.text(`MIN: ${stats.min.toFixed(2)} | MAX: ${stats.max.toFixed(2)}`, pageWidth/2, yPos);
+            yPos += 6;
+            doc.text(`MEAN (u): ${sanitizeText(document.getElementById('statMean').innerText)}`, 14, yPos);
+            doc.text(`STDDEV (s): ${sanitizeText(document.getElementById('statStd').innerText)}`, pageWidth/2, yPos);
+            yPos += 6;
+            doc.text(`SKEWNESS: ${sanitizeText(document.getElementById('statSkew').innerText)}`, 14, yPos);
+            doc.text(`KURTOSIS: ${sanitizeText(document.getElementById('statKurt').innerText)}`, pageWidth/2, yPos);
+            yPos += 10;
+
+            try {
+                // Image parameters - Highly optimized aspect ratio to fit everything on page 1
+                const imgWidth = pageWidth - 28; 
+                const imgHeight = (380 / 1200) * imgWidth; 
+
+                // --- Histogram Section ---
+                const histImg = await Plotly.toImage('plotHistogram', {format: 'png', width: 1200, height: 380});
+                
+                if (yPos + imgHeight > pageHeight - 20) {
+                    doc.addPage();
+                    addPageHeader(doc);
+                    yPos = headerHeight + 8;
+                }
+
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.text("CONTINUOUS HISTOGRAM ANALYSIS", 14, yPos);
+                yPos += 5;
+
+                doc.addImage(histImg, 'PNG', 14, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 3;
+
+                // God Mode WYSIWYG Fix: Capture exact UI box as an image to perfectly preserve layout/spacing
+                const contBox = document.getElementById('continuousInterpretationBox');
+                if (contBox && !contBox.classList.contains('hidden')) {
+                    const btn = contBox.querySelector('button');
+                    if (btn) btn.style.visibility = 'hidden'; // Hide copy button from PDF print
+                    
+                    const canvas = await html2canvas(contBox, { scale: 2, backgroundColor: null });
+                    
+                    if (btn) btn.style.visibility = 'visible'; // Restore copy button
+
+                    const boxWidth = pageWidth - 28;
+                    const boxHeight = (canvas.height / canvas.width) * boxWidth;
+                    
+                    if (yPos + boxHeight > pageHeight - 20) {
+                        doc.addPage();
+                        addPageHeader(doc);
+                        yPos = headerHeight + 8;
+                    }
+                    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, yPos, boxWidth, boxHeight);
+                    yPos += boxHeight + 8;
+                }
+
+                // --- Bar Chart Section ---
+                const barImg = await Plotly.toImage('plotBar', {format: 'png', width: 1200, height: 380});
+                
+                if (yPos + imgHeight > pageHeight - 20) {
+                    doc.addPage();
+                    addPageHeader(doc);
+                    yPos = headerHeight + 8;
+                }
+
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.text("DISCRETE CATEGORY ANALYSIS", 14, yPos);
+                yPos += 5;
+
+                doc.addImage(barImg, 'PNG', 14, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 3;
+
+                // God Mode WYSIWYG Fix: Capture exact UI box as an image to perfectly preserve layout/spacing
+                const discBox = document.getElementById('discreteInterpretationBox');
+                if (discBox && !discBox.classList.contains('hidden')) {
+                    const btn = discBox.querySelector('button');
+                    if (btn) btn.style.visibility = 'hidden'; // Hide copy button from PDF print
+                    
+                    const canvas = await html2canvas(discBox, { scale: 2, backgroundColor: null });
+                    
+                    if (btn) btn.style.visibility = 'visible'; // Restore copy button
+
+                    const boxWidth = pageWidth - 28;
+                    const boxHeight = (canvas.height / canvas.width) * boxWidth;
+                    
+                    if (yPos + boxHeight > pageHeight - 20) {
+                        doc.addPage();
+                        addPageHeader(doc);
+                        yPos = headerHeight + 8;
+                    }
+                    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 14, yPos, boxWidth, boxHeight);
+                    yPos += boxHeight + 10;
+                }
+
+            } catch (e) {
+                console.error("Plotly/HTML2Canvas Image Generation Failed:", e);
+                doc.text("Error generating chart images.", 14, yPos);
+                yPos += 10;
+            }
+
+            if (yPos > pageHeight - 40) {
+                doc.addPage();
+                addPageHeader(doc);
+                yPos = headerHeight + 8;
+            }
+
+            // Data Table with auto pagination and header hook
+            const tableData = currentData.map(d => [sanitizeText(d.label), d.value]);
+            doc.autoTable({
+                startY: yPos,
+                head: [['CATEGORY / LABEL', 'VALUE']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [68, 114, 196] },
+                margin: { top: headerHeight + 8 },
+                didDrawPage: function (data) {
+                    addPageHeader(doc); // Ensures header exists on every single table page
+                }
+            });
+
+            doc.save("MECTS_SPC_Report.pdf");
+            showToast("PDF REPORT SUCCESSFULLY DOWNLOADED.", "success");
+            isAppLoaded = oldStatus;
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            populateDropdown();
+            
+            document.getElementById('genMean').value = '';
+            document.getElementById('genStd').value = '';
+            
+            loadSegmentData(); 
+
+            const txtInput = document.getElementById('customDataInput');
+            const clearBtn = document.getElementById('btnClearData');
+            const btnRegenerate = document.getElementById('btnRegenerate');
+            
+            txtInput.addEventListener('input', () => {
+                clearTimeout(window.inputTimeout);
+                window.inputTimeout = setTimeout(handleInput, 500);
+            });
+            
+            btnRegenerate.addEventListener('click', () => {
+                loadSegmentData();
+            });
+
+            document.getElementById('btnAutoLimitsBasic').addEventListener('click', () => {
+                const oldStatus = isAppLoaded;
+                isAppLoaded = true;
+                autoCaptureLimitsBasic(false);
+                isAppLoaded = oldStatus;
+            });
+            document.getElementById('btnAutoLimitsAdv').addEventListener('click', () => {
+                const oldStatus = isAppLoaded;
+                isAppLoaded = true;
+                autoCaptureLimitsAdv();
+                isAppLoaded = oldStatus;
+            });
+
+            clearBtn.addEventListener('click', () => {
+                txtInput.value = '';
+                handleInput();
+                document.getElementById('overrideMeanInput').value = '';
+                document.getElementById('overrideStdInput').value = '';
+                document.getElementById('dataStats').innerText = "MIN: -- | MAX: --";
+                document.getElementById('statMean').innerHTML = "--";
+                document.getElementById('statStd').innerHTML = "--";
+                document.getElementById('statSkew').innerText = "--";
+                document.getElementById('statKurt').innerText = "--";
+                
+                document.getElementById('continuousInterpretationBox').classList.add('hidden');
+                document.getElementById('discreteInterpretationBox').classList.add('hidden');
+                document.getElementById('binDistributionBox').classList.add('hidden');
+                document.getElementById('chartContainerHist').classList.add('hidden');
+                document.getElementById('chartContainerBar').classList.add('hidden');
+                document.getElementById('calculatedBinEnd').innerText = `END: --`;
+                
+                const oldStatus = isAppLoaded;
+                isAppLoaded = true;
+                showToast('WORKSPACE CLEARED. AWAITING NEW DATA.', 'info');
+                isAppLoaded = oldStatus;
+            });
+
+            document.getElementById('binCountInput').addEventListener('input', () => {
+                document.getElementById('binWidthInput').value = ''; 
+                clearTimeout(window.chartTimeout);
+                window.chartTimeout = setTimeout(renderCharts, 300);
+            });
+
+            ['binStartInput', 'binWidthInput', 'lclInput', 'uclInput', 'toggleCurve', 'togglePercent', 'overrideMeanInput', 'overrideStdInput', 'toggleZeroBase'].forEach(id => {
+                document.getElementById(id).addEventListener('input', () => {
+                    clearTimeout(window.chartTimeout);
+                    window.chartTimeout = setTimeout(renderCharts, 300);
+                });
+            });
+
+            document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
+            document.getElementById('btnExportPDF').addEventListener('click', exportToPDF);
+
+            window.addEventListener('resize', () => {
+                if(currentData.length > 0) {
+                     Plotly.Plots.resize('plotHistogram');
+                     Plotly.Plots.resize('plotBar');
+                }
+            });
+            
+            setTimeout(() => { isAppLoaded = true; }, 800);
+        });
+
+    </script>
+</body>
+</html>

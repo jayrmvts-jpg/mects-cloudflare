@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychometric Masterclass | Cronbach Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for native, warning-free Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .heatmap-cell { transition: all 0.2s ease; aspect-ratio: 1 / 1; width: 100%; height: auto; }
+        .heatmap-cell:hover { transform: scale(1.05); z-index: 10; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Data grid inputs */
+        .data-input { width: 100%; height: 100%; text-align: center; outline: none; font-weight: 500; transition: background-color 0.2s;}
+        .data-input:focus { background: #e0e7ff !important; }
+        [contenteditable]:focus { outline: 2px solid #6366f1; background: #e0e7ff; border-radius: 4px; padding: 0 4px; }
+        .toast { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen overflow-hidden flex flex-col md:flex-row">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Main Dashboard -->
+    <main class="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 space-y-6 relative">
+        
+        <!-- MECTS BRANDING BANNER -->
+        <div class="w-full bg-slate-900 text-white py-3 px-6 rounded-lg shadow-md flex items-center justify-center border-b-4 border-indigo-500 shrink-0">
+            <h1 class="text-xl md:text-2xl font-black tracking-[0.25em] uppercase">MECTS ....SET....GO</h1>
+        </div>
+
+        <!-- Header & Top Controls -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-slate-200 pb-4 gap-4">
+            <div>
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Cronbach's Alpha Engine</h2>
+                <p class="text-slate-500 mt-1">Inter-Item Correlation & Reliability Masterclass</p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                <div class="w-full sm:w-auto">
+                    <label for="industry-select" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Industry Segment</label>
+                    <select id="industry-select" class="w-full sm:w-48 bg-white border border-slate-300 text-slate-700 py-2 px-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-medium">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <button onclick="resetCurrentIndustry()" class="w-full sm:w-auto mt-0 sm:mt-5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-3 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-1 text-sm" title="Reset to Baseline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                <button onclick="downloadExcel()" class="w-full sm:w-auto mt-0 sm:mt-5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-sm" title="Export to Excel with embedded formulas">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Export Excel
+                </button>
+                <div class="text-right pt-5 hidden md:block ml-2">
+                    <span id="incident-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 uppercase tracking-wider whitespace-nowrap">
+                        System Optimal
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Metric Boxes (Small Rectangles) -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4" id="metrics-container">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- TWO-COLUMN LAYOUT: Data Editor (Left) + Calculation Box (Right) -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            
+            <!-- Real-Time Data Editor & Advanced Stats -->
+            <div class="xl:col-span-2 glass-panel rounded-xl shadow-sm p-5 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold uppercase text-slate-500 tracking-wider">Live Raw Data Matrix</h3>
+                    <div class="flex gap-2 items-center">
+                        <button onclick="addRespondent()" class="text-xs bg-slate-200 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 font-bold py-1 px-2 rounded transition" title="Add Respondent Row">+ Resp</button>
+                        <button onclick="addItem()" class="text-xs bg-slate-200 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 font-bold py-1 px-2 rounded transition" title="Add Question Column">+ Item</button>
+                        <span class="text-xs text-indigo-500 font-semibold bg-indigo-50 px-2 py-1 rounded ml-2 border border-indigo-200">Scale: 1 to 5</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left border-collapse">
+                        <thead class="text-xs text-slate-600 bg-slate-50 border-b border-slate-200" id="data-editor-head">
+                            <!-- Populated by JS -->
+                        </thead>
+                        <tbody id="data-editor-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                        <tfoot id="data-editor-foot" class="bg-slate-50 text-xs font-semibold text-slate-600 border-t-2 border-slate-300">
+                            <!-- Variances populated by JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mathematical Blueprint & Excel Formulas Box -->
+            <div id="calculation-steps-container" class="xl:col-span-1 glass-panel rounded-xl shadow-sm p-5 flex flex-col bg-slate-50 border-l-4 border-indigo-500">
+                <!-- Dynamically populated by JS -->
+            </div>
+
+        </div>
+
+        <!-- Visualizations Area -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6" id="visuals-container">
+            <!-- Current Heatmap -->
+            <div class="glass-panel rounded-xl shadow-sm p-5 flex flex-col min-h-[350px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold uppercase text-slate-500 tracking-wider">Current Matrix</h3>
+                    <span class="text-xs text-slate-400">Pearson r</span>
+                </div>
+                <div id="current-heatmap" class="flex-1 w-full flex items-center justify-center overflow-visible"></div>
+            </div>
+
+            <!-- Previous Heatmap -->
+            <div id="previous-heatmap-container" class="glass-panel rounded-xl shadow-sm p-5 flex flex-col hidden transition-all duration-300 min-h-[350px]">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-bold uppercase text-slate-500 tracking-wider">Previous State</h3>
+                    <span class="text-xs text-rose-500 font-semibold">Pre-CAPA (Read-Only)</span>
+                </div>
+                <div id="previous-heatmap" class="flex-1 w-full flex items-center justify-center overflow-visible"></div>
+            </div>
+        </div>
+
+        <!-- Deep Interpretation Box -->
+        <div class="glass-panel rounded-xl shadow-sm p-6 mt-auto border-l-4 border-indigo-600">
+            <h3 class="text-lg font-bold text-slate-900 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Dynamic Interpretation
+            </h3>
+            <div id="interpretation-text" class="text-slate-600 space-y-3 text-sm leading-relaxed">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- CAPA Side Panel -->
+    <aside class="w-full md:w-80 bg-slate-900 text-slate-100 h-full overflow-y-auto flex flex-col shadow-2xl z-10 shrink-0">
+        <div class="p-6 flex-1 flex flex-col">
+            <h2 class="text-xl font-bold text-white mb-2 border-b border-slate-700 pb-4">CAPA Control</h2>
+            
+            <div class="mt-4 mb-4">
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="text-slate-400">Incident Tracker</span>
+                    <span id="incident-counter" class="font-bold text-indigo-400">0 / 3</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2">
+                    <div id="incident-progress" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Status Box -->
+            <div id="capa-status-box" class="bg-slate-800 rounded-lg p-4 mb-4 border border-slate-700">
+                <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">System Diagnostics</h4>
+                <p id="diagnostic-text" class="text-sm text-slate-300">Scanning psychometric payload...</p>
+            </div>
+
+            <!-- DYNAMIC CAPA SOLUTION BOX -->
+            <div id="capa-solution-box" class="bg-indigo-900/50 rounded-lg p-4 mb-6 border border-indigo-500/30 hidden shadow-inner transition-all duration-300">
+                <h4 class="text-xs font-bold uppercase text-indigo-300 tracking-wider mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    Proposed CAPA Solution
+                </h4>
+                <p id="solution-text" class="text-sm text-indigo-100 leading-relaxed"></p>
+            </div>
+
+            <!-- Capa Action Buttons -->
+            <div class="flex gap-2 mb-6">
+                <button id="capa-btn" onclick="executeCAPA()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 flex items-center justify-center group">
+                    <svg class="w-5 h-5 mr-2 group-hover:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Correct CAPA
+                </button>
+                <button id="undo-btn" onclick="undoCAPA()" class="hidden bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center" title="Undo Last Action">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                </button>
+            </div>
+
+            <div class="mt-auto">
+                <h4 class="text-xs font-bold uppercase text-slate-500 tracking-wider mb-3">Executed Steps</h4>
+                <ul id="capa-steps" class="space-y-3 relative pl-4 border-l border-slate-700">
+                    <li class="text-xs text-slate-500 italic">Awaiting intervention...</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="bg-slate-950 p-4 text-center text-xs text-slate-600">
+            Psychometric Auditing Protocol V10.0 (God Mode Lock)
+        </div>
+    </aside>
+
+    <script>
+        /**
+         * TOAST NOTIFICATION SYSTEM
+         */
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const colors = { error: 'bg-rose-600', success: 'bg-emerald-600', warning: 'bg-amber-500' };
+            
+            toast.className = `toast ${colors[type]} text-white px-4 py-3 rounded shadow-lg text-sm font-semibold flex items-center justify-between w-72`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="ml-4 text-white hover:text-gray-200 pointer-events-auto">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.transition = 'all 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 3500);
+        }
+
+        /**
+         * 20 INDUSTRY SEGMENTS DATA GENERATOR
+         */
+        const IndustrySegments = [
+            { name: "Hospitality", items: ['Food Quality', 'Service Speed', 'Cleanliness', 'Noise Level', 'Value Match'] },
+            { name: "Healthcare", items: ['Wait Time', 'Doctor Empathy', 'Facility Hygiene', 'Billing Clarity', 'Overall Care'] },
+            { name: "SaaS / Tech", items: ['UI Intuition', 'Load Speed', 'Feature Depth', 'Bug Frequency', 'Support Quality'] },
+            { name: "Retail", items: ['Product Variety', 'Staff Helpfulness', 'Store Layout', 'Checkout Speed', 'Pricing'] },
+            { name: "E-Commerce", items: ['Site Navigation', 'Image Quality', 'Shipping Speed', 'Return Ease', 'Packaging'] },
+            { name: "Banking", items: ['App Stability', 'Transfer Speed', 'Fraud Alert', 'Branch Service', 'Fee Transparency'] },
+            { name: "Real Estate", items: ['Agent Knowledge', 'Property Match', 'Contract Clarity', 'Response Time', 'Fee Fairness'] },
+            { name: "Automotive", items: ['Build Quality', 'Fuel Efficiency', 'Tech Interface', 'Ride Comfort', 'Dealer Service'] },
+            { name: "Education", items: ['Curriculum', 'Instructor Clarity', 'Material Access', 'Campus Safety', 'Peer Quality'] },
+            { name: "Telecom", items: ['Signal Strength', 'Data Speed', 'Call Drop Rate', 'Billing Accuracy', 'Plan Value'] },
+            { name: "Airlines", items: ['Seat Comfort', 'Legroom', 'On-Time Status', 'Crew Politeness', 'Baggage Care'] },
+            { name: "Logistics", items: ['Tracking Accuracy', 'Delivery Speed', 'Package Safety', 'Driver Courtesy', 'Cost Efficiency'] },
+            { name: "Manufacturing", items: ['Defect Rate', 'Material Grade', 'Safety Protocol', 'Output Speed', 'Tolerance Fit'] },
+            { name: "Consulting", items: ['Problem Solving', 'Report Clarity', 'Timeline Met', 'Communication', 'ROI Output'] },
+            { name: "Media / Streaming", items: ['Content Quality', 'Buffer Rate', 'Search UI', 'Ad Frequency', 'Audio Clarity'] },
+            { name: "Non-Profit", items: ['Mission Impact', 'Fund Transparency', 'Volunteer Exp', 'Communication', 'Goal Reach'] },
+            { name: "Energy", items: ['Power Stability', 'Outage Recovery', 'Billing clarity', 'Green Energy %', 'Support Access'] },
+            { name: "Pharmaceuticals", items: ['Efficacy', 'Side Effects', 'Packaging Ease', 'Instruction Clarity', 'Availability'] },
+            { name: "Agriculture", items: ['Yield Volume', 'Pest Resistance', 'Water Efficiency', 'Soil Health', 'Market Price'] },
+            { name: "Construction", items: ['Material Quality', 'Code Compliance', 'Deadline Met', 'Budget Accuracy', 'Site Safety'] }
+        ];
+
+        function generateSegmentData(items) {
+            const data = [];
+            data.push([4, 5, 4, 3, 5, 4, 5, 3, 4, 5]); 
+            data.push([4, 4, 5, 3, 4, 4, 5, 3, 5, 4]);
+            data.push([3, 4, 3, 2, 4, 3, 4, 2, 3, 4]);
+            data.push([2, 1, 2, 4, 1, 2, 1, 4, 2, 1]); // Flaw 1: Inverse
+            data.push([4, 5, 4, 3, 5, 4, 5, 3, 4, 5]); // Flaw 2: Redundant
+            return { items: [...items], data: data };
+        }
+
+        /**
+         * MASTERCLASS MATHEMATICS ENGINE
+         */
+        const MathEngine = {
+            mean: (arr) => arr.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / arr.length,
+            variance: (arr) => {
+                const m = MathEngine.mean(arr);
+                return arr.reduce((a, b) => a + Math.pow(parseFloat(b) - m, 2), 0) / (arr.length - 1 || 1);
+            },
+            pearson: (x, y) => {
+                const n = x.length;
+                let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+                for (let i = 0; i < n; i++) {
+                    const xi = parseFloat(x[i]), yi = parseFloat(y[i]);
+                    sumX += xi; sumY += yi;
+                    sumXY += xi * yi;
+                    sumX2 += xi * xi; sumY2 += yi * yi;
+                }
+                const num = (n * sumXY) - (sumX * sumY);
+                const den = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+                if (den === 0) return 0; // Protects against Zero Variance
+                return num / den;
+            },
+            generateCorrelationMatrix: (dataMatrix) => {
+                const k = dataMatrix.length;
+                let matrix = Array(k).fill(0).map(() => Array(k).fill(0));
+                for(let i=0; i<k; i++) {
+                    for(let j=0; j<k; j++) {
+                        matrix[i][j] = i === j ? 1 : MathEngine.pearson(dataMatrix[i], dataMatrix[j]);
+                    }
+                }
+                return matrix;
+            },
+            getAdvancedStats: (dataMatrix) => {
+                const k = dataMatrix.length;
+                if (k === 0) return { alpha: 0, itemVars: [], sumItemVars: 0, totalVar: 0, totalScores: [] };
+                
+                const n = dataMatrix[0].length;
+                let itemVars = dataMatrix.map(scores => MathEngine.variance(scores));
+                let sumItemVars = itemVars.reduce((a, b) => a + b, 0);
+
+                let totalScores = new Array(n).fill(0);
+                for(let i=0; i<n; i++) {
+                    for(let j=0; j<k; j++) {
+                        totalScores[i] += parseFloat(dataMatrix[j][i]);
+                    }
+                }
+                let totalVar = MathEngine.variance(totalScores);
+                
+                let alpha = 0;
+                if (totalVar > 0 && k > 1) {
+                    alpha = (k / (k - 1)) * (1 - (sumItemVars / totalVar));
+                }
+
+                return { alpha, itemVars, sumItemVars, totalVar, totalScores };
+            }
+        };
+
+        const AppState = {
+            stage: 0,
+            incidentCount: 0,
+            penaltyAmount: 0,
+            history: [],
+            items: [],
+            data: [],
+            stats: {}
+        };
+
+        const Elements = {
+            industrySelect: document.getElementById('industry-select'),
+            metrics: document.getElementById('metrics-container'),
+            editorHead: document.getElementById('data-editor-head'),
+            editorBody: document.getElementById('data-editor-body'),
+            editorFoot: document.getElementById('data-editor-foot'),
+            calcSteps: document.getElementById('calculation-steps-container'),
+            currentHeatmap: document.getElementById('current-heatmap'),
+            prevHeatmapContainer: document.getElementById('previous-heatmap-container'),
+            prevHeatmap: document.getElementById('previous-heatmap'),
+            interpretation: document.getElementById('interpretation-text'),
+            diagnosticText: document.getElementById('diagnostic-text'),
+            capaBtn: document.getElementById('capa-btn'),
+            undoBtn: document.getElementById('undo-btn'),
+            capaSteps: document.getElementById('capa-steps'),
+            incidentBadge: document.getElementById('incident-badge'),
+            incidentCounter: document.getElementById('incident-counter'),
+            incidentProgress: document.getElementById('incident-progress'),
+            capaSolutionBox: document.getElementById('capa-solution-box'),
+            solutionText: document.getElementById('solution-text')
+        };
+
+        const Colors = {
+            darkIndigo: 'bg-indigo-900 text-white',
+            indigo: 'bg-indigo-600 text-white',
+            lightIndigo: 'bg-indigo-300 text-indigo-900',
+            slate: 'bg-slate-100 text-slate-500',
+            red: 'bg-rose-600 text-white'
+        };
+
+        function getHeatmapClass(r) {
+            if (r >= 0.99) return Colors.darkIndigo + ' font-bold ring-2 ring-indigo-400 ring-inset';
+            if (r >= 0.80) return Colors.darkIndigo;
+            if (r >= 0.40) return Colors.indigo;
+            if (r >= 0.10) return Colors.lightIndigo;
+            if (r >= 0.00) return Colors.slate;
+            return Colors.red;
+        }
+
+        // GOD MODE AUDIT FIX: Memory Leak Prevention & Perfect UI Synchronization
+        function captureHistory() {
+            AppState.history.push({
+                data: AppState.data.map(row => [...row]),
+                matrix: MathEngine.generateCorrelationMatrix(AppState.data),
+                items: [...AppState.items],
+                penalty: AppState.penaltyAmount,
+                stage: AppState.stage,
+                incidentCount: AppState.incidentCount,
+                capaHTML: Elements.capaSteps.innerHTML // Backup UI State directly
+            });
+            // Cap history at 50 to prevent DOM/Memory bloat from infinite typing
+            if (AppState.history.length > 50) {
+                AppState.history.shift();
+            }
+        }
+
+        function initApp() {
+            IndustrySegments.forEach((seg, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.innerText = seg.name;
+                Elements.industrySelect.appendChild(opt);
+            });
+            Elements.industrySelect.addEventListener('change', (e) => loadIndustry(e.target.value));
+            loadIndustry(0);
+        }
+
+        function loadIndustry(index) {
+            const segment = IndustrySegments[index];
+            const initData = generateSegmentData(segment.items);
+            AppState.items = initData.items;
+            AppState.data = initData.data;
+            AppState.stage = 0;
+            AppState.incidentCount = 0;
+            AppState.penaltyAmount = 0;
+            AppState.history = [];
+            
+            Elements.prevHeatmapContainer.classList.add('hidden');
+            Elements.capaSteps.innerHTML = '<li class="text-xs text-slate-500 italic">Awaiting intervention...</li>';
+            Elements.capaBtn.disabled = false;
+            Elements.capaBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            Elements.capaBtn.innerHTML = `
+                <svg class="w-5 h-5 mr-2 group-hover:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Correct CAPA
+            `;
+            renderDashboard();
+        }
+
+        window.resetCurrentIndustry = function() {
+            showToast("System Reset to Baseline Data", "success");
+            loadIndustry(Elements.industrySelect.value);
+        }
+
+        function renderDashboard() {
+            const matrix = MathEngine.generateCorrelationMatrix(AppState.data);
+            AppState.stats = MathEngine.getAdvancedStats(AppState.data);
+            
+            // Allow alpha to show true negative mathematically, but clamp max at 1
+            let alpha = Math.min(1, AppState.stats.alpha - AppState.penaltyAmount);
+
+            const k = AppState.items.length;
+            renderDataEditor();
+            renderCalculationSteps(alpha);
+
+            // Dynamic Styling for Alpha
+            let alphaColor = 'text-rose-600';
+            let alphaStatus = 'Noisy Data';
+            if (alpha < 0) {
+                alphaColor = 'text-rose-700';
+                alphaStatus = 'Severe Flaw';
+            } else if (alpha > 0.75) {
+                alphaColor = 'text-emerald-600';
+                alphaStatus = 'Reliable';
+            } else if (alpha > 0.6) {
+                alphaColor = 'text-amber-500';
+                alphaStatus = 'Acceptable';
+            }
+
+            Elements.metrics.innerHTML = `
+                <div class="bg-white border border-slate-200 p-4 rounded shadow-sm text-center">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Cronbach's Alpha</p>
+                    <p class="text-2xl font-black ${alphaColor}">
+                        ${alpha.toFixed(3)}
+                    </p>
+                    ${AppState.penaltyAmount > 0 ? `<p class="text-[10px] text-rose-500 mt-1 font-semibold">-${AppState.penaltyAmount.toFixed(2)} Penalty</p>` : ''}
+                </div>
+                <div class="bg-white border border-slate-200 p-4 rounded shadow-sm text-center">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Items Tracked</p>
+                    <p class="text-2xl font-black text-slate-700">${k}</p>
+                </div>
+                <div class="bg-white border border-slate-200 p-4 rounded shadow-sm text-center">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Lowest r Value</p>
+                    <p class="text-2xl font-black text-slate-700">${Math.min(...matrix.flat()).toFixed(2)}</p>
+                </div>
+                <div class="bg-white border border-slate-200 p-4 rounded shadow-sm text-center">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Sum Item Variances</p>
+                    <p class="text-2xl font-black text-slate-700">${AppState.stats.sumItemVars.toFixed(2)}</p>
+                </div>
+                <div class="bg-white border border-slate-200 p-4 rounded shadow-sm text-center">
+                    <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">System Status</p>
+                    <p class="text-sm font-black mt-2 ${alphaColor}">
+                        ${alphaStatus}
+                    </p>
+                </div>
+            `;
+
+            Elements.currentHeatmap.innerHTML = generateHeatmapHTML(matrix, AppState.items);
+
+            const hasNegative = matrix.flat().some(v => v < 0);
+            const hasZeroVar = AppState.stats.itemVars.some(v => v === 0);
+            
+            let rogueItemName = "";
+            if (hasNegative) {
+                const flatScores = matrix.map(row => row.reduce((a,b)=>a+b,0));
+                const rogueIndex = flatScores.indexOf(Math.min(...flatScores));
+                rogueItemName = AppState.items[rogueIndex];
+            }
+
+            let hasRedundant = false;
+            let redundantItemName = "";
+            for(let i=0; i<k; i++) {
+                for(let j=i+1; j<k; j++) {
+                    if (matrix[i][j] > 0.95) {
+                        hasRedundant = true;
+                        if(!redundantItemName) redundantItemName = AppState.items[j];
+                    }
+                }
+            }
+
+            if (hasNegative) {
+                Elements.diagnosticText.innerHTML = `<span class="text-rose-400">Critical flaws detected:</span> Multi-dimensional noise is crashing the Alpha score.`;
+                Elements.incidentBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 uppercase tracking-wider";
+                Elements.incidentBadge.innerText = "Critical Faults";
+            } else if (hasRedundant) {
+                Elements.diagnosticText.innerHTML = `<span class="text-amber-400">Secondary flaw detected:</span> Redundancy. Respondent fatigue likely.`;
+                Elements.incidentBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 uppercase tracking-wider";
+                Elements.incidentBadge.innerText = "Warning Active";
+            } else if (hasZeroVar) {
+                Elements.diagnosticText.innerHTML = `<span class="text-amber-400">Constant Variable:</span> An item has 0 variance. Correlation undefined.`;
+                Elements.incidentBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 uppercase tracking-wider";
+                Elements.incidentBadge.innerText = "Zero Variance";
+            } else {
+                Elements.diagnosticText.innerHTML = `<span class="text-emerald-400">System Optimized.</span> Scale is uni-dimensional and lean.`;
+                Elements.incidentBadge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 uppercase tracking-wider";
+                Elements.incidentBadge.innerText = "System Optimal";
+                if(AppState.stage < 2 && AppState.incidentCount === 0) {
+                   Elements.capaBtn.disabled = true;
+                   Elements.capaBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                   Elements.capaBtn.innerHTML = `Audit Complete`;
+                }
+            }
+
+            Elements.capaSolutionBox.classList.remove('hidden');
+            if (hasZeroVar) {
+                Elements.capaSolutionBox.className = "bg-amber-900/30 rounded-lg p-4 mb-6 border border-amber-500/50 shadow-inner transition-all duration-300";
+                Elements.capaSolutionBox.querySelector('h4').className = "text-xs font-bold uppercase text-amber-400 tracking-wider mb-2 flex items-center";
+                Elements.solutionText.innerHTML = `<strong>Manual Intervention Needed:</strong> The mathematical engine cannot automate a fix for zero variance. Please manually edit the highlighted data column to inject variance into the constant values.`;
+            } else if (hasNegative) {
+                Elements.capaSolutionBox.className = "bg-rose-900/30 rounded-lg p-4 mb-6 border border-rose-500/50 shadow-inner transition-all duration-300";
+                Elements.capaSolutionBox.querySelector('h4').className = "text-xs font-bold uppercase text-rose-400 tracking-wider mb-2 flex items-center";
+                Elements.solutionText.innerHTML = `<strong>Proposed Automation:</strong> The engine will mathematically reverse-code the item <span class="font-bold text-rose-200">"${rogueItemName}"</span> using the formula <span class="font-mono bg-rose-950/50 px-1 rounded">(6 - x)</span> to realign its dimensional vector with the rest of the survey.`;
+            } else if (hasRedundant) {
+                Elements.capaSolutionBox.className = "bg-indigo-900/50 rounded-lg p-4 mb-6 border border-indigo-500/50 shadow-inner transition-all duration-300";
+                Elements.capaSolutionBox.querySelector('h4').className = "text-xs font-bold uppercase text-indigo-300 tracking-wider mb-2 flex items-center";
+                Elements.solutionText.innerHTML = `<strong>Proposed Automation:</strong> The engine will safely eliminate the highly correlated duplicate item <span class="font-bold text-indigo-200">"${redundantItemName}"</span> to cure respondent fatigue without losing statistical validity.`;
+            } else {
+                Elements.capaSolutionBox.classList.add('hidden');
+            }
+
+            Elements.incidentCounter.innerText = `${AppState.incidentCount} / 2`;
+            Elements.incidentProgress.style.width = `${(AppState.incidentCount / 2) * 100}%`;
+
+            Elements.undoBtn.classList.toggle('hidden', AppState.history.length === 0);
+            Elements.interpretation.innerHTML = generateInterpretation(matrix, alpha, hasNegative, hasRedundant, hasZeroVar);
+        }
+
+        function renderCalculationSteps(currentAlpha) {
+            const k = AppState.items.length;
+            const stats = AppState.stats;
+            const tVar = stats.totalVar || 1; 
+
+            let penaltyHtml = AppState.penaltyAmount > 0 
+                ? `<br><span class="text-rose-600 font-bold block mt-1">- ${AppState.penaltyAmount.toFixed(3)} (Systemic Penalty)</span>
+                   <span class="font-bold text-xs mt-1 block border-t border-indigo-100 pt-1">Final Result = ${currentAlpha.toFixed(3)}</span>`
+                : `<br><span class="font-bold text-xs mt-1 block border-t border-indigo-100 pt-1">Result = ${currentAlpha.toFixed(3)}</span>`;
+                
+            let excelFormulaStr = `=IF(TotalVarCell=0, 0, (${k}/(${k}-1))*(1-(SumOfVarCell / TotalVarCell)))`;
+            if (AppState.penaltyAmount > 0) {
+                excelFormulaStr = `=( ${excelFormulaStr} ) - ${AppState.penaltyAmount}`;
+            }
+
+            Elements.calcSteps.innerHTML = `
+                <div class="flex justify-between items-center mb-4 border-b border-indigo-200 pb-3">
+                    <h3 class="text-sm font-bold uppercase text-indigo-700 tracking-wider">Blueprint & Formulas</h3>
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                </div>
+                <div class="space-y-4 text-xs text-slate-700 flex-1 overflow-y-auto pr-2">
+                    <div>
+                        <strong class="text-slate-900 block mb-1">1. Item Variance (s²)</strong>
+                        <p class="mb-1 text-[11px] text-slate-500">Calculates spread of scores per question.</p>
+                        <div class="bg-indigo-100/50 text-indigo-800 font-mono text-[10px] p-2 rounded border border-indigo-200 shadow-inner break-words">
+                            <span class="font-bold text-indigo-600 mr-1">EXCEL:</span>=VAR.S(Column_Data)
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="text-slate-900 block mb-1">2. Total Score Variance (s²_t)</strong>
+                        <p class="mb-1 text-[11px] text-slate-500">Variance of all user sums (<span class="font-bold text-slate-700">${stats.totalVar.toFixed(3)}</span>).</p>
+                        <div class="bg-indigo-100/50 text-indigo-800 font-mono text-[10px] p-2 rounded border border-indigo-200 shadow-inner break-words">
+                            <span class="font-bold text-indigo-600 mr-1">EXCEL:</span>=VAR.S(Total_Score_Col)
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="text-slate-900 block mb-1">3. Sum of Item Variances (Σs²_i)</strong>
+                        <p class="mb-1 text-[11px] text-slate-500">Adding all column variances (<span class="font-bold text-slate-700">${stats.sumItemVars.toFixed(3)}</span>).</p>
+                        <div class="bg-indigo-100/50 text-indigo-800 font-mono text-[10px] p-2 rounded border border-indigo-200 shadow-inner break-words">
+                            <span class="font-bold text-indigo-600 mr-1">EXCEL:</span>=SUM(Variance_Row)
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-indigo-100">
+                        <strong class="text-slate-900 block mb-1">4. Cronbach's Alpha Math (α)</strong>
+                        <p class="font-mono bg-white p-2 rounded text-[10px] text-slate-600 border border-slate-200 mb-2 shadow-sm text-center">
+                            α = [k / (k-1)] × [1 - (Σs²_i / s²_t)]
+                        </p>
+                        <p class="font-mono text-indigo-700 bg-white p-2 rounded text-[10px] border border-indigo-300 shadow-sm leading-relaxed text-center">
+                            = [${k} / ${k-1}] × [1 - (${stats.sumItemVars.toFixed(3)} / ${stats.totalVar.toFixed(3)})]<br>
+                            = ${(k / (k-1)).toFixed(3)} × ${(1 - (stats.sumItemVars / tVar)).toFixed(3)}
+                            ${penaltyHtml}
+                        </p>
+                        <div class="bg-indigo-100/50 text-indigo-800 font-mono text-[10px] p-2 rounded border border-indigo-200 shadow-inner mt-2 break-words">
+                            <span class="font-bold text-indigo-600 block mb-1">EXCEL COMBINED FORMULA:</span>
+                            ${excelFormulaStr}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Feature: Add/Delete Data Dynamically
+        window.addRespondent = function() {
+            if (AppState.data[0].length >= 30) {
+                showToast("Maximum of 30 respondents allowed in preview to maintain visual integrity.", "warning");
+                return;
+            }
+            captureHistory();
+            
+            // GOD MODE FIX: Inject alternating variance to prevent immediate Zero-Variance lockout on rows
+            for(let c=0; c<AppState.items.length; c++) {
+                AppState.data[c].push(c % 2 === 0 ? 4 : 3); 
+            }
+            showToast("New respondent row added. Edit data to refine variance.", "success");
+            renderDashboard();
+        }
+
+        window.deleteRespondent = function(rowIndex) {
+            if (AppState.data[0].length <= 3) {
+                showToast("Threshold Limit: Minimum 3 respondents required for reliable correlation.", "error");
+                return;
+            }
+            captureHistory();
+            for (let c = 0; c < AppState.items.length; c++) {
+                AppState.data[c].splice(rowIndex, 1);
+            }
+            showToast(`Respondent ${rowIndex + 1} manually removed.`, "warning");
+            renderDashboard();
+        }
+
+        window.addItem = function() {
+            if (AppState.items.length >= 10) {
+                showToast("Maximum of 10 items allowed in preview to maintain visual integrity.", "warning");
+                return;
+            }
+            captureHistory();
+            const n = AppState.data[0].length;
+            AppState.items.push(`Item ${AppState.items.length + 1}`);
+            
+            // GOD MODE FIX: Inject alternating variance to prevent immediate Zero-Variance lockout
+            const newCol = Array.from({length: n}, (_, i) => (i % 2 === 0 ? 4 : 3));
+            AppState.data.push(newCol);
+            
+            showToast("New question column added. Edit data to refine variance.", "success");
+            renderDashboard();
+        }
+
+        window.deleteItem = function(colIndex) {
+            if (AppState.items.length <= 2) {
+                showToast("Threshold Limit: Cronbach requires a minimum of 2 items.", "error");
+                return;
+            }
+            captureHistory();
+            const removedItem = AppState.items.splice(colIndex, 1)[0];
+            AppState.data.splice(colIndex, 1);
+            showToast(`Item "${removedItem}" manually deleted.`, "warning");
+            renderDashboard();
+        }
+
+        function renderDataEditor() {
+            let headHTML = '<tr><th class="px-3 py-2 border-r border-slate-200 bg-slate-100 w-16 text-center">Resp ID</th>';
+            AppState.items.forEach((item, idx) => {
+                const isZeroVar = AppState.stats.itemVars && AppState.stats.itemVars[idx] === 0;
+                const headerClass = isZeroVar ? "bg-amber-100 text-amber-800" : "hover:bg-slate-200";
+                
+                // GOD MODE FIX: Prevent text-injection via enter key, truncate massive inputs
+                headHTML += `
+                <th class="px-3 py-2 border-r border-slate-200 text-center relative transition ${headerClass} group" title="${isZeroVar ? 'Zero Variance Alert' : ''}">
+                    <div class="flex items-center justify-between overflow-hidden">
+                        <div contenteditable="true" class="outline-none flex-1 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" 
+                             onblur="updateHeader(${idx}, this.innerText)" 
+                             onkeydown="if(event.key === 'Enter') { this.blur(); return false; }">${item}</div>
+                        ${AppState.items.length > 2 ? `<button onclick="deleteItem(${idx})" class="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0" title="Delete Item"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
+                    </div>
+                </th>`;
+            });
+            headHTML += '<th class="px-3 py-2 border-slate-200 bg-indigo-50 text-indigo-800 text-center whitespace-nowrap">Total Score</th></tr>';
+            Elements.editorHead.innerHTML = headHTML;
+
+            const respondentsCount = AppState.data[0].length;
+            let bodyHTML = '';
+            for(let r=0; r<respondentsCount; r++) {
+                bodyHTML += `<tr>
+                <td class="px-3 py-1 border border-slate-200 bg-slate-50 text-center font-semibold text-slate-500 relative group">
+                    <div class="flex items-center justify-between">
+                        <span class="flex-1">${r+1}</span>
+                        ${respondentsCount > 3 ? `<button onclick="deleteRespondent(${r})" class="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1" title="Delete Respondent"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>` : ''}
+                    </div>
+                </td>`;
+                
+                for(let c=0; c<AppState.items.length; c++) {
+                    const val = AppState.data[c][r];
+                    const isZeroVar = AppState.stats.itemVars && AppState.stats.itemVars[c] === 0;
+                    // GOD MODE FIX: Visually tint input cells if column has 0 variance to pinpoint the error
+                    const bgClass = isZeroVar ? "bg-amber-50/50 text-amber-900" : "bg-transparent";
+
+                    bodyHTML += `<td class="border border-slate-200 p-0 h-8 ${bgClass}">
+                        <input type="number" class="data-input" value="${val}" min="1" max="5" step="1" 
+                        onkeydown="return ['e', 'E', '+', '-', '.'].includes(event.key) ? false : true" 
+                        onchange="updateData(${c}, ${r}, this.value)">
+                    </td>`;
+                }
+                bodyHTML += `<td class="px-3 py-1 border border-slate-200 bg-indigo-50/50 text-center font-bold text-indigo-700">${AppState.stats.totalScores[r]}</td></tr>`;
+            }
+            Elements.editorBody.innerHTML = bodyHTML;
+
+            let footHTML = `<tr><td class="px-3 py-2 border border-slate-200 text-right whitespace-nowrap text-[10px] uppercase">Item Variance</td>`;
+            if(AppState.stats.itemVars) {
+                AppState.stats.itemVars.forEach(v => {
+                    footHTML += `<td class="px-3 py-2 border border-slate-200 text-center font-mono text-slate-700">${v.toFixed(3)}</td>`;
+                });
+            }
+            footHTML += `<td class="px-3 py-2 border border-slate-200 bg-indigo-50 text-indigo-800 text-center whitespace-nowrap"><span class="text-[10px] uppercase block">Total Var</span><span class="font-mono text-sm">${AppState.stats.totalVar ? AppState.stats.totalVar.toFixed(3) : 0}</span></td></tr>`;
+            Elements.editorFoot.innerHTML = footHTML;
+        }
+
+        window.updateHeader = function(colIndex, newText) {
+            if(!newText.trim()) {
+                showToast("Column headers cannot be completely blank.", "warning");
+                renderDashboard(); // Safely Revert
+                return;
+            }
+            captureHistory();
+            AppState.items[colIndex] = newText.trim();
+            renderDashboard();
+        }
+
+        window.updateData = function(colIndex, rowIndex, newVal) {
+            let val = parseInt(newVal, 10);
+            
+            // GOD MODE FIX: Strict threshold interceptor catches bad manual inputs and invalid copy/pastes globally
+            if(isNaN(val) || val < 1 || val > 5) {
+                showToast("Threshold Limit: System strictly requires an integer between 1 and 5.", "error");
+                renderDashboard(); // Safely Revert grid visually instantly
+                return;
+            }
+            captureHistory();
+            AppState.data[colIndex][rowIndex] = val;
+            showToast("Matrix recalculating based on real-time input.", "success");
+            renderDashboard();
+        }
+
+        function generateHeatmapHTML(matrix, items) {
+            const k = items.length;
+            let html = `<div class="w-full max-w-full grid gap-1 fade-in" style="grid-template-columns: minmax(60px, auto) repeat(${k}, minmax(0, 1fr))">`;
+            
+            html += `<div></div>`; 
+            items.forEach(item => {
+                html += `<div class="text-[10px] sm:text-xs font-bold text-slate-600 text-center truncate px-1 flex items-center justify-center h-16 sm:h-20 break-words" style="writing-mode: vertical-rl; transform: rotate(180deg);" title="${item}">${item}</div>`;
+            });
+
+            for(let i=0; i<k; i++) {
+                html += `<div class="text-[10px] sm:text-xs font-bold text-slate-600 flex items-center justify-center px-1 text-center break-words leading-tight" title="${items[i]}">${items[i]}</div>`;
+                for(let j=0; j<k; j++) {
+                    const r = matrix[i][j];
+                    const colorClass = getHeatmapClass(r);
+                    html += `
+                        <div class="${colorClass} heatmap-cell rounded flex items-center justify-center text-xs shadow-sm cursor-help font-medium" title="${items[i]} vs ${items[j]}: r = ${r.toFixed(3)}">
+                            ${r.toFixed(2)}
+                        </div>
+                    `;
+                }
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        function generateInterpretation(matrix, alpha, hasNegative, hasRedundant, hasZeroVar) {
+            let insights = [];
+            if (alpha < 0) {
+                 insights.push(`<strong>1. Baseline Assessment:</strong> CRITICAL FAILURE. Alpha is mathematically <span class="text-rose-700 font-bold">${alpha.toFixed(3)}</span>. Items are severely inverse-correlated and measuring entirely opposed dimensions.`);
+            } else if (alpha < 0.6) {
+                insights.push(`<strong>1. Baseline Assessment:</strong> Your current Cronbach's Alpha is an unacceptable <span class="text-rose-600 font-bold">${alpha.toFixed(3)}</span>. The scale is noisy.`);
+            } else if (alpha < 0.8) {
+                insights.push(`<strong>1. Baseline Assessment:</strong> Your Alpha is <span class="text-amber-500 font-bold">${alpha.toFixed(3)}</span>. Acceptable, but leaves room for structural improvement.`);
+            } else {
+                 insights.push(`<strong>1. Baseline Assessment:</strong> Excellent Alpha of <span class="text-emerald-600 font-bold">${alpha.toFixed(3)}</span>. The internal consistency is fundamentally robust.`);
+            }
+            
+            if (hasNegative) {
+                insights.push(`<strong>2. The "Red Trap" Identified:</strong> A question was likely reverse-worded but not flipped. It is destroying your reliability score.`);
+                insights.push(`<em>Action:</em> Engage CAPA to mathematically invert the rogue item's scores.`);
+            }
+            if (hasZeroVar) {
+                insights.push(`<strong>⚠️ Warning - Zero Variance:</strong> One or more items have identical responses across all users. This breaks the Pearson correlation (Division by Zero protocol initiated). You must edit the raw data to inject variance.`);
+            } else if (!hasNegative && hasRedundant) {
+                insights.push(`<strong>2. The "Redundancy" Warning:</strong> Notice the blocks of Dark Indigo (r > 0.95). You are asking the same question multiple ways.`);
+                insights.push(`<em>Action:</em> Eliminate duplicate items via CAPA to prevent respondent fatigue.`);
+            }
+            if (!hasNegative && !hasRedundant && !hasZeroVar && alpha > 0.7) {
+                insights.push(`<strong>✅ Uni-Dimensional Scale Confirmed:</strong> The matrix displays a healthy mix of Indigo. The diagonal rule holds true.`);
+                if (AppState.penaltyAmount > 0) {
+                    insights.push(`<strong>⚠️ Systemic Design Penalty:</strong> Because this model required structural CAPA interventions, a weighted penalty of <span class="text-rose-600 font-bold">-${AppState.penaltyAmount}</span> was applied to the Alpha rating.`);
+                }
+            }
+            return insights.map(i => `<p class="border-b border-slate-100 pb-2 last:border-0">${i}</p>`).join('');
+        }
+
+        function executeCAPA() {
+            const currentMatrix = MathEngine.generateCorrelationMatrix(AppState.data);
+            const k = AppState.items.length;
+            const hasNegative = currentMatrix.flat().some(v => v < 0);
+            const hasZeroVar = AppState.stats.itemVars.some(v => v === 0);
+            
+            if(hasZeroVar) {
+                showToast("CAPA Error: Cannot execute while Zero Variance variables exist. Edit data manually.", "error");
+                return;
+            }
+
+            let hasRedundant = false;
+            let redundantPairs = [];
+            for(let i=0; i<k; i++) {
+                for(let j=i+1; j<k; j++) {
+                    if (currentMatrix[i][j] > 0.95) {
+                        hasRedundant = true;
+                        redundantPairs.push(j);
+                    }
+                }
+            }
+
+            if(!hasNegative && !hasRedundant) {
+                showToast("Matrix optimal. No corrective action required.", "success");
+                return;
+            }
+
+            if (hasRedundant && !hasNegative && k <= 2) {
+                showToast("Threshold Limit: Cronbach requires minimum 2 items. Cannot delete redundant item.", "error");
+                return;
+            }
+
+            captureHistory();
+
+            let executedAction = "";
+
+            if (hasNegative) {
+                const flatScores = currentMatrix.map(row => row.reduce((a,b)=>a+b,0));
+                const rogueIndex = flatScores.indexOf(Math.min(...flatScores)); 
+                AppState.data[rogueIndex] = AppState.data[rogueIndex].map(val => 6 - val);
+                executedAction = `Reverse-coded Item: "${AppState.items[rogueIndex]}" to align dimensional vector.`;
+            } else if (hasRedundant) {
+                const redundantIndex = redundantPairs[0];
+                const removedItem = AppState.items[redundantIndex];
+                
+                AppState.items.splice(redundantIndex, 1);
+                AppState.data.splice(redundantIndex, 1);
+                
+                executedAction = `Eliminated redundant Item: "${removedItem}" to cure respondent fatigue.`;
+                if(AppState.incidentCount > 0) AppState.penaltyAmount = 0.05;
+            }
+
+            AppState.stage++;
+            AppState.incidentCount++;
+
+            Elements.prevHeatmapContainer.classList.remove('hidden');
+            Elements.prevHeatmap.innerHTML = generateHeatmapHTML(AppState.history[AppState.history.length-1].matrix, AppState.history[AppState.history.length-1].items);
+
+            const stepLi = document.createElement('li');
+            stepLi.className = "text-xs text-slate-300 relative before:content-[''] before:absolute before:-left-[21px] before:top-1 before:w-2 before:h-2 before:rounded-full before:bg-indigo-500 fade-in";
+            stepLi.innerHTML = `<strong class="text-white block mb-1">Incident ${AppState.incidentCount} ${AppState.penaltyAmount > 0 ? '<span class="text-rose-400 ml-1">(Repeated)</span>' : ''}</strong> ${executedAction} ${AppState.penaltyAmount > 0 ? `<br><span class="text-rose-400 mt-1 block">Penalty Applied: -${AppState.penaltyAmount} to Alpha.</span>` : ''}`;
+            
+            if (AppState.stage === 1 && AppState.incidentCount === 1) Elements.capaSteps.innerHTML = ''; 
+            Elements.capaSteps.appendChild(stepLi);
+
+            showToast("CAPA Intervention Applied Successfully", "success");
+            renderDashboard();
+            
+            if(!hasNegative && !hasRedundant && AppState.stage >= 2) {
+               Elements.capaBtn.disabled = true;
+               Elements.capaBtn.classList.add('opacity-50', 'cursor-not-allowed');
+               Elements.capaBtn.innerHTML = `Audit Complete`;
+            }
+        }
+
+        // DEEP RESTORE UNDO - Bug Fix for perfect UI/State alignment
+        window.undoCAPA = function() {
+            if (AppState.history.length === 0) return;
+            const lastState = AppState.history.pop();
+            
+            AppState.data = lastState.data.map(row => [...row]);
+            AppState.items = [...lastState.items];
+            AppState.penaltyAmount = lastState.penalty;
+            AppState.stage = lastState.stage;
+            AppState.incidentCount = lastState.incidentCount;
+            
+            // Restore UI tracking
+            Elements.capaSteps.innerHTML = lastState.capaHTML;
+
+            // Revert Matrix History View
+            let prevHeatmapFound = false;
+            for(let i = AppState.history.length - 1; i >= 0; i--) {
+                if(AppState.history[i].stage < AppState.stage) {
+                    Elements.prevHeatmap.innerHTML = generateHeatmapHTML(AppState.history[i].matrix, AppState.history[i].items);
+                    prevHeatmapFound = true;
+                    break;
+                }
+            }
+            if(!prevHeatmapFound) {
+                Elements.prevHeatmapContainer.classList.add('hidden');
+            }
+
+            Elements.capaBtn.disabled = false;
+            Elements.capaBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            Elements.capaBtn.innerHTML = `
+                <svg class="w-5 h-5 mr-2 group-hover:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Correct CAPA
+            `;
+
+            showToast("System State Reverted", "warning");
+            renderDashboard();
+        }
+
+        // GOD MODE EXCEL EXPORT - Solved "We Found A Problem" warning using direct Cache Evaluation + Safe Strings
+        window.downloadExcel = function() {
+            showToast("Generating native .xlsx payload with embedded formula appendix...", "success");
+            
+            const k = AppState.items.length;
+            const n = AppState.data[0].length;
+            const stats = AppState.stats; 
+            
+            let ws_data = [];
+
+            ws_data.push(["Resp ID", ...AppState.items, "Total Score"]);
+            
+            let startColRef = XLSX.utils.encode_col(1);
+            let endColRef = XLSX.utils.encode_col(k);
+            
+            for(let r=0; r<n; r++) {
+                let row = [r + 1];
+                for(let c=0; c<k; c++) row.push(parseFloat(AppState.data[c][r]));
+                let rowNum = r + 2;
+                
+                // EXCEL GOD MODE FIX: Evaluate formula directly into cache 'v' to pass strict validator
+                row.push({ t: 'n', f: `SUM(${startColRef}${rowNum}:${endColRef}${rowNum})`, v: stats.totalScores[r] });
+                ws_data.push(row);
+            }
+            
+            ws_data.push([]); 
+            
+            let varRowIdx = n + 3; 
+            let varRow = ["Item Variance"];
+            for(let c=0; c<k; c++) {
+                let colStr = XLSX.utils.encode_col(c + 1);
+                varRow.push({ t: 'n', f: `VAR.S(${colStr}2:${colStr}${n + 1})`, v: stats.itemVars[c] || 0 });
+            }
+            let totalColStr = XLSX.utils.encode_col(k + 1);
+            varRow.push({ t: 'n', f: `VAR.S(${totalColStr}2:${totalColStr}${n + 1})`, v: stats.totalVar || 0 });
+            ws_data.push(varRow);
+            
+            let sumVarRowIdx = n + 4;
+            let sumVarRow = ["Sum of Variances"];
+            sumVarRow.push({ t: 'n', f: `SUM(${startColRef}${varRowIdx}:${endColRef}${varRowIdx})`, v: stats.sumItemVars || 0 });
+            ws_data.push(sumVarRow);
+
+            ws_data.push([]); 
+
+            let alphaRowIdx = n + 6;
+            let alphaRow = ["Cronbach's Alpha"];
+            let sumVarCell = `${startColRef}${sumVarRowIdx}`;
+            let totalVarCell = `${totalColStr}${varRowIdx}`;
+            
+            // EXCEL GOD MODE FIX: IF statement protects empty grids from throwing #DIV/0!
+            let alphaFormula = `IF(${totalVarCell}=0, 0, (${k}/(${k}-1))*(1-(${sumVarCell}/${totalVarCell})))`;
+            let finalAlpha = stats.alpha || 0;
+            
+            if (AppState.penaltyAmount > 0) {
+                alphaFormula = `(${alphaFormula})-${AppState.penaltyAmount}`;
+                finalAlpha -= AppState.penaltyAmount;
+            }
+            alphaRow.push({ t: 'n', f: alphaFormula, v: finalAlpha });
+
+            ws_data.push([]);
+            ws_data.push([]);
+            ws_data.push(["EXCEL FORMULA BLUEPRINT & CALCULATION STEPS"]);
+            ws_data.push(["Metric", "Mathematical Purpose", "Exact Excel Formula Used"]);
+            
+            // EXCEL GOD MODE FIX: Re-encoded to "Formula:" text to prevent Excel string-evaluation crashing
+            ws_data.push(["Total Score (per user)", "Summing individual responses", `Formula: =SUM(${startColRef}2:${endColRef}2)`]);
+            ws_data.push(["Item Variance", "Sample variance of responses", `Formula: =VAR.S(${startColRef}2:${startColRef}${n+1})`]);
+            ws_data.push(["Total Variance", "Sample variance of the Total Score", `Formula: =VAR.S(${totalColStr}2:${totalColStr}${n+1})`]);
+            ws_data.push(["Sum of Variances", "Adding all column variances", `Formula: =SUM(${startColRef}${varRowIdx}:${endColRef}${varRowIdx})`]);
+            ws_data.push(["Cronbach's Alpha", "Mathematical final formula", `Formula: =${alphaFormula}`]);
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+            let wscols = [{wch: 25}];
+            for(let i=0; i<=k; i++) wscols.push({wch: 45});
+            ws['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, ws, "Cronbach Data");
+            XLSX.writeFile(wb, "Cronbach_Analysis_Masterclass.xlsx");
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>

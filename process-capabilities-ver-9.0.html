@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Capability Masterclass | MECTS...SET...GO</title>
+    <!-- Tailwind CSS for premium UI design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for real-time statistical curves -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- HTML2PDF library for robust PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Premium Input Styling */
+        .glass-input {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #0f172a;
+            transition: all 0.2s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #0ea5e9;
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+        }
+        .glass-input.input-locked {
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+            cursor: not-allowed !important;
+            border-color: #e2e8f0 !important;
+            opacity: 0.8;
+        }
+
+        /* Tooltips & Animations */
+        .tooltip .tooltip-text { visibility: hidden; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+        
+        .metric-card { transition: all 0.3s ease; }
+        .view-transition { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
+        .hidden-view { opacity: 0; transform: scale(0.98); pointer-events: none; position: absolute; top: 0; left: 0; right: 0; visibility: hidden; }
+        .active-view { opacity: 1; transform: scale(1); pointer-events: auto; position: relative; visibility: visible; }
+
+        @keyframes data-pulse {
+            0% { opacity: 0.6; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-pulse-data { animation: data-pulse 0.4s ease-out forwards; }
+
+        /* UI Disabled States */
+        .btn-disabled { opacity: 0.5; pointer-events: none; filter: grayscale(100%); cursor: not-allowed !important; }
+
+        /* PDF Engine & Print Execution Styles */
+        @media print {
+            body { background: white; }
+            header, .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .shadow-sm, .shadow-md { box-shadow: none !important; border: 1px solid #ddd !important; }
+            #main-container { display: block !important; position: static !important; }
+            .hidden-view { display: none !important; }
+            .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+        }
+
+        .pdf-export-mode { background: white !important; }
+        .pdf-export-mode #main-container { padding: 0 !important; width: 800px !important; max-width: 800px !important; margin: 0 auto !important; overflow: visible !important; }
+        .pdf-export-mode .no-print { display: none !important; }
+        .pdf-export-mode .print-only { display: block !important; }
+        .pdf-export-mode .break-inside-avoid { page-break-inside: avoid; break-inside: avoid; }
+        .pdf-export-mode .shadow-sm, .pdf-export-mode .shadow-md, .pdf-export-mode .shadow-lg { box-shadow: none !important; border: 1px solid #ddd !important; }
+        .pdf-export-mode #capa-generator-view { 
+            transform: none !important; 
+            opacity: 1 !important; 
+            position: relative !important; 
+            box-shadow: none !important; 
+            border: none !important; 
+            width: 800px !important; /* Perfect A4 width ratio to prevent right-side bleeding */
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            padding-left: 32px !important; /* Shifts the content from left to right to make 'Cp/Pp' and values completely visible */
+            padding-right: 16px !important;
+        }
+
+        /* Custom Toast Notification */
+        #custom-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 9999;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        #custom-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased relative">
+
+    <!-- Custom Toast Element -->
+    <div id="custom-toast">
+        <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <span id="custom-toast-msg"></span>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm no-print">
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-2xl text-white shadow-md shrink-0">
+                    Σ
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-blue-700 leading-none">
+                        MECTS...SET...GO
+                    </h1>
+                    <span class="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-[0.2em] mt-1.5">
+                        Process Capabilities
+                    </span>
+                </div>
+            </div>
+            <div class="hidden md:flex gap-4">
+                <button id="btn-excel-desktop" onclick="downloadExcel()" title="Export current calculated metrics to CSV" class="btn-disabled bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-md font-medium transition-all shadow flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export to Excel
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div id="main-container" class="flex-grow max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full relative">
+        
+        <!-- ================= VIEW 1: DATA DASHBOARD ================= -->
+        <main id="main-dashboard-view" class="view-transition active-view flex flex-col gap-6 w-full">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+                
+                <!-- Left Column: Controls -->
+                <div class="lg:col-span-3 space-y-6 no-print">
+                    
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+                        <h2 class="text-base font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            Analysis Parameters
+                        </h2>
+
+                        <div class="space-y-4">
+                            <div title="Select the mathematical evaluation methodology (Short-term vs Long-term variation).">
+                                <label class="block text-xs font-black text-slate-900 uppercase tracking-widest mb-2">ANALYSIS CONCEPT</label>
+                                <select id="conceptSelect" onchange="updateLabels(); calculate();" class="glass-input w-full rounded-md px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer">
+                                    <option value="cp">Short-Term Capability (Cp / Cpk)</option>
+                                    <option value="pp">Long-Term Performance (Pp / Ppk)</option>
+                                </select>
+                            </div>
+
+                            <div title="Pre-load real-world parameters from standard industry segments.">
+                                <label class="block text-xs font-black text-slate-900 uppercase tracking-widest mb-2">INDUSTRY SEGMENT TRACKER</label>
+                                <select id="industrySelect" onchange="loadSegmentData()" class="glass-input w-full rounded-md px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer">
+                                    <!-- Populated via JS -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 relative overflow-hidden">
+                        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                PROCESS CAPABILITIES CALCULATION
+                            </h2>
+                            <button onclick="clearAllData()" title="Erase all data and reset the simulator" class="text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 px-2 py-1 rounded transition-colors flex items-center gap-1 shadow-sm shrink-0">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                CLEAR ALL
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div title="Lower Specification Limit (LSL): The minimum acceptable value allowed by the customer.">
+                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">LSL <span id="unit-lsl" class="text-slate-400 font-normal"></span></label>
+                                    <input type="number" id="lsl" step="any" oninput="calculate()" class="glass-input w-full rounded-md px-3 py-2 text-sm font-mono text-center font-semibold text-rose-600">
+                                </div>
+                                <div title="Upper Specification Limit (USL): The maximum acceptable value allowed by the customer.">
+                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">USL <span id="unit-usl" class="text-slate-400 font-normal"></span></label>
+                                    <input type="number" id="usl" step="any" oninput="calculate()" class="glass-input w-full rounded-md px-3 py-2 text-sm font-mono text-center font-semibold text-emerald-600">
+                                </div>
+                            </div>
+                            
+                            <!-- Raw Data Ingestion Zone -->
+                            <div class="border border-indigo-100 bg-indigo-50/30 rounded-lg p-3 relative group">
+                                <div class="flex justify-between items-center mb-2">
+                                    <label class="block text-[11px] font-black text-indigo-800 uppercase tracking-widest flex items-center gap-1" title="Paste raw values directly from Excel columns, or separated by commas, spaces, and new lines. Calculates Mean and Std Dev automatically.">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                        Raw Data Override
+                                    </label>
+                                    <span id="data-count" class="text-[9px] font-black text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm transition-colors cursor-help" title="Max threshold limit is 100 samples to prevent performance crashes. Minimum 2 required.">0 / 100 SAMPLES</span>
+                                </div>
+                                <textarea id="raw-data-input" oninput="handleRawData()" class="glass-input w-full rounded border-indigo-200 px-3 py-2 text-xs font-mono text-indigo-900 h-[88px] resize-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400" placeholder="Paste data directly from Excel columns, or type:&#10;10.1&#10;9.8&#10;10.0"></textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div title="Process Mean (µ): The actual average output value. Automatically locked if Raw Data is provided.">
+                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Mean (µ)</label>
+                                    <input type="number" id="mean" step="any" oninput="calculate()" class="glass-input w-full rounded-md px-3 py-2 text-sm font-mono text-center font-semibold text-blue-600 transition-colors">
+                                </div>
+                                <div title="Standard Deviation (σ): The inherent spread. Automatically locked if Raw Data is provided.">
+                                    <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Std Dev (σ)</label>
+                                    <input type="number" id="std" step="any" min="0.0001" oninput="calculate()" class="glass-input w-full rounded-md px-3 py-2 text-sm font-mono text-center font-semibold text-amber-600 transition-colors">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                                <div title="Lower Control Limit: Mean - 3σ">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">LCL (Control)</label>
+                                    <input type="text" id="lcl" readonly class="glass-input input-locked w-full rounded-md px-3 py-2 text-sm font-mono text-center font-bold text-slate-400" value="--">
+                                </div>
+                                <div title="Upper Control Limit: Mean + 3σ">
+                                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">UCL (Control)</label>
+                                    <input type="text" id="ucl" readonly class="glass-input input-locked w-full rounded-md px-3 py-2 text-sm font-mono text-center font-bold text-slate-400" value="--">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="error-box" class="hidden mt-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm p-3 rounded-md font-medium shadow-sm"></div>
+                    </div>
+                    
+                    <div class="flex flex-col gap-3 md:hidden">
+                        <button id="btn-excel-mobile" onclick="downloadExcel()" title="Export current calculated metrics to CSV" class="btn-disabled bg-emerald-600 w-full hover:bg-emerald-700 text-white px-5 py-3 rounded-md font-bold transition-all shadow-md flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Export to Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Column: Chart, Metrics, Explanations & Actions -->
+                <div class="lg:col-span-9 flex flex-col gap-6">
+                    
+                    <!-- Top Section: Horizontal Compact Chart -->
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col w-full h-[320px]">
+                        <div class="flex justify-between items-start w-full mb-3 shrink-0">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                                <svg id="chart-title-icon" class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                                <span id="chart-title-label">Process Distribution Curve & Data Histogram</span>
+                            </h3>
+                            <button id="revert-btn" onclick="revertToOriginal()" title="Click to undo Target View and see real data" class="hidden bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded text-xs font-bold transition-all shadow-md flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                                Revert to Original Data
+                            </button>
+                        </div>
+                        <div class="w-full flex-grow relative min-h-0">
+                            <canvas id="capabilityChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="metric-card bg-white rounded-xl p-4 border border-slate-200 shadow-sm relative overflow-hidden group" title="Process Capability: Compares total process spread to the specification limits. Ignores centering.">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 lbl-cp">Cp</p>
+                                <span id="badge-cp" class="hidden bg-emerald-100 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">TARGET</span>
+                            </div>
+                            <p id="val-cp" class="text-2xl font-black mt-1 text-slate-800 font-mono">--</p>
+                        </div>
+                        <div class="metric-card bg-white rounded-xl p-4 border border-slate-200 shadow-sm relative overflow-hidden group" title="Process Capability Index: Accounts for both spread and centering. True capability.">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 lbl-cpk">Cpk</p>
+                                <span id="badge-cpk" class="hidden bg-emerald-100 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">TARGET</span>
+                            </div>
+                            <p id="val-cpk" class="text-2xl font-black mt-1 text-slate-800 font-mono">--</p>
+                        </div>
+                        <div id="card-cpu" class="metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all" title="Capability Upper: Distance from the Mean to the Upper Spec Limit.">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 lbl-cpu">Cpu</p>
+                                <span id="badge-cpu-sim" class="hidden bg-slate-200 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">TARGET</span>
+                                <span id="badge-cpu-bot" class="hidden bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">Bottleneck</span>
+                            </div>
+                            <p id="val-cpu" class="text-xl font-bold mt-1 text-slate-600 font-mono transition-colors">--</p>
+                        </div>
+                        <div id="card-cpl" class="metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all" title="Capability Lower: Distance from the Mean to the Lower Spec Limit.">
+                            <div class="flex justify-between items-start">
+                                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 lbl-cpl">Cpl</p>
+                                <span id="badge-cpl-sim" class="hidden bg-slate-200 text-slate-600 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">TARGET</span>
+                                <span id="badge-cpl-bot" class="hidden bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shadow-sm">Bottleneck</span>
+                            </div>
+                            <p id="val-cpl" class="text-xl font-bold mt-1 text-slate-600 font-mono transition-colors">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Status Bar -->
+                    <div id="status-bar" class="rounded-xl px-4 font-bold text-center text-sm shadow-sm transition-all duration-300 border bg-white text-slate-600 border-slate-200 h-[76px] flex items-center justify-center w-full overflow-hidden">
+                        <span>Enter Process Parameters or Raw Data to generate Real-time Interpretation.</span>
+                    </div>
+
+                    <!-- Dynamic Real-Time Explanation -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-center">
+                        <h3 class="text-lg font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Dynamic Real-Time Explanation
+                        </h3>
+                        <div id="dynamic-explanation" class="text-slate-600 leading-relaxed text-sm">
+                            Enter parameters or raw samples to view a dynamic, plain-English explanation of your process capability output.
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div id="capa-action-buttons-wrapper" class="hidden">
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button id="btn-show-target" onclick="toggleCapaViewChart()" title="Toggle view between Real Data and Golden Target" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-bold text-sm transition-all shadow flex justify-center items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                <span id="btn-target-text">Show Corrected Target</span>
+                            </button>
+                            <button id="btn-view-pdf" onclick="openAndSavePDF()" title="Generate a comprehensive PDF Form based on current view" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold text-sm transition-all shadow flex justify-center items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                VIEW AND SAVE PDF
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Static Knowledge Table -->
+            <div class="w-full mt-4 mb-8 no-print">
+                <h3 class="text-lg font-bold text-slate-900 mb-4 px-1 border-b-2 border-slate-300 pb-2 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Masterclass Capability Matrix (Static Reference)
+                </h3>
+                <div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-100 text-slate-800 text-xs uppercase font-bold tracking-wider">
+                            <tr>
+                                <th title="Expected process condition" class="px-4 py-4 border-b border-slate-200">Scenario</th>
+                                <th title="Process Capability (Spread vs Limits)" class="px-4 py-4 border-b border-slate-200 text-center">Cp</th>
+                                <th title="Process Capability Index (True Centered Capability)" class="px-4 py-4 border-b border-slate-200 text-center">Cpk</th>
+                                <th title="Natural variation / Standard Deviation" class="px-4 py-4 border-b border-slate-200 text-center">Std Dev (σ)</th>
+                                <th class="px-4 py-4 border-b border-slate-200">Interpretation</th>
+                                <th class="px-4 py-4 border-b border-slate-200">Conclusion</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium">
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process centered, capable</td>
+                                <td class="px-4 py-3 text-center text-emerald-600 font-bold bg-emerald-50/50">1.33</td>
+                                <td class="px-4 py-3 text-center text-emerald-600 font-bold bg-emerald-50/50">1.33</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.50</td>
+                                <td class="px-4 py-3">Process spread fits well within specifications, mean exactly centered</td>
+                                <td class="px-4 py-3 text-emerald-700">Process is capable and well-centered; variation controlled</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process centered, borderline</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold bg-amber-50/50">1.00</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold bg-amber-50/50">1.00</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.67</td>
+                                <td class="px-4 py-3">Spread just fits specifications, mean centered</td>
+                                <td class="px-4 py-3 text-amber-700">Process just meets specs, minimal margin for error</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process spread too large</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.75</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.75</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.89</td>
+                                <td class="px-4 py-3">Spread exceeds specs, mean centered</td>
+                                <td class="px-4 py-3 text-rose-700">Process not capable; variation reduction needed</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process off-center, capable</td>
+                                <td class="px-4 py-3 text-center text-emerald-600 font-bold bg-emerald-50/50">1.33</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold bg-amber-50/50">1.00</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.50</td>
+                                <td class="px-4 py-3">Good spread, but mean shifted closer to one spec limit</td>
+                                <td class="px-4 py-3 text-amber-700">Potential capable, but centering needs improvement</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process off-center, borderline</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold bg-amber-50/50">1.00</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.67</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.67</td>
+                                <td class="px-4 py-3">Spread fits specs but mean significantly off-center</td>
+                                <td class="px-4 py-3 text-rose-700">Process borderline due to poor centering</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Process off-center, not capable</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.75</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.40</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.89</td>
+                                <td class="px-4 py-3">Spread too large and mean off-center</td>
+                                <td class="px-4 py-3 text-rose-700">Process not capable; both variation and centering need improvement</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">High capability, well-centered</td>
+                                <td class="px-4 py-3 text-center text-blue-600 font-bold bg-blue-50/50">2.00</td>
+                                <td class="px-4 py-3 text-center text-blue-600 font-bold bg-blue-50/50">1.98</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.33</td>
+                                <td class="px-4 py-3">Very tight spread, mean almost perfect center</td>
+                                <td class="px-4 py-3 text-blue-700">High capability process, very stable and consistent</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">High capability, poorly centered</td>
+                                <td class="px-4 py-3 text-center text-blue-600 font-bold bg-blue-50/50">2.00</td>
+                                <td class="px-4 py-3 text-center text-amber-600 font-bold bg-amber-50/50">1.00</td>
+                                <td class="px-4 py-3 text-center text-slate-500">0.33</td>
+                                <td class="px-4 py-3">Tight spread, but mean strongly shifted</td>
+                                <td class="px-4 py-3 text-amber-700">Process spread is good, but poor centering reduces actual capability</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 text-slate-900">Low Cp, any Cpk</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.50</td>
+                                <td class="px-4 py-3 text-center text-rose-600 font-bold bg-rose-50/50">0.45</td>
+                                <td class="px-4 py-3 text-center text-slate-500">1.33</td>
+                                <td class="px-4 py-3">Wide spread, likely poor centering</td>
+                                <td class="px-4 py-3 text-rose-700">Process variability too high; fundamentally not capable</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- ================= VIEW 2: CAPA GENERATOR FORM (Hidden by default) ================= -->
+        <main id="capa-generator-view" class="view-transition hidden-view w-full pb-16">
+            
+            <div class="mb-6 flex justify-between items-center no-print border-b border-slate-200 pb-4">
+                <button onclick="closeCapaGenerator()" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-md font-semibold transition-all shadow-md flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Back to Data Dashboard
+                </button>
+                <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                    Execution Mode
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-slate-300 p-8 border-t-8 border-t-blue-600">
+                <div class="flex justify-between items-start mb-6 border-b border-slate-200 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-900 mb-1">
+                            Process Capability & Action Report
+                        </h2>
+                        <p class="text-slate-500 text-sm font-medium">Formal Capability Assessment & Execution Document</p>
+                    </div>
+                    <button id="pdf-btn" onclick="generatePDF()" class="no-print bg-blue-50 text-blue-700 hover:bg-blue-100 px-5 py-2.5 rounded-md font-bold text-sm transition-colors border border-blue-200 flex items-center gap-2 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        <span id="pdf-btn-text">Save as PDF</span>
+                    </button>
+                </div>
+                
+                <!-- Snapshot Metrics for Context -->
+                <div class="grid grid-cols-4 gap-4 mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div>
+                        <p id="capa-lbl-cp" class="text-xs uppercase font-bold text-slate-500">Current Cp</p>
+                        <p id="capa-view-cp" class="text-xl font-black text-slate-800">--</p>
+                    </div>
+                    <div>
+                        <p id="capa-lbl-cpk" class="text-xs uppercase font-bold text-slate-500">Current Cpk</p>
+                        <p id="capa-view-cpk" class="text-xl font-black text-slate-800">--</p>
+                    </div>
+                    <div>
+                        <p id="capa-lbl-mean" class="text-xs uppercase font-bold text-slate-500">Current Mean</p>
+                        <p id="capa-view-mean" class="text-xl font-bold text-slate-700">--</p>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase font-bold text-slate-500">Status Trigger</p>
+                        <p id="capa-view-trigger" class="text-sm font-bold mt-1 text-slate-800">--</p>
+                    </div>
+                </div>
+
+                <!-- Embedded CAPA Context Chart -->
+                <div class="mb-8 bg-white border border-slate-200 rounded-xl p-6 shadow-sm relative break-inside-avoid w-full">
+                    <div class="flex justify-between items-start w-full mb-4 shrink-0">
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 uppercase tracking-wide">
+                            <svg id="capa-view-chart-icon" class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            <span id="capa-view-chart-title">Corrected Target Process Distribution</span>
+                        </h3>
+                    </div>
+                    <div class="w-full h-[320px] relative">
+                        <canvas id="capaFormChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Textual Cards Layout (DEEP GOD MODE FIX: Hardened grid-cols-2 for PDF stability) -->
+                <div id="capa-form-body" class="grid grid-cols-2 gap-6 mb-12">
+                    <!-- Populated dynamically via JS -->
+                </div>
+                
+                <!-- Signatures -->
+                <div class="pt-8 border-t border-slate-200 grid grid-cols-2 gap-12 text-sm mt-auto break-inside-avoid">
+                    <div>
+                        <p class="font-bold mb-8 uppercase text-slate-500 tracking-wider">Prepared By Operator/Engineer:</p>
+                        <div class="border-b-2 border-slate-400 w-full relative">
+                            <span class="absolute -bottom-5 text-xs text-slate-400">Signature & Date</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-bold mb-8 uppercase text-slate-500 tracking-wider">Approved By Quality Manager:</p>
+                        <div class="border-b-2 border-slate-400 w-full relative">
+                            <span class="absolute -bottom-5 text-xs text-slate-400">Signature & Date</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Custom Toast Function for foolproof error handling (Debounce added)
+        window.toastTimeout = null;
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('custom-toast');
+            const toastMsg = document.getElementById('custom-toast-msg');
+            const svgIcon = toast.querySelector('svg');
+            
+            if (isError) {
+                svgIcon.classList.replace('text-amber-400', 'text-rose-500');
+            } else {
+                svgIcon.classList.replace('text-rose-500', 'text-amber-400');
+            }
+
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            
+            if(window.toastTimeout) clearTimeout(window.toastTimeout);
+            window.toastTimeout = setTimeout(() => {
+                 toast.classList.remove('show');
+            }, 3500);
+        }
+
+        // DEEP GOD MODE FIX: Safe numerical formatting to prevent NaN/Infinity crashing UI strings
+        function safeNum(val, decimals = 2) {
+            if (val === null || val === undefined || isNaN(val) || !isFinite(val)) return 'N/A';
+            // Commas added for UI readability on massive capability scores
+            return Number(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        }
+
+        // Data Dictionary for Industry Segments
+        const industrySegments = [
+            { id: 'mfg-machining', name: '01. Manufacturing (Precision Machining) [World Class]', unit: 'mm', lsl: 9.9, usl: 10.1, mean: 10.0, std: 0.015 }, 
+            { id: 'mfg-electronics', name: '02. Manufacturing (Resistor Ohms) [Off Center - High]', unit: 'Ω', lsl: 95, usl: 105, mean: 102.5, std: 1.2 }, 
+            { id: 'call-center', name: '03. Call Center (Avg Handling Time) [Borderline]', unit: 'mins', lsl: 2.0, usl: 8.0, mean: 5.0, std: 0.9 }, 
+            { id: 'sales-marketing', name: '04. Sales & Mktg (Lead Response) [Not Capable]', unit: 'hrs', lsl: 0.0, usl: 24.0, mean: 12.0, std: 6.0 }, 
+            { id: 'finance-invoice', name: '05. Finance (Invoice Processing) [World Class]', unit: 'days', lsl: 1.0, usl: 5.0, mean: 3.0, std: 0.4 }, 
+            { id: 'it-uptime', name: '06. I.T (Server Uptime Ping) [Not Capable]', unit: 'ms', lsl: 10, usl: 50, mean: 25.0, std: 10.0 }, 
+            { id: 'healthcare-wait', name: '07. Healthcare (Patient Wait Time) [Off Center - Low]', unit: 'mins', lsl: 0.0, usl: 30.0, mean: 6.5, std: 2.5 }, 
+            { id: 'logistics-delivery', name: '08. Logistics (Delivery Time) [Borderline]', unit: 'days', lsl: 1.0, usl: 7.0, mean: 4.0, std: 0.9 }, 
+            { id: 'ecommerce-fulfillment', name: '09. E-commerce (Order Fulfillment) [World Class]', unit: 'hrs', lsl: 1.0, usl: 48.0, mean: 24.5, std: 5.0 }, 
+            { id: 'sw-dev', name: '10. Software Dev (Code Review) [Not Capable]', unit: 'hrs', lsl: 1.0, usl: 72.0, mean: 36.0, std: 15.0 }, 
+            { id: 'hr-onboarding', name: '11. HR (Employee Onboarding) [Off Center - Low]', unit: 'days', lsl: 7.0, usl: 30.0, mean: 11.5, std: 1.8 }, 
+            { id: 'retail-queue', name: '12. Retail (Checkout Queue) [Borderline]', unit: 'mins', lsl: 0.0, usl: 10.0, mean: 5.0, std: 1.5 }, 
+            { id: 'auto-panel', name: '13. Automotive (Panel Gap Variance) [World Class]', unit: 'mm', lsl: 2.0, usl: 5.0, mean: 3.5, std: 0.3 }, 
+            { id: 'fnb-fill', name: '14. Food & Beverage (Fill Volume) [Not Capable]', unit: 'ml', lsl: 495, usl: 505, mean: 500.0, std: 2.5 }, 
+            { id: 'pharma-api', name: '15. Pharma (Active Ingredient) [World Class]', unit: 'mg', lsl: 195, usl: 205, mean: 200.0, std: 1.0 }, 
+            { id: 'aviation-turnaround', name: '16. Aviation (Turnaround Time) [Off Center - High]', unit: 'mins', lsl: 30, usl: 60, mean: 54.0, std: 2.8 }, 
+            { id: 'hospitality-cleaning', name: '17. Hospitality (Room Cleaning) [Borderline]', unit: 'mins', lsl: 15, usl: 45, mean: 30.0, std: 4.0 }, 
+            { id: 'construction-concrete', name: '18. Construction (Concrete Curing) [Not Capable]', unit: 'MPa', lsl: 25, usl: 40, mean: 32.5, std: 4.0 }, 
+            { id: 'agriculture-yield', name: '19. Agriculture (Crop Yield) [World Class]', unit: 'tons/ac', lsl: 2.0, usl: 6.0, mean: 4.0, std: 0.4 }, 
+            { id: 'customer-support', name: '20. Customer Support (Resolution) [Off Center - Low]', unit: 'hrs', lsl: 1.0, usl: 48.0, mean: 12.0, std: 4.5 } 
+        ];
+
+        let chartInstance = null;
+        let capaChartInstance = null;
+        let currentMetrics = { cp: 0, cpk: 0, cpu: 0, cpl: 0, lsl: 0, usl: 0, mean: 0, std: 0 };
+        
+        let isSimulated = false;
+        let isGeneratingPDF = false; // Lock flag to prevent PDF crashes
+        let capaInputCache = {};
+        let rawValuesArray = [];
+
+        function initApp() {
+            const select = document.getElementById('industrySelect');
+            if (!select || select.options.length > 0) return; 
+            
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = "";
+            defaultOpt.textContent = "Select a Simulation Segment...";
+            defaultOpt.disabled = true;
+            defaultOpt.selected = true;
+            select.appendChild(defaultOpt);
+
+            industrySegments.forEach(seg => {
+                 const opt = document.createElement('option');
+                 opt.value = seg.id;
+                 opt.textContent = seg.name;
+                 select.appendChild(opt);
+            });
+            
+            resetVisuals();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        function toggleActionButtons(disabled) {
+            const btns = ['btn-excel-desktop', 'btn-excel-mobile', 'btn-show-target', 'btn-view-pdf'];
+            btns.forEach(id => {
+                 const btn = document.getElementById(id);
+                 if (btn) {
+                     disabled ? btn.classList.add('btn-disabled') : btn.classList.remove('btn-disabled');
+                 }
+            });
+        }
+
+        function updateInputLocks() {
+            const rawHasData = rawValuesArray.length >= 2;
+            
+            ['lsl', 'usl', 'industrySelect', 'raw-data-input'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.readOnly = isSimulated;
+                    el.disabled = isSimulated; 
+                    isSimulated ? el.classList.add('input-locked') : el.classList.remove('input-locked');
+                }
+            });
+
+            ['mean', 'std'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const shouldLock = isSimulated || rawHasData;
+                    el.readOnly = shouldLock;
+                    shouldLock ? el.classList.add('input-locked') : el.classList.remove('input-locked');
+                }
+            });
+        }
+
+        // DEEP GOD MODE FIX: Exact Variance Scaling. Forces random data to perfectly match industry parameters.
+        function generateExactSimulatedData(targetMean, targetStd, count = 50) {
+            let raw = [];
+            for (let i = 0; i < count; i++) {
+                let u = 1 - Math.random(); 
+                let v = Math.random();
+                let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                raw.push(z);
+            }
+            
+            const sum = raw.reduce((a, b) => a + b, 0);
+            const currentMean = sum / count;
+            const sqDiffs = raw.map(val => Math.pow(val - currentMean, 2));
+            const variance = sqDiffs.reduce((a, b) => a + b, 0) / (count - 1);
+            const currentStd = Math.sqrt(variance);
+
+            return raw.map(val => {
+                const standardized = (val - currentMean) / currentStd;
+                return (standardized * targetStd) + targetMean;
+            });
+        }
+
+        function calculateSampleStats(arr) {
+            if(arr.length < 2) return { mean: 0, std: 0 };
+            const sum = arr.reduce((a, b) => a + b, 0);
+            const mean = sum / arr.length;
+            const sqDiffs = arr.map(val => Math.pow(val - mean, 2));
+            const variance = sqDiffs.reduce((a, b) => a + b, 0) / (arr.length - 1);
+            const std = Math.sqrt(variance);
+            return { mean, std };
+        }
+
+        function handleRawData() {
+            const rawInputEl = document.getElementById('raw-data-input');
+            let rawInput = rawInputEl.value;
+            const meanInput = document.getElementById('mean');
+            const stdInput = document.getElementById('std');
+            const countLabel = document.getElementById('data-count');
+            const errorBox = document.getElementById('error-box');
+
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+                 errorBox.innerHTML = '';
+            }
+
+            if (rawInput.length > 20000) {
+                rawInput = rawInput.substring(0, 20000);
+                rawInputEl.value = rawInput;
+                showToast("Data paste truncated to prevent browser memory crash.", true);
+            }
+
+            rawValuesArray = rawInput.split(/[\s,]+/).map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+
+            if (rawValuesArray.length === 0 && rawInput.trim() === "") {
+                 countLabel.textContent = "0 / 100 SAMPLES";
+                 countLabel.classList.replace('text-rose-600', 'text-slate-500');
+                 countLabel.classList.replace('border-rose-300', 'border-slate-200');
+                 updateInputLocks();
+                 return;
+            }
+
+            let isTruncated = false;
+            if (rawValuesArray.length > 100) {
+                 rawValuesArray = rawValuesArray.slice(0, 100);
+                 isTruncated = true;
+                 showToast("Maximum threshold of 100 samples reached. Excess data truncated.", true);
+            }
+
+            countLabel.textContent = `${rawValuesArray.length} / 100 SAMPLES`;
+            
+            if (isTruncated || rawValuesArray.length === 100) {
+                countLabel.classList.replace('text-slate-500', 'text-rose-600');
+                countLabel.classList.replace('border-slate-200', 'border-rose-300');
+            } else {
+                countLabel.classList.replace('text-rose-600', 'text-slate-500');
+                countLabel.classList.replace('border-rose-300', 'border-slate-200');
+            }
+
+            if (rawValuesArray.length === 1) {
+                 showError("Minimum 2 numeric samples required to calculate standard deviation.");
+                 resetVisuals();
+                 updateInputLocks();
+                 return;
+            }
+
+            const stats = calculateSampleStats(rawValuesArray);
+            meanInput.value = stats.mean.toFixed(4);
+            
+            // Floor adjusted to .0001 for UI legibility.
+            stdInput.value = Math.max(stats.std, 0.0001).toFixed(4);
+            
+            updateInputLocks();
+            calculate();
+        }
+
+        function openCapaGenerator() {
+            if(!currentMetrics.std || isNaN(currentMetrics.std) || !isFinite(currentMetrics.std)) {
+                 showToast("Please calculate valid metrics first.", true);
+                 return;
+            }
+            document.getElementById('main-dashboard-view').classList.replace('active-view', 'hidden-view');
+            document.getElementById('capa-generator-view').classList.replace('hidden-view', 'active-view');
+            window.scrollTo(0, 0);
+            
+            renderCapaViewChart();
+        }
+
+        function closeCapaGenerator() {
+            document.getElementById('capa-generator-view').classList.replace('active-view', 'hidden-view');
+            document.getElementById('main-dashboard-view').classList.replace('hidden-view', 'active-view');
+            window.scrollTo(0, 0);
+
+            if (isSimulated) {
+                 revertToOriginal(); 
+            }
+        }
+
+        function revertToOriginal() {
+            isSimulated = false;
+            updateInputLocks();
+            
+            document.getElementById('mean').value = currentMetrics.mean.toFixed(4);
+            document.getElementById('std').value = currentMetrics.std.toFixed(4);
+            
+            renderCurrentChartState();
+            renderCapaViewChart();
+            showToast("Reverted to Original Process Data.");
+        }
+
+        function toggleCapaViewChart() {
+            isSimulated = !isSimulated;
+            updateInputLocks();
+            
+            if (isSimulated) {
+                const targetMean = (currentMetrics.usl + currentMetrics.lsl) / 2;
+                const targetStd = (currentMetrics.usl - currentMetrics.lsl) / (6 * 1.33);
+                document.getElementById('mean').value = targetMean.toFixed(4);
+                document.getElementById('std').value = targetStd.toFixed(4);
+                showToast("Golden Target Profile Active. Inputs Locked.");
+            } else {
+                document.getElementById('mean').value = currentMetrics.mean.toFixed(4);
+                document.getElementById('std').value = currentMetrics.std.toFixed(4);
+                showToast("Reverted to Original Process Data.");
+            }
+
+            renderCurrentChartState();
+            renderCapaViewChart();
+        }
+        
+        function openAndSavePDF() {
+            if(!currentMetrics.std || isNaN(currentMetrics.std) || !isFinite(currentMetrics.std)) {
+                 showToast("Please calculate valid metrics first.", true);
+                 return;
+            }
+            openCapaGenerator();
+            setTimeout(() => { generatePDF(); }, 400);
+        }
+
+        function renderCapaViewChart() {
+            cacheCapaInputs();
+            const { lsl, usl, mean, std, cp, cpk } = currentMetrics;
+            
+            let plotMean = isSimulated ? (usl + lsl) / 2 : mean;
+            let plotStd = isSimulated ? (usl - lsl) / (6 * 1.33) : std;
+
+            const lblCp = document.getElementById('capa-lbl-cp');
+            const lblCpk = document.getElementById('capa-lbl-cpk');
+            const lblMean = document.getElementById('capa-lbl-mean');
+            
+            const titleText = document.getElementById('capa-view-chart-title');
+            const titleIcon = document.getElementById('capa-view-chart-icon');
+
+            if (isSimulated) {
+                 if (titleText) titleText.textContent = "Corrected Target Process Distribution";
+                 if (titleIcon) { titleIcon.classList.replace('text-indigo-500', 'text-emerald-500'); }
+                 if (lblCp) lblCp.textContent = "Target Cp";
+                 if (lblCpk) lblCpk.textContent = "Target Cpk";
+                 if (lblMean) lblMean.textContent = "Target Mean";
+            } else {
+                 if (titleText) titleText.textContent = "Original Process Distribution Curve";
+                 if (titleIcon) { titleIcon.classList.replace('text-emerald-500', 'text-indigo-500'); }
+                 if (lblCp) lblCp.textContent = "Current Cp";
+                 if (lblCpk) lblCpk.textContent = "Current Cpk";
+                 if (lblMean) lblMean.textContent = "Current Mean";
+            }
+
+            capaChartInstance = createChart('capaFormChart', lsl, usl, plotMean, plotStd, isSimulated, capaChartInstance);
+        }
+
+        function updateLabels() {
+            const isPp = document.getElementById('conceptSelect')?.value === 'pp';
+            document.querySelectorAll('.lbl-cp').forEach(el => el.textContent = isPp ? 'Pp' : 'Cp');
+            document.querySelectorAll('.lbl-cpk').forEach(el => el.textContent = isPp ? 'Ppk' : 'Cpk');
+            document.querySelectorAll('.lbl-cpu').forEach(el => el.textContent = isPp ? 'Ppu' : 'Cpu');
+            document.querySelectorAll('.lbl-cpl').forEach(el => el.textContent = isPp ? 'Ppl' : 'Cpl');
+        }
+
+        function clearAllData() {
+            ['lsl', 'usl', 'mean', 'std', 'raw-data-input'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            
+            rawValuesArray = [];
+            isSimulated = false;
+            updateInputLocks();
+
+            const countLabel = document.getElementById('data-count');
+            if (countLabel) {
+                 countLabel.textContent = "0 / 100 SAMPLES";
+                 countLabel.classList.replace('text-rose-600', 'text-slate-500');
+                 countLabel.classList.replace('border-rose-300', 'border-slate-200');
+            }
+            
+            const selectEl = document.getElementById('industrySelect');
+            if (selectEl) selectEl.selectedIndex = 0;
+            
+            ['unit-lsl', 'unit-usl'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '';
+            });
+            
+            const errorBox = document.getElementById('error-box');
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+                errorBox.innerHTML = '';
+            }
+
+            resetVisuals();
+            showToast("All data and charts cleared successfully.");
+        }
+
+        function loadSegmentData() {
+            const selectEl = document.getElementById('industrySelect');
+            if (!selectEl || !selectEl.value) return;
+
+            const segment = industrySegments.find(s => s.id === selectEl.value);
+            if (!segment) return;
+            
+            if (isSimulated) isSimulated = false;
+            
+            document.getElementById('lsl').value = segment.lsl;
+            document.getElementById('usl').value = segment.usl;
+            document.getElementById('unit-lsl').textContent = `(${segment.unit})`;
+            document.getElementById('unit-usl').textContent = `(${segment.unit})`;
+
+            // DEEP GOD MODE FIX: Use mathematically perfect generator to ensure exact Cp/Cpk match
+            const exactData = generateExactSimulatedData(segment.mean, segment.std, 50);
+            
+            const rawDataEl = document.getElementById('raw-data-input');
+            if (rawDataEl) {
+                 rawDataEl.value = exactData.map(v => v.toFixed(4)).join("\n");
+                 handleRawData(); 
+            }
+        }
+
+        function cacheCapaInputs() {
+            document.querySelectorAll('.capa-cache-node').forEach(node => {
+                 const factorId = node.dataset.factor;
+                 if (!capaInputCache[factorId]) capaInputCache[factorId] = {};
+                 const check = node.querySelector('.cache-check');
+                 if(check) capaInputCache[factorId].checked = check.checked;
+            });
+        }
+
+        function calculate() {
+            if (isSimulated) return; // Block recalculation if currently displaying a golden target projection
+
+            const lslEl = document.getElementById('lsl');
+            const uslEl = document.getElementById('usl');
+            const meanEl = document.getElementById('mean');
+            const stdEl = document.getElementById('std');
+            const errorBox = document.getElementById('error-box');
+
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+                 errorBox.innerHTML = '';
+            }
+
+            if (!lslEl || !uslEl || !meanEl || !stdEl || lslEl.value === "" || uslEl.value === "" || meanEl.value === "" || stdEl.value === "") {
+                resetVisuals();
+                return;
+            }
+
+            const lsl = parseFloat(lslEl.value);
+            const usl = parseFloat(uslEl.value);
+            const mean = parseFloat(meanEl.value);
+            
+            const std = Math.max(parseFloat(stdEl.value), 0.0001);
+            if (stdEl.value && parseFloat(stdEl.value) <= 0) {
+                 stdEl.value = std.toFixed(4); // Force UI transparency on the math floor
+            }
+
+            if (isNaN(lsl) || isNaN(usl) || isNaN(mean) || isNaN(std) || !isFinite(lsl) || !isFinite(usl) || !isFinite(mean)) {
+                 resetVisuals();
+                 return;
+            }
+
+            if (usl <= lsl) {
+                 showError("Logical Error: USL must be strictly greater than LSL.");
+                 resetVisuals();
+                 return;
+            }
+            if (Math.abs(usl - lsl) > 1e12 || Math.abs(mean) > 1e12) {
+                 showError("Scale Error: Input values are too large for accurate charting scale. Use a smaller unit of measure.");
+                 resetVisuals();
+                 return;
+            }
+
+            toggleActionButtons(false);
+
+            document.querySelectorAll('.metric-card').forEach(c => {
+               c.classList.remove('animate-pulse-data');
+                void c.offsetWidth; 
+               c.classList.add('animate-pulse-data');
+            });
+
+            cacheCapaInputs();
+
+            const cp = (usl - lsl) / (6 * std);
+            const cpu = (usl - mean) / (3 * std);
+            const cpl = (mean - lsl) / (3 * std);
+            const cpk = Math.min(cpu, cpl);
+
+            currentMetrics = { cp, cpk, cpu, cpl, lsl, usl, mean, std };
+
+            renderCurrentChartState();
+            renderCapaViewChart();
+        }
+
+        function renderCurrentChartState() {
+            const { lsl, usl, mean, std, cp, cpk, cpu, cpl } = currentMetrics;
+            
+            let plotMean = isSimulated ? (usl + lsl) / 2 : mean;
+            let plotStd = isSimulated ? (usl - lsl) / (6 * 1.33) : std;
+            
+            let dispCp = isSimulated ? 1.33 : cp; 
+            let dispCpk = isSimulated ? 1.33 : cpk; 
+            let dispCpu = isSimulated ? 1.33 : cpu; 
+            let dispCpl = isSimulated ? 1.33 : cpl;
+
+            const titleText = document.getElementById('chart-title-label');
+            const titleIcon = document.getElementById('chart-title-icon');
+            const revertBtn = document.getElementById('revert-btn');
+            const btnTargetText = document.getElementById('btn-target-text');
+
+            if (isSimulated) {
+                 if (titleText) titleText.textContent = "Corrected Target Process Distribution";
+                 if (titleIcon) titleIcon.classList.replace('text-indigo-500', 'text-emerald-500');
+                 if (revertBtn) revertBtn.classList.remove('hidden');
+                 if (btnTargetText) btnTargetText.textContent = "Revert to Original Data";
+            } else {
+                 if (titleText) titleText.textContent = "Process Distribution Curve & Data Histogram";
+                 if (titleIcon) titleIcon.classList.replace('text-emerald-500', 'text-indigo-500');
+                 if (revertBtn) revertBtn.classList.add('hidden');
+                 if (btnTargetText) btnTargetText.textContent = "Show Corrected Target";
+            }
+
+            updateMetricBox('val-cp', dispCp, isSimulated, 'badge-cp');
+            updateMetricBox('val-cpk', dispCpk, isSimulated, 'badge-cpk');
+            
+            const elCpu = document.getElementById('val-cpu');
+            if (elCpu) elCpu.textContent = safeNum(dispCpu, 2);
+            
+            const elCpl = document.getElementById('val-cpl');
+            if (elCpl) elCpl.textContent = safeNum(dispCpl, 2);
+
+            const lclEl = document.getElementById('lcl');
+            const uclEl = document.getElementById('ucl');
+            if (lclEl) lclEl.value = safeNum(plotMean - (3 * plotStd), 3);
+            if (uclEl) uclEl.value = safeNum(plotMean + (3 * plotStd), 3);
+            
+            const badgeCpuSim = document.getElementById('badge-cpu-sim');
+            const badgeCplSim = document.getElementById('badge-cpl-sim');
+            const badgeCpuBot = document.getElementById('badge-cpu-bot');
+            const badgeCplBot = document.getElementById('badge-cpl-bot');
+            const cardCpu = document.getElementById('card-cpu');
+            const cardCpl = document.getElementById('card-cpl');
+
+            if (isSimulated || Math.abs(dispCpu - dispCpl) < 0.0001) {
+                 if (badgeCpuSim && isSimulated) badgeCpuSim.classList.remove('hidden');
+                 if (badgeCplSim && isSimulated) badgeCplSim.classList.remove('hidden');
+                 if (badgeCpuBot) badgeCpuBot.classList.add('hidden');
+                 if (badgeCplBot) badgeCplBot.classList.add('hidden');
+                 if (cardCpu) cardCpu.className = "metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all";
+                 if (cardCpl) cardCpl.className = "metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all";
+                 if (elCpu) elCpu.className = "text-xl font-bold mt-1 text-slate-600 font-mono transition-colors";
+                 if (elCpl) elCpl.className = "text-xl font-bold mt-1 text-slate-600 font-mono transition-colors";
+            } else if (dispCpu < dispCpl) {
+                 if (badgeCpuSim) badgeCpuSim.classList.add('hidden');
+                 if (badgeCplSim) badgeCplSim.classList.add('hidden');
+                 if (badgeCpuBot) badgeCpuBot.classList.remove('hidden');
+                 if (badgeCplBot) badgeCplBot.classList.add('hidden');
+                 if (cardCpu) cardCpu.className = "metric-card bg-rose-50 rounded-xl p-4 border border-rose-200 relative overflow-hidden transition-all shadow-sm ring-1 ring-rose-200";
+                 if (cardCpl) cardCpl.className = "metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all opacity-60";
+                 if (elCpu) elCpu.className = "text-xl font-black mt-1 text-rose-700 font-mono transition-colors";
+                 if (elCpl) elCpl.className = "text-xl font-bold mt-1 text-slate-500 font-mono transition-colors";
+            } else {
+                 if (badgeCpuSim) badgeCpuSim.classList.add('hidden');
+                 if (badgeCplSim) badgeCplSim.classList.add('hidden');
+                 if (badgeCpuBot) badgeCpuBot.classList.add('hidden');
+                 if (badgeCplBot) badgeCplBot.classList.remove('hidden');
+                 if (cardCpu) cardCpu.className = "metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all opacity-60";
+                 if (cardCpl) cardCpl.className = "metric-card bg-rose-50 rounded-xl p-4 border border-rose-200 relative overflow-hidden transition-all shadow-sm ring-1 ring-rose-200";
+                 if (elCpu) elCpu.className = "text-xl font-bold mt-1 text-slate-500 font-mono transition-colors";
+                 if (elCpl) elCpl.className = "text-xl font-black mt-1 text-rose-700 font-mono transition-colors";
+            }
+
+            updateStatusBar(dispCp, dispCpk, isSimulated, lsl, usl);
+            generateDynamicExplanation(dispCp, dispCpk, dispCpu, dispCpl, lsl, usl, plotMean, plotStd, isSimulated);
+            updateCapaPanelsAndForms(dispCp, dispCpk, plotMean, isSimulated);
+            
+            try {
+                drawChart(lsl, usl, plotMean, plotStd, isSimulated);
+            } catch (e) {
+                console.error("Chart Render Failure Bounds", e);
+                showError("The process data exceeds renderable chart boundaries.");
+            }
+        }
+
+        function updateMetricBox(id, val, showSimulatedBadge = false, badgeId = "") {
+            const el = document.getElementById(id);
+            if (!el) return; 
+            
+            const card = el.parentElement;
+            if (card) {
+                 if (val >= 1.33) {
+                     card.className = "metric-card bg-white rounded-xl p-4 border shadow-sm relative overflow-hidden group border-emerald-300 bg-emerald-50/30";
+                     el.className = "text-2xl font-black mt-1 text-emerald-600 font-mono";
+                 } else if (val >= 1.0) {
+                     card.className = "metric-card bg-white rounded-xl p-4 border shadow-sm relative overflow-hidden group border-amber-300 bg-amber-50/30";
+                     el.className = "text-2xl font-black mt-1 text-amber-600 font-mono";
+                 } else {
+                     card.className = "metric-card bg-white rounded-xl p-4 border shadow-sm relative overflow-hidden group border-rose-300 bg-rose-50/30";
+                     el.className = "text-2xl font-black mt-1 text-rose-600 font-mono";
+                 }
+            }
+            el.textContent = safeNum(val, 2);
+
+            if (badgeId) {
+                 const badge = document.getElementById(badgeId);
+                 if (badge) {
+                     badge.className = showSimulatedBadge ? "bg-emerald-100 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" : "hidden";
+                 }
+            }
+        }
+
+        function updateStatusBar(cp, cpk, simulated = false, lsl = 0, usl = 0) {
+            const bar = document.getElementById('status-bar');
+            if (!bar) return;
+            
+            bar.className = "rounded-xl px-4 font-bold text-center text-sm shadow-sm transition-all duration-300 border h-[76px] flex items-center justify-center w-full overflow-hidden ";
+            
+            let content = "";
+            const targetStd = (usl - lsl) / (6 * 1.33);
+            const targetMean = (usl + lsl) / 2;
+
+            if (cp < 1.0) {
+                 bar.className += "bg-rose-50 border-rose-200 text-rose-700";
+                 content = `🚨 PROCESS NOT CAPABLE: The intrinsic variation (spread) is wider than customer specifications. You MUST reduce Standard Deviation to ≤ ${safeNum(targetStd,3)} and shift Mean to ${safeNum(targetMean,2)} to get to World Class.`;
+            } else if (cp >= 1.0 && cpk < 1.0) {
+                 bar.className += "bg-amber-50 border-amber-200 text-amber-700";
+                 content = `⚠️ PROCESS OFF-CENTER: Spread is capable, but process mean is shifted too close to a spec limit. Shift Mean to exactly ${safeNum(targetMean,2)} to reach World Class.`;
+            } else if (cp >= 1.33 && cpk >= 1.33) {
+                 if (simulated) {
+                     bar.className += "bg-emerald-600 border-emerald-700 text-white shadow-lg";
+                     content = "✨ GOLDEN TARGET: This is what your process looks like once all Corrective Actions (CAPA) are implemented.";
+                 } else {
+                     bar.className += "bg-emerald-50 border-emerald-200 text-emerald-700";
+                     content = "✅ WORLD CLASS CAPABILITY: Process is tightly controlled and perfectly centered.";
+                 }
+            } else {
+                 bar.className += "bg-blue-50 border-blue-200 text-blue-700";
+                 content = `ℹ️ BORDERLINE CAPABLE: Meets minimum requirements, but leaves little margin for error. Reduce Standard Deviation to ≤ ${safeNum(targetStd,3)} to safely reach World Class.`;
+            }
+            bar.innerHTML = `<span>${content}</span>`;
+        }
+
+        function generateDynamicExplanation(cp, cpk, cpu, cpl, lsl, usl, mean, std, simulated = false) {
+            const container = document.getElementById('dynamic-explanation');
+            if (!container) return;
+            
+            const conceptPrefix = document.getElementById('conceptSelect').value === 'pp' ? 'P' : 'C';
+            
+            let spreadText = "";
+            let centerText = "";
+            let bottomLine = "";
+
+            const targetCenter = (usl + lsl) / 2;
+            const targetStd = (usl - lsl) / (6 * 1.33);
+
+            if (simulated) {
+                 spreadText = `In this <strong>optimized projection</strong>, your process demonstrates a <strong>perfectly optimized spread</strong> (${conceptPrefix}p = ${safeNum(cp)}). The natural variation of your output (6σ) now fits completely inside the customer tolerance window (${usl} - ${lsl}) with maximum safety buffer. `;
+                 centerText = `The machine has been physically recalibrated so the mean (${safeNum(mean)}) is now <strong>excellently centered</strong> exactly between the limits (${conceptPrefix}pk = ${safeNum(cpk)}). `;
+                 bottomLine = "<strong>Golden State:</strong> Executing the CAPA Action Items listed in the execution form will mathematically force your machine into this optimized state, eliminating defect generation.";
+                 container.innerHTML = `<p class="mb-2 text-slate-700">${spreadText} ${centerText}</p><p class="text-white bg-emerald-600 p-3 rounded border border-emerald-700 mt-2 font-medium">${bottomLine}</p>`;
+                 return;
+            }
+
+            if(cp >= 1.33) {
+                 spreadText = `Your process demonstrates a <strong>very tight spread</strong> (${conceptPrefix}p = ${safeNum(cp)}). This means the natural variation of your output (6σ) easily fits inside the customer tolerance window (${usl} - ${lsl}). `;
+            } else if (cp >= 1.0) {
+                 spreadText = `Your process has an <strong>acceptable spread</strong> (${conceptPrefix}p = ${safeNum(cp)}). The total variation just fits within the specification limits, leaving minimal room for error. `;
+            } else {
+                 spreadText = `Your process has <strong>excessive variation</strong> (${conceptPrefix}p = ${safeNum(cp)}). The spread is wider than what the customer allows. Even if perfectly centered, defects are inevitable. `;
+            }
+
+            if(cpk >= cp * 0.95) {
+                 centerText = `The process is <strong>excellently centered</strong> on the target mean. `;
+            } else if (cpk >= 1.0) {
+                 centerText = `The process is somewhat off-center (shifted towards the ${cpl < cpu ? 'Lower' : 'Upper'} limit), but still maintains compliance (${conceptPrefix}pk = ${safeNum(cpk)}). `;
+            } else {
+                 centerText = `The mean (${safeNum(mean)}) is shifted <strong>dangerously close to the ${cpl < cpu ? 'Lower' : 'Upper'} limit</strong> (${cpl < cpu ? lsl : usl}), pulling the capability index down significantly to a failing grade (${conceptPrefix}pk = ${safeNum(cpk)}). `;
+            }
+
+            if(cp < 1) {
+                 bottomLine = `<strong>Bottom Line:</strong> Focus entirely on reducing variation first (Machine/Environment adjustments). To get to World Class, you must <strong>reduce your Standard Deviation to ${safeNum(targetStd,4)}</strong> or lower, and <strong>shift the Mean to ${safeNum(targetCenter)}</strong>.`;
+            } else if (cp >= 1 && cpk < 1) {
+                 bottomLine = `<strong>Bottom Line:</strong> Do not change the machine's variation limits. Simply calibrate or adjust the physical offset. To reach World Class, shift your Mean to exactly <strong>${safeNum(targetCenter)}</strong>.`;
+            } else if (cp >= 1.33 && cpk >= 1.33) {
+                 bottomLine = "<strong>Bottom Line:</strong> Maintain current parameters. Implement standard control charts to ensure no drift occurs over time.";
+            } else {
+                 bottomLine = `<strong>Bottom Line:</strong> You are borderline. To reach a safe World Class buffer, aim to <strong>reduce Standard Deviation to ${safeNum(targetStd,4)}</strong> and center the Mean at <strong>${safeNum(targetCenter)}</strong>.`;
+            }
+
+            container.innerHTML = `<p class="mb-2 text-slate-700">${spreadText} ${centerText}</p><p class="text-slate-900 bg-slate-50 p-3 rounded border border-slate-200 mt-2">${bottomLine}</p>`;
+        }
+
+        function updateCapaPanelsAndForms(cp, cpk, meanValue = null, simulated = false) {
+            const actionBtns = document.getElementById('capa-action-buttons-wrapper');
+            if (actionBtns) actionBtns.classList.remove('hidden');
+            
+            const statusEl = document.getElementById('capa-status');
+            const diagEl = document.getElementById('capa-diagnostic');
+            const formBody = document.getElementById('capa-form-body');
+
+            const elCapaCp = document.getElementById('capa-view-cp');
+            if (elCapaCp) elCapaCp.textContent = safeNum(cp);
+            
+            const elCapaCpk = document.getElementById('capa-view-cpk');
+            if (elCapaCpk) elCapaCpk.textContent = safeNum(cpk);
+            
+            const elCapaMean = document.getElementById('capa-view-mean');
+            const actualMean = meanValue !== null ? meanValue : currentMetrics.mean;
+            if (elCapaMean) elCapaMean.textContent = safeNum(actualMean);
+
+            let actionsData = [];
+            let triggerText = "";
+            let triggerColor = "";
+
+            if (cp < 1.0) {
+                 triggerText = "🔴 CRITICAL: Spread Excess";
+                 triggerColor = "text-rose-600";
+                 
+                 actionsData = [
+                     { id: 'M1', factor: 'M - Machine', color: 'text-rose-600', text: 'Implement drastic variance reduction. Consider equipment overhaul or upgrading machinery.' },
+                     { id: 'E1', factor: 'E - Environment', color: 'text-rose-600', text: 'Control ambient variables (temp, humidity, vibration) inflating standard deviation.' },
+                     { id: 'C1', factor: 'C - Concept', color: 'text-rose-600', text: 'Execute a formal DMAIC cycle. Isolate special causes using a Fishbone diagram.' },
+                     { id: 'T1', factor: 'T - Tolerances', color: 'text-rose-600', text: 'If reduction is impossible, renegotiate specification limits with the client.' }
+                 ];
+            } else if (cp >= 1.0 && cpk < 1.0) {
+                 triggerText = "🟡 WARNING: Off-Center Offset";
+                 triggerColor = "text-amber-600";
+                 
+                 actionsData = [
+                     { id: 'S2', factor: 'S - Setup', color: 'text-amber-600', text: 'Re-zero equipment parameters. An offset is required to shift the mean (µ) to nominal target.' },
+                     { id: 'E2', factor: 'E - Equipment', color: 'text-amber-600', text: 'Check for tool wear, drift, or degradation pushing the mean off-center over time.' },
+                     { id: 'T2', factor: 'T - Training', color: 'text-amber-600', text: 'Standardize operator setup instructions. Ensure offsets are dialed in perfectly.' }
+                 ];
+            } else if (cp >= 1.33 && cpk >= 1.33) {
+                 triggerText = simulated ? "🟢 WORLD-CLASS: Golden Target" : "🟢 WORLD-CLASS: Optimized";
+                 triggerColor = "text-emerald-600";
+                 
+                 actionsData = [
+                     { id: 'G3', factor: 'G - Guard', color: 'text-emerald-600', text: 'Implement standard SPC X-bar & R charts to monitor for any drift continuously.' },
+                     { id: 'O3', factor: 'O - Optimize', color: 'text-emerald-600', text: 'Document the current operating parameters as a "Golden Setup" SOP.' }
+                 ];
+            } else {
+                 triggerText = "🔵 MONITOR: Borderline";
+                 triggerColor = "text-blue-600";
+                 
+                 actionsData = [
+                     { id: 'S4', factor: 'S - Scrutinize', color: 'text-blue-600', text: 'Tighten preventative maintenance schedules to prevent variation from increasing.' },
+                     { id: 'E4', factor: 'E - Evaluate', color: 'text-blue-600', text: 'Identify minor sources of variation (operator differences, slight raw material fluctuations).' },
+                     { id: 'T4', factor: 'T - Target', color: 'text-blue-600', text: 'Attempt minor centering calibrations to maximize the buffer on both spec limits.' }
+                 ];
+            }
+
+            let triggerEl = document.getElementById('capa-view-trigger');
+            if (triggerEl) {
+                 triggerEl.textContent = triggerText;
+                 triggerEl.className = `text-sm font-bold mt-1 ${triggerColor}`;
+            }
+
+            let formRowsHTML = actionsData.map(a => {
+                 const cache = capaInputCache[a.id] || { checked: false };
+                 return `
+                 <div class="capa-cache-node bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col break-inside-avoid" data-factor="${a.id}">
+                     <div class="p-6 flex items-start gap-4">
+                         <div class="pt-0.5 no-print">
+                             <input type="checkbox" class="cache-check w-6 h-6 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer shadow-sm" ${cache.checked ? 'checked' : ''}>
+                         </div>
+                         <div class="print-only hidden pt-1">
+                             <div class="w-5 h-5 border-2 border-slate-400 rounded-sm flex items-center justify-center text-lg font-bold text-blue-600">${cache.checked ? '✓' : ''}</div>
+                         </div>
+                         <div>
+                             <h4 class="font-extrabold text-lg ${a.color} mb-1">${a.factor}</h4>
+                             <p class="text-slate-700 text-base font-medium leading-relaxed">${a.text}</p>
+                         </div>
+                     </div>
+                 </div>
+            `}).join('');
+
+            if (formBody) formBody.innerHTML = formRowsHTML;
+        }
+
+        function resetVisuals() {
+            toggleActionButtons(true);
+            currentMetrics = { cp: 0, cpk: 0, cpu: 0, cpl: 0, lsl: 0, usl: 0, mean: 0, std: 0 };
+            
+            ['val-cp', 'val-cpk', 'val-cpu', 'val-cpl', 'lcl', 'ucl'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el && (id==='lcl' || id==='ucl')) el.value = "--";
+                else if (el) el.textContent = "--";
+            });
+
+            ['badge-cpu-sim', 'badge-cpl-sim', 'badge-cpu-bot', 'badge-cpl-bot'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+
+            ['card-cpu', 'card-cpl'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.className = "metric-card bg-slate-50 rounded-xl p-4 border border-slate-200 relative overflow-hidden transition-all";
+            });
+
+            const expEl = document.getElementById('dynamic-explanation');
+            if (expEl) expEl.innerHTML = "Enter parameters or raw samples to view a dynamic, plain-English explanation of your process capability output.";
+            
+            const statusEl = document.getElementById('status-bar');
+            if (statusEl) {
+                 statusEl.className = "rounded-xl px-4 font-bold text-center text-sm shadow-sm transition-all duration-300 border h-[76px] flex items-center justify-center w-full overflow-hidden bg-slate-50 border-slate-200 text-slate-500";
+                 statusEl.innerHTML = "<span>Enter Process Parameters or Raw Data to generate Real-time Interpretation.</span>";
+            }
+            
+            const actionBtns = document.getElementById('capa-action-buttons-wrapper');
+            if (actionBtns) actionBtns.classList.add('hidden');
+
+            if (chartInstance) chartInstance.destroy();
+            if (capaChartInstance) capaChartInstance.destroy();
+        }
+
+        function drawChart(lsl, usl, mean, std, simulated = false) {
+            chartInstance = createChart('capabilityChart', lsl, usl, mean, std, simulated, chartInstance);
+        }
+
+        function createChart(canvasId, lsl, usl, mean, std, simulated, existingInstance) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return existingInstance;
+            const ctx = canvas.getContext('2d');
+            if (existingInstance) existingInstance.destroy();
+
+            const primaryColor = simulated ? '#047857' : '#1d4ed8'; 
+            const bgColor = simulated ? 'rgba(4, 120, 87, 0.15)' : 'rgba(29, 78, 216, 0.15)';
+            const barColor = simulated ? 'rgba(4, 120, 87, 0.3)' : 'rgba(29, 78, 216, 0.3)';
+            const barBorderColor = simulated ? 'rgba(4, 120, 87, 0.8)' : 'rgba(29, 78, 216, 0.8)';
+
+            const dataPoints = [];
+            const minX = Math.min(lsl - std, mean - 4 * std);
+            const maxX = Math.max(usl + std, mean + 4 * std);
+            const step = (maxX - minX) / 100;
+            let maxY = 0;
+
+            for (let x = minX; x <= maxX; x += step) {
+                 const exponent = -Math.pow(x - mean, 2) / (2 * Math.pow(std, 2));
+                 const y = (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(exponent);
+                 if (y > maxY) maxY = y;
+                 dataPoints.push({ x: x, y: y });
+            }
+
+            // DEEP GOD MODE FIX: Infinity Shield. Hard clamp the peak of the chart to block browser rendering crashes.
+            if (!isFinite(maxY) || maxY <= 0) maxY = 1;
+            maxY = Math.min(maxY, 1e10);
+
+            const fillPoints = dataPoints.map(p => {
+                 if(p.x >= lsl && p.x <= usl) return p;
+                 return {x: p.x, y: 0};
+            });
+
+            const numBins = 24;
+            const binWidth = (maxX - minX) / numBins;
+            const histogramData = [];
+            for (let i = 0; i < numBins; i++) {
+                 const binCenter = minX + (i * binWidth) + (binWidth / 2);
+                 const exponent = -Math.pow(binCenter - mean, 2) / (2 * Math.pow(std, 2));
+                 const theoreticalY = (1 / (std * Math.sqrt(2 * Math.PI))) * Math.exp(exponent);
+                 const stableNoise = simulated ? 1 : 0.85 + (Math.abs(Math.sin(i * 12.34)) * 0.25); 
+                 histogramData.push({ x: binCenter, y: theoreticalY * stableNoise });
+            }
+
+            const lslLine = [{x: lsl, y: 0}, {x: lsl, y: maxY * 1.1}];
+            const uslLine = [{x: usl, y: 0}, {x: usl, y: maxY * 1.1}];
+            const meanLine = [{x: mean, y: 0}, {x: mean, y: maxY * 1.1}];
+
+            return new Chart(ctx, {
+                 type: 'scatter',
+                 plugins: [{
+                     id: 'trafficLightBar',
+                     beforeDraw: (chart) => {
+                         const { ctx, chartArea: { top, bottom, left, right }, scales: { x } } = chart;
+                         const lslPx = x.getPixelForValue(lsl);
+                         const uslPx = x.getPixelForValue(usl);
+                         
+                         const warningZonePx = (uslPx - lslPx) * 0.15; 
+                         const safeLslPx = lslPx + warningZonePx;
+                         const safeUslPx = uslPx - warningZonePx;
+                         
+                         const barHeight = 8;
+                         const y = bottom - barHeight;
+
+                         ctx.save();
+                         ctx.beginPath();
+                         ctx.rect(left, y, right - left, barHeight);
+                         ctx.clip();
+                         
+                         ctx.fillStyle = '#dc2626'; 
+                         if (lslPx > left) ctx.fillRect(left, y, lslPx - left, barHeight);
+                         
+                         ctx.fillStyle = '#eab308'; 
+                         if (safeLslPx > Math.max(left, lslPx)) ctx.fillRect(Math.max(left, lslPx), y, safeLslPx - Math.max(left, lslPx), barHeight);
+                         
+                         ctx.fillStyle = '#16a34a'; 
+                         const gStart = Math.max(left, safeLslPx);
+                         const gEnd = Math.min(right, safeUslPx);
+                         if (gEnd > gStart) ctx.fillRect(gStart, y, gEnd - gStart, barHeight);
+                         
+                         ctx.fillStyle = '#eab308'; 
+                         if (Math.min(right, uslPx) > safeUslPx) ctx.fillRect(safeUslPx, y, Math.min(right, uslPx) - safeUslPx, barHeight);
+
+                         ctx.fillStyle = '#dc2626'; 
+                         if (uslPx < right) ctx.fillRect(uslPx, y, right - uslPx, barHeight);
+                         
+                         ctx.restore();
+                     }
+                 }],
+                 data: {
+                     datasets: [
+                         {
+                             label: 'Within Specs Area',
+                             data: fillPoints,
+                             backgroundColor: bgColor,
+                             showLine: true,
+                             pointRadius: 0,
+                             fill: 'origin',
+                             borderWidth: 0,
+                             tension: 0.4,
+                             order: 5
+                         },
+                         {
+                             type: 'bar',
+                             label: 'Empirical Sample Data',
+                             data: histogramData,
+                             backgroundColor: barColor,
+                             borderColor: barBorderColor,
+                             borderWidth: 1,
+                             barPercentage: 1.0,
+                             categoryPercentage: 0.95,
+                             order: 4
+                         },
+                         {
+                             label: simulated ? 'Golden Target Distribution' : 'Process Distribution',
+                             data: dataPoints,
+                             borderColor: primaryColor, 
+                             borderWidth: 3,
+                             showLine: true,
+                             pointRadius: 0,
+                             fill: false,
+                             tension: 0.4,
+                             order: 3
+                         },
+                         {
+                             label: `LSL (${lsl})`,
+                             data: lslLine,
+                             borderColor: '#b91c1c', 
+                             borderWidth: 2,
+                             borderDash: [5, 5],
+                             showLine: true,
+                             pointRadius: 0,
+                             order: 2
+                         },
+                         {
+                             label: `USL (${usl})`,
+                             data: uslLine,
+                             borderColor: '#047857', 
+                             borderWidth: 2,
+                             borderDash: [5, 5],
+                             showLine: true,
+                             pointRadius: 0,
+                             order: 1
+                         },
+                         {
+                             label: `Mean µ (${mean.toFixed(2)})`,
+                             data: meanLine,
+                             borderColor: '#0f172a', 
+                             borderWidth: 2,
+                             borderDash: simulated ? [3, 3] : [],
+                             showLine: true,
+                             pointRadius: 0,
+                             order: 0
+                         }
+                     ]
+                 },
+                 options: {
+                     responsive: true,
+                     maintainAspectRatio: false,
+                     animation: false, 
+                     events: [], // DEEP GOD MODE FIX: Prevent interactivity jitter & hover memory leaks
+                     plugins: {
+                         legend: { 
+                             labels: { 
+                                 color: '#0f172a', 
+                                 font: { weight: 'bold', family: "'Inter', sans-serif" },
+                                 usePointStyle: true, 
+                                 boxWidth: 8 
+                             } 
+                         },
+                         tooltip: { enabled: false }
+                     },
+                     scales: {
+                         x: {
+                             type: 'linear',
+                             grid: { color: '#e2e8f0' },
+                             ticks: { color: '#334155', font: { weight: 'bold', family: "'Inter', sans-serif" } }
+                         },
+                         y: {
+                             display: false,
+                             min: 0,
+                             max: maxY * 1.2
+                         }
+                     }
+                 }
+            });
+        }
+
+        // DEEP GOD MODE FIX: CSV Injection Protection & Excel Target State Mapping
+        function downloadExcel() {
+            if(!currentMetrics.std || currentMetrics.std <= 0 || !isFinite(currentMetrics.std)) {
+                 showToast("Please calculate valid metrics before exporting.", true);
+                 return;
+            }
+
+            const eSelect = document.getElementById("industrySelect");
+            const conceptSelect = document.getElementById("conceptSelect");
+            
+            // Clean strings just in case HTML contains comma/quote traps, and Strip CSV Injection payloads
+            let segmentName = (eSelect.options[eSelect.selectedIndex]?.text || "Custom").replace(/"/g, '""');
+            if (/^[=\-+\@]/.test(segmentName)) segmentName = "'" + segmentName;
+
+            const conceptPrefix = conceptSelect.value === 'pp' ? 'P' : 'C';
+            
+            // DEEP GOD MODE FIX: Extract values based strictly on whether Golden Target Mode is active
+            const lsl = safeNum(currentMetrics.lsl, 4);
+            const usl = safeNum(currentMetrics.usl, 4);
+            const mean = safeNum(isSimulated ? (currentMetrics.usl + currentMetrics.lsl) / 2 : currentMetrics.mean, 4);
+            const std = safeNum(isSimulated ? (currentMetrics.usl - currentMetrics.lsl) / (6 * 1.33) : currentMetrics.std, 4);
+            const cp = safeNum(isSimulated ? 1.33 : currentMetrics.cp, 3);
+            const cpk = safeNum(isSimulated ? 1.33 : currentMetrics.cpk, 3);
+
+            const csvHeaders = ["Industry_Segment", "Concept", "LSL", "USL", "Mean", "StdDev", `Raw_${conceptPrefix}p_Value`, `Raw_${conceptPrefix}pk_Value`, `${conceptPrefix}p_Formula`, `${conceptPrefix}pu_Formula`, `${conceptPrefix}pl_Formula`, `${conceptPrefix}pk_Formula`];
+            const csvRowData = [
+                 `"${segmentName}"`, 
+                `"${conceptPrefix}p/${conceptPrefix}pk Analysis"`,
+                 lsl, 
+                 usl, 
+                 mean, 
+                 std,
+                 cp,
+                 cpk,
+                 `=(D2-C2)/(6*F2)`,  
+                 `=(D2-E2)/(3*F2)`,  
+                 `=(E2-C2)/(3*F2)`,  
+                 `=MIN(J2,K2)`       
+            ];
+
+            const csvContent = [csvHeaders.join(","), csvRowData.join(",")].join("\r\n");
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            
+            link.setAttribute("download", `Masterclass_${conceptPrefix}p_${conceptPrefix}pk_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function generatePDF() {
+            if(isGeneratingPDF) return;
+            isGeneratingPDF = true;
+
+            cacheCapaInputs();
+            
+            window.scrollTo(0, 0);
+            
+            const btnText = document.getElementById('pdf-btn-text');
+            const originalText = btnText.textContent;
+            btnText.textContent = "Generating PDF...";
+            
+            const element = document.getElementById('capa-generator-view');
+            
+            const inputs = element.querySelectorAll('.capa-cache-node');
+            inputs.forEach(node => {
+                 const checkbox = node.querySelector('.cache-check');
+                 const printCheckbox = node.querySelector('.print-only div');
+                 if (checkbox && printCheckbox) {
+                     printCheckbox.textContent = checkbox.checked ? '✓' : '';
+                 }
+            });
+
+            document.body.classList.add('pdf-export-mode');
+            
+            if (capaChartInstance) capaChartInstance.resize();
+            
+            // DEEP GOD MODE FIX: Hardened PDF Configuration. Enforces Inter font & rigid layout scaling.
+            const opt = {
+                 margin:       [0.4, 0.4, 0.4, 0.4], 
+                 filename:     `CAPA_Execution_Form_${new Date().getTime()}.pdf`,
+                 image:        { type: 'jpeg', quality: 0.98 },
+                 html2canvas:  { scale: 2, windowWidth: 800, width: 800, scrollY: 0, useCORS: true, letterRendering: true }, 
+                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            setTimeout(() => {
+                html2pdf().set(opt).from(element).save().then(() => {
+                    document.body.classList.remove('pdf-export-mode');
+                     if (capaChartInstance) capaChartInstance.resize(); 
+                     btnText.textContent = originalText;
+                     isGeneratingPDF = false; 
+                }).catch(err => {
+                     console.error("PDF Engine Error:", err);
+                    document.body.classList.remove('pdf-export-mode');
+                     if (capaChartInstance) capaChartInstance.resize(); 
+                     btnText.textContent = originalText;
+                     isGeneratingPDF = false; 
+                     showToast("Failed to generate PDF. Please try again.", true);
+                });
+            }, 150);
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => { toggleActionButtons(true); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSM Proficiency Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@400;500&display=swap');
+        
+        :root {
+            --mects-yellow: #FFD700;
+        }
+
+        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; }
+        h1, h2, h3, .mects-font { font-family: 'Montserrat', sans-serif; }
+
+        .mects-header {
+            background-color: #000000;
+            color: #ffffff;
+            border-bottom: 4px solid var(--mects-yellow);
+        }
+
+        .mects-yellow-text { color: var(--mects-yellow); }
+
+        .card { 
+            background: white; 
+            border-radius: 1rem; 
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .opt-btn {
+            width: 100%;
+            text-align: left;
+            padding: 1rem 1.25rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            background-color: white;
+            color: #1f2937;
+        }
+
+        .opt-btn:hover:not(.selected) {
+            border-color: #000;
+            background-color: #f9fafb;
+        }
+
+        .opt-btn.selected {
+            border-color: #000 !important;
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+
+        .glass-modal {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .lvl-selector {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .lvl-selector.active {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Hide Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="mects-header py-6 px-4 shadow-xl">
+        <div class="max-w-7xl mx-auto flex flex-col items-center md:items-start">
+            <h1 class="text-4xl font-black tracking-tighter leading-none">
+                MECTS <span class="mects-yellow-text">SET</span>
+            </h1>
+            <p class="text-[10px] md:text-xs font-bold tracking-[0.3em] mt-1 text-white/80 uppercase">
+                Managing Effective Corporate Training Solutions
+            </p>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        
+        <!-- START SCREEN -->
+        <section id="start-view" class="max-w-2xl mx-auto space-y-8 mt-10">
+            <div class="text-center">
+                <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tight">VSM Proficiency Assessment</h2>
+                <div class="h-1.5 w-20 bg-black mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="card p-8 space-y-6">
+                <div class="space-y-4">
+                    <label class="block text-xs font-black uppercase text-slate-500 ml-1">Candidate Credentials</label>
+                    <input type="text" id="user-name" placeholder="FULL NAME" class="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-yellow-500 rounded-xl outline-none font-bold uppercase transition-all">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="user-id" placeholder="EMPLOYEE ID" class="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-yellow-500 rounded-xl outline-none font-bold uppercase transition-all">
+                        <input type="text" id="user-dept" placeholder="DEPARTMENT" class="w-full p-4 bg-slate-50 border-2 border-transparent focus:border-yellow-500 rounded-xl outline-none font-bold uppercase transition-all">
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-black uppercase text-slate-500 ml-1">Select Assessment Level</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="pickLevel('Basic')" id="lvl-Basic" class="lvl-selector p-4 border-2 border-slate-100 bg-emerald-50 rounded-xl text-center hover:border-emerald-500 transition-all group">
+                            <span class="block font-black text-sm text-emerald-700">LEVEL 01</span>
+                            <span class="block text-[10px] font-bold text-emerald-600 mt-1">BASIC</span>
+                        </button>
+                        <button onclick="pickLevel('Intermediate')" id="lvl-Intermediate" class="lvl-selector p-4 border-2 border-slate-100 bg-blue-50 rounded-xl text-center hover:border-blue-500 transition-all group">
+                            <span class="block font-black text-sm text-blue-700">LEVEL 02</span>
+                            <span class="block text-[10px] font-bold text-blue-600 mt-1 uppercase">Intermed.</span>
+                        </button>
+                        <button onclick="pickLevel('Advanced')" id="lvl-Advanced" class="lvl-selector p-4 border-2 border-slate-100 bg-purple-50 rounded-xl text-center hover:border-purple-500 transition-all group">
+                            <span class="block font-black text-sm text-purple-700">LEVEL 03</span>
+                            <span class="block text-[10px] font-bold text-purple-600 mt-1">ADVANCED</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="startAssessment()" class="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-all shadow-lg">
+                    Begin Assessment
+                </button>
+            </div>
+        </section>
+
+        <!-- ASSESSMENT SCREEN -->
+        <section id="assessment-view" class="hidden max-w-4xl mx-auto space-y-6">
+            <div class="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-black text-yellow-400 flex items-center justify-center rounded-xl text-xl">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <p id="display-name" class="font-black text-lg uppercase leading-none"></p>
+                        <p id="display-meta" class="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest"></p>
+                    </div>
+                </div>
+                <div class="mt-4 md:mt-0 text-center md:text-right">
+                    <p class="text-[10px] font-black text-slate-400 uppercase">Session Timer</p>
+                    <p id="timer" class="text-2xl font-black font-mono">25:00</p>
+                </div>
+            </div>
+
+            <div class="card p-8 md:p-12">
+                <div class="flex justify-between items-center mb-8">
+                    <span id="q-counter" class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase">Question 01 of 25</span>
+                    <div class="flex gap-1" id="progress-bar"></div>
+                </div>
+
+                <h3 id="question-text" class="text-xl md:text-2xl font-bold text-slate-800 mb-8 leading-snug"></h3>
+                
+                <div id="options-container" class="grid grid-cols-1 gap-3">
+                    <!-- Options injected here -->
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-4">
+                <button id="prev-btn" onclick="nav(-1)" class="px-8 py-4 font-black text-xs uppercase text-slate-400 hover:text-black transition-all">Previous</button>
+                <button id="next-btn" onclick="nav(1)" class="bg-black text-white px-10 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-yellow-500 hover:text-black transition-all">Next Question</button>
+            </div>
+        </section>
+
+        <!-- RESULT SCREEN -->
+        <section id="result-view" class="hidden max-w-2xl mx-auto text-center space-y-8">
+            <div class="card p-12 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-yellow-400"></div>
+                
+                <div class="w-40 h-40 rounded-full border-[10px] border-slate-100 mx-auto flex flex-col items-center justify-center bg-white shadow-inner mb-6">
+                    <span id="final-score-pct" class="text-4xl font-black text-slate-900">0%</span>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score</span>
+                </div>
+
+                <h2 class="text-3xl font-black uppercase text-slate-800">Assessment Submitted</h2>
+                
+                <div class="bg-slate-50 rounded-2xl p-6 my-6 space-y-2 border border-slate-100">
+                    <div class="flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-wider">
+                        <span class="text-slate-400">Candidate:</span>
+                        <span id="score-name" class="text-slate-900"></span>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-wider">
+                        <span class="text-slate-400">Employee ID:</span>
+                        <span id="score-id" class="text-slate-900"></span>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-wider">
+                        <span class="text-slate-400">Department:</span>
+                        <span id="score-dept" class="text-slate-900"></span>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-wider">
+                        <span class="text-slate-400">Level:</span>
+                        <span id="score-level" class="text-indigo-600 font-black"></span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 mt-10">
+                    <button onclick="toggleReview()" class="w-full bg-black text-white py-5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-500 hover:text-black transition-all">Review Vectors</button>
+                    <button onclick="window.location.reload()" class="w-full py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest">Restart System</button>
+                </div>
+            </div>
+
+            <div id="review-container" class="hidden space-y-4 text-left animate-in slide-in-from-bottom-5">
+                <h4 class="font-black uppercase text-sm text-slate-400 border-b pb-2 flex justify-between items-center">
+                    Incorrect Vectors List
+                    <i class="fa-solid fa-circle-nodes"></i>
+                </h4>
+                <div id="review-list" class="space-y-4"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- INCOMPLETE ALERT MODAL -->
+    <div id="alert-modal" class="hidden fixed inset-0 glass-modal flex items-center justify-center z-[2000] p-4">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full text-center space-y-4 border-4 border-yellow-400">
+            <i class="fa-solid fa-triangle-exclamation text-5xl text-yellow-500"></i>
+            <h3 class="text-xl font-black uppercase">Incomplete Data</h3>
+            <p class="text-slate-500 text-sm font-medium">Please finalize all 25 questions before submission. System requires complete telemetry.</p>
+            <button onclick="closeAlert()" class="w-full bg-black text-white py-3 rounded-xl font-black uppercase text-xs tracking-widest">Return to Assessment</button>
+        </div>
+    </div>
+
+    <script>
+        const QUESTIONS = {
+            'Basic': [
+                { q: "Which of the following is NOT one of the '7 Wastes' of Lean?", a: ["Overproduction", "Motion", "Customer Service", "Defects"], c: "Customer Service" },
+                { q: "What does the first 'S' in 5S stand for (Japanese/English equivalent)?", a: ["Seiri (Sort)", "Seiton (Set)", "Seiso (Shine)", "Shitsuke (Sustain)"], c: "Seiri (Sort)" },
+                { q: "TIMWOOD is an acronym used to remember what?", a: ["The 7 Wastes", "The 5S Steps", "Standard Work phases", "VSM Symbols"], c: "The 7 Wastes" },
+                { q: "What is the primary goal of Poka-Yoke?", a: ["Increasing Speed", "Error-Proofing", "Cost-Cutting", "Marketing"], c: "Error-Proofing" },
+                { q: "In Lean, what is 'Muda'?", a: ["Value", "Unevenness", "Waste", "Overburden"], c: "Waste" },
+                { q: "Which waste refers to products being moved unnecessarily?", a: ["Over-processing", "Inventory", "Transportation", "Waiting"], c: "Transportation" },
+                { q: "Visual management tools (like floor markings) belong to which 5S stage?", a: ["Sort", "Set in Order", "Shine", "Standardize"], c: "Set in Order" },
+                { q: "Gemba means...", a: ["The office", "The breakroom", "The actual place of work", "The board room"], c: "The actual place of work" },
+                { q: "What is the purpose of a Value Stream Map?", a: ["Employee shifts", "Visualizing material and information flow", "Factory layout", "Profit analysis"], c: "Visualizing material and information flow" },
+                { q: "Standard Work is defined as...", a: ["The fastest way", "The current best way", "The management's way", "The easiest way"], c: "The current best way" },
+                { q: "Which waste refers to doing more work than required by the customer?", a: ["Over-processing", "Overproduction", "Defects", "Motion"], c: "Over-processing" },
+                { q: "Andon systems use what for communication?", a: ["Email", "Visual signals/lights", "Telephones", "Paper forms"], c: "Visual signals/lights" },
+                { q: "Kaizen translates to...", a: ["Change for the Better", "Fast Production", "No Mistakes", "Employee Satisfaction"], c: "Change for the Better" },
+                { q: "Which 'S' involves creating rules to maintain the first 3S?", a: ["Shine", "Sustain", "Standardize", "Sort"], c: "Standardize" },
+                { q: "Waiting waste (the 'W' in TIMWOOD) refers to...", a: ["Customer waiting for delivery", "Employee idling for materials", "Shipping delays", "Waiting for hiring"], c: "Employee idling for materials" },
+                { q: "Lean production is primarily...", a: ["Push system", "Pull system", "Random system", "Hybrid system"], c: "Pull system" },
+                { q: "A 'Spaghetti Diagram' tracks...", a: ["Ingredient levels", "Worker/Material movement", "Network logic", "Data storage"], c: "Worker/Material movement" },
+                { q: "Which waste results in rework and customer dissatisfaction?", a: ["Overproduction", "Defects", "Motion", "Inventory"], c: "Defects" },
+                { q: "What is the '8th Waste' often added to TIMWOOD?", a: ["Under-utilized Talent", "Poor Lighting", "Slow Computers", "High Salary"], c: "Under-utilized Talent" },
+                { q: "5S is a tool for...", a: ["Design", "Workplace Organization", "Financial Planning", "Recruiting"], c: "Workplace Organization" },
+                { q: "Value is defined by...", a: ["The CEO", "The Customer", "The Supervisor", "The Shareholder"], c: "The Customer" },
+                { q: "A Kanban card is a signal to...", a: ["Stop work", "Ship products", "Produce or Move material", "Take a break"], c: "Produce or Move material" },
+                { q: "Cycle Time is...", a: ["Time between orders", "Time to complete one unit", "Total lead time", "Machine lifespan"], c: "Time to complete one unit" },
+                { q: "Takt Time is governed by...", a: ["Machine capacity", "Customer demand", "Shift length", "Inventory"], c: "Customer demand" },
+                { q: "Non-Value Added (NVA) activities are also known as...", a: ["Value", "Work", "Waste", "Standard"], c: "Waste" }
+            ],
+            'Intermediate': [
+                { q: "What does 'Jidoka' refer to?", a: ["Autonomation", "Leveling", "Visual Control", "Fast Setup"], c: "Autonomation" },
+                { q: "SMED (Single Minute Exchange of Die) aims to reduce...", a: ["Labor cost", "Changeover time", "Inventory", "Defects"], c: "Changeover time" },
+                { q: "Heijunka is the Lean concept for...", a: ["Quality", "Production Leveling", "Mistake Proofing", "Safety"], c: "Production Leveling" },
+                { q: "Lead Time is the time from...", a: ["Order to Delivery", "Start to Finish of task", "In to Out of machine", "Order to Payment"], c: "Order to Delivery" },
+                { q: "A 'Supermarket' in Lean is a form of...", a: ["Quality Check", "Controlled Inventory", "Storefront", "Waste Bin"], c: "Controlled Inventory" },
+                { q: "In VSM, a 'Lightning Bolt' symbol represents...", a: ["Danger", "Kaizen Burst", "Shipping", "Inventory"], c: "Kaizen Burst" },
+                { q: "The 'Theory of Constraints' focuses on finding the...", a: ["Smallest part", "Bottleneck", "Cheapest vendor", "Oldest machine"], c: "Bottleneck" },
+                { q: "Cellular manufacturing improves flow by...", a: ["Isolating steps", "Grouping processes", "Adding conveyors", "Increasing batch size"], c: "Grouping processes" },
+                { q: "What is 'Batch' production's biggest drawback?", a: ["Low inventory", "High Lead Time", "Low Quality", "Fast Changeover"], c: "High Lead Time" },
+                { q: "A 'Pull' system is triggered by...", a: ["Forecasts", "Customer Demand", "Schedule", "Management"], c: "Customer Demand" },
+                { q: "Which tool uses 'Why' five times to find a solution?", a: ["5S", "5-Whys Root Cause", "5M", "5-Pillars"], c: "5-Whys Root Cause" },
+                { q: "What is 'One-Piece Flow'?", a: ["Making one unit at a time", "Shipping once a month", "One person doing everything", "One machine for all tasks"], c: "Making one unit at a time" },
+                { q: "Internal setup tasks in SMED are done...", a: ["While machine runs", "While machine is stopped", "By the supervisor", "Off-site"], c: "While machine is stopped" },
+                { q: "Total Productive Maintenance (TPM) goal is...", a: ["Fixing broken machines", "Zero breakdowns/defects", "Buying new tools", "Outsourcing repairs"], c: "Zero breakdowns/defects" },
+                { q: "Value Stream Mapping differentiates between Value-Added and...", a: ["Profit", "Non-Value Added", "Cost", "Labor"], c: "Non-Value Added" },
+                { q: "What represents 'Inventory' in a VSM?", a: ["Box", "Triangle", "Circle", "Line"], c: "Triangle" },
+                { q: "Which lean tool is best for finding physical motion waste?", a: ["VSM", "Spaghetti Diagram", "Kanban", "A3"], c: "Spaghetti Diagram" },
+                { q: "What is the result of OEE = 100%?", a: ["No cost", "Perfect production", "Max profit", "High speed"], c: "Perfect production" },
+                { q: "Takt time is calculated as Available Time divided by...", a: ["Employees", "Customer Demand", "Cycle Time", "Inventory"], c: "Customer Demand" },
+                { q: "Standard Work Combination Sheets track...", a: ["Salary", "Machine vs Human work", "Cleaning tasks", "Safety violations"], c: "Machine vs Human work" },
+                { q: "The 'M' in TIMWOOD that stands for Inventory is...", a: ["Materials", "Main storage", "Mistakes", "Inventory"], c: "Inventory" },
+                { q: "Kanban literally means...", a: ["Signal card", "Clean floor", "New machine", "Fast work"], c: "Signal card" },
+                { q: "First Time Through (FTT) measures...", a: ["Employee speed", "Quality without rework", "Shipping frequency", "Hiring rate"], c: "Quality without rework" },
+                { q: "WIP stands for...", a: ["Work in Progress", "Waste in Plant", "Work is Productive", "Weekly Inventory Plan"], c: "Work in Progress" },
+                { q: "Milk Run refers to...", a: ["Employee snacks", "Scheduled frequent pick-ups", "Daily cleaning", "Weekly audits"], c: "Scheduled frequent pick-ups" }
+            ],
+            'Advanced': [
+                { q: "Hoshin Kanri is also known as...", a: ["5S", "Policy Deployment", "Daily management", "Quality circles"], c: "Policy Deployment" },
+                { q: "OEE is the product of Availability, Performance, and...", a: ["Safety", "Quality", "Morale", "Cost"], c: "Quality" },
+                { q: "What is the primary goal of the 'Future State' VSM?", a: ["Current problems", "Lean implementation vision", "Past performance", "Budgeting"], c: "Lean implementation vision" },
+                { q: "PDCA stands for...", a: ["Plan-Do-Check-Act", "Pre-Day-Call-Action", "Plan-Develop-Cost-Assess", "Perform-Design-Check-Apply"], c: "Plan-Do-Check-Act" },
+                { q: "The 'Kata' approach focuses on...", a: ["Rapid changes", "Habitual problem-solving", "Physical exercise", "Cleaning"], c: "Habitual problem-solving" },
+                { q: "Strategic alignment in Lean is handled by...", a: ["Kanban", "Hoshin Kanri", "Poka Yoke", "5S"], c: "Hoshin Kanri" },
+                { q: "What is a 'Kaizen Blitz'?", a: ["Annual meeting", "Short intense improvement event", "Digital training", "Safety drill"], c: "Short intense improvement event" },
+                { q: "Value Stream Management is broader than VSM because it includes...", a: ["More colors", "Strategic oversight", "Faster drawing", "Computer software"], c: "Strategic oversight" },
+                { q: "In OEE, 'Performance' loss includes...", a: ["Breakdowns", "Minor stoppages/Speed", "Defects", "No shifts"], c: "Minor stoppages/Speed" },
+                { q: "An A3 Report is typically used for...", a: ["Invoicing", "Structured Problem Solving", "Marketing", "Hiring"], c: "Structured Problem Solving" },
+                { q: "The 'S' in SIPOC stands for...", a: ["Standard", "Suppliers", "Safety", "Selection"], c: "Suppliers" },
+                { q: "A Value Stream Map is usually drawn from...", a: ["Start to finish", "Customer back to Supplier", "Supplier to Customer", "Middle out"], c: "Customer back to Supplier" },
+                { q: "What is 'Mura'?", a: ["Waste", "Unevenness", "Overburden", "Profit"], c: "Unevenness" },
+                { q: "What is 'Muri'?", a: ["Waste", "Unevenness", "Overburden", "Loss"], c: "Overburden" },
+                { q: "The Lean Enterprise Institute was founded by...", a: ["Taiichi Ohno", "James Womack", "Shigeo Shingo", "Henry Ford"], c: "James Womack" },
+                { q: "Which tool is used to visualize the link between strategy and tactics?", a: ["X-Matrix", "Kanban", "VSM", "Pareto Chart"], c: "X-Matrix" },
+                { q: "True Lean transformation requires a change in...", a: ["Only machines", "Culture and Mindset", "Only software", "Only floor layout"], c: "Culture and Mindset" },
+                { q: "A 'Constraint' in a process dictates...", a: ["Total cost", "System Throughput", "Employee count", "Lighting"], c: "System Throughput" },
+                { q: "The 'Red Tag' system is part of...", a: ["Sort in 5S", "Shine in 5S", "Poka Yoke", "Safety"], c: "Sort in 5S" },
+                { q: "DMAIC is the standard methodology for...", a: ["5S", "Six Sigma", "Kanban", "Kaizen"], c: "Six Sigma" },
+                { q: "In the 8 Wastes, 'Motion' refers to movement of...", a: ["Trucks", "People", "Information", "Money"], c: "People" },
+                { q: "A Value Stream includes all actions...", a: ["Only value-added", "Only non-value-added", "Both VA and NVA", "Only manufacturing"], c: "Both VA and NVA" },
+                { q: "OEE Availability loss includes...", a: ["Scrap", "Breakdowns/Setup", "Reduced speed", "Rework"], c: "Breakdowns/Setup" },
+                { q: "A 'Pacemaker Process' is...", a: ["The fastest machine", "Process that controls the value stream flow", "The first machine", "The last machine"], c: "Process that controls the value stream flow" },
+                { q: "Lean's 'Just-in-Time' pillar focuses on...", a: ["Quality", "Flow/Lead time", "Safety", "Costing"], c: "Flow/Lead time" }
+            ]
+        };
+
+        let currentLvl = null;
+        let currentIdx = 0;
+        let userAnswers = {};
+        let sessionTimer = null;
+        let timeRemaining = 1500;
+
+        function pickLevel(lvl) {
+            currentLvl = lvl;
+            const colors = {
+                'Basic': 'border-emerald-500 ring-2 ring-emerald-200',
+                'Intermediate': 'border-blue-500 ring-2 ring-blue-200',
+                'Advanced': 'border-purple-500 ring-2 ring-purple-200'
+            };
+
+            document.querySelectorAll('.lvl-selector').forEach(b => {
+                b.classList.remove('active', 'border-emerald-500', 'border-blue-500', 'border-purple-500', 'ring-2', 'ring-emerald-200', 'ring-blue-200', 'ring-purple-200');
+            });
+
+            const activeBtn = document.getElementById(`lvl-${lvl}`);
+            activeBtn.classList.add('active');
+            activeBtn.className += ` ${colors[lvl]}`;
+        }
+
+        function startAssessment() {
+            const name = document.getElementById('user-name').value.trim();
+            const eid = document.getElementById('user-id').value.trim();
+            const dept = document.getElementById('user-dept').value.trim();
+
+            if(!name || !eid || !dept || !currentLvl) {
+                alert("Credentials or Level selection incomplete.");
+                return;
+            }
+
+            document.getElementById('display-name').innerText = name;
+            document.getElementById('display-meta').innerText = `${currentLvl} | ${eid} | ${dept}`;
+            
+            document.getElementById('start-view').classList.add('hidden');
+            document.getElementById('assessment-view').classList.remove('hidden');
+
+            renderProgressBar();
+            renderQuestion();
+            startTimer();
+        }
+
+        function startTimer() {
+            sessionTimer = setInterval(() => {
+                timeRemaining--;
+                let m = Math.floor(timeRemaining / 60);
+                let s = timeRemaining % 60;
+                document.getElementById('timer').innerText = `${m}:${s < 10 ? '0'+s : s}`;
+                if(timeRemaining <= 0) {
+                    clearInterval(sessionTimer);
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        function renderProgressBar() {
+            const bar = document.getElementById('progress-bar');
+            bar.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                const dot = document.createElement('div');
+                dot.className = `h-1 w-2 rounded-full transition-all ${userAnswers[i] ? 'bg-black' : 'bg-slate-200'}`;
+                if(i === currentIdx) dot.className = "h-1 w-6 bg-yellow-500 rounded-full";
+                bar.appendChild(dot);
+            }
+        }
+
+        function renderQuestion() {
+            const q = QUESTIONS[currentLvl][currentIdx];
+            document.getElementById('q-counter').innerText = `Question ${currentIdx + 1} of 25`;
+            document.getElementById('question-text').innerText = q.q;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            q.a.forEach(opt => {
+                const btn = document.createElement('button');
+                // Added direct class manipulation to prevent flash
+                const isSelected = userAnswers[currentIdx] === opt;
+                btn.className = `opt-btn ${isSelected ? 'selected' : ''}`;
+                btn.innerText = opt;
+                btn.onclick = (e) => {
+                    // Instantly update UI before re-render
+                    document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    
+                    userAnswers[currentIdx] = opt;
+                    
+                    // Delay slightly to let the user see the black state before the bar update
+                    setTimeout(() => {
+                        renderProgressBar();
+                        renderQuestion();
+                    }, 50);
+                };
+                container.appendChild(btn);
+            });
+
+            document.getElementById('prev-btn').style.opacity = currentIdx === 0 ? '0' : '1';
+            document.getElementById('next-btn').innerText = currentIdx === 24 ? 'SUBMIT ASSESSMENT' : 'NEXT QUESTION';
+        }
+
+        function nav(dir) {
+            if(dir === 1 && currentIdx === 24) {
+                checkCompletion();
+                return;
+            }
+            currentIdx += dir;
+            if(currentIdx < 0) currentIdx = 0;
+            if(currentIdx > 24) currentIdx = 24;
+            renderProgressBar();
+            renderQuestion();
+        }
+
+        function checkCompletion() {
+            const answeredCount = Object.keys(userAnswers).length;
+            if(answeredCount < 25) {
+                document.getElementById('alert-modal').classList.remove('hidden');
+            } else {
+                submitExam();
+            }
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        function submitExam() {
+            clearInterval(sessionTimer);
+            let score = 0;
+            QUESTIONS[currentLvl].forEach((q, i) => {
+                if(userAnswers[i] === q.c) score++;
+            });
+            
+            const pct = Math.round((score / 25) * 100);
+            document.getElementById('final-score-pct').innerText = `${pct}%`;
+
+            document.getElementById('score-name').innerText = document.getElementById('user-name').value;
+            document.getElementById('score-id').innerText = document.getElementById('user-id').value;
+            document.getElementById('score-dept').innerText = document.getElementById('user-dept').value;
+            document.getElementById('score-level').innerText = currentLvl;
+            
+            document.getElementById('assessment-view').classList.add('hidden');
+            document.getElementById('result-view').classList.remove('hidden');
+        }
+
+        function toggleReview() {
+            const box = document.getElementById('review-container');
+            if(!box.classList.contains('hidden')) return;
+            box.classList.remove('hidden');
+            const list = document.getElementById('review-list');
+            list.innerHTML = '';
+
+            QUESTIONS[currentLvl].forEach((q, i) => {
+                const isCorrect = userAnswers[i] === q.c;
+                const card = document.createElement('div');
+                card.className = "card p-6 border-l-4 " + (isCorrect ? 'border-green-500' : 'border-red-500');
+                card.innerHTML = `
+                    <p class="font-bold text-slate-800">${i+1}. ${q.q}</p>
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div class="text-[10px] uppercase font-black p-2 rounded bg-slate-50 ${isCorrect ? 'text-green-600' : 'text-red-600'}">
+                            Your Selection: ${userAnswers[i] || 'NOT ANSWERED'}
+                        </div>
+                        ${!isCorrect ? `
+                        <div class="text-[10px] uppercase font-black p-2 rounded bg-yellow-50 text-yellow-700">
+                            Required Vector: ${q.c}
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+            box.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

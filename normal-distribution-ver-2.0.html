@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Master Class Industry Bell Curve</title>
+    <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+    <style>
+        :root {
+            --bg: #f4f6f8;
+            --card: #ffffff;
+            --muted: #637381;
+            --txt: #212b36;
+            --line: #dfe3e8;
+            --accent: #2563eb;
+            
+            /* EXTREME TRAFFIC LIGHT COLORS */
+            --c-poor: #ff0000;       /* Pure Red */
+            --c-sat: #ff8c00;        /* Extreme Orange */
+            --c-avg: #ffd700;        /* Bright Gold/Yellow */
+            --c-good: #9acd32;       /* Yellow-Green */
+            --c-vgood: #00ff00;      /* Pure Green */
+            --c-outst: #0000ff;      /* Pure Blue */
+            
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--txt);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .wrap {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 15px;
+            height: 100%;
+            padding: 15px;
+        }
+
+        @media (max-width: 1024px) {
+            .wrap { grid-template-columns: 1fr; overflow-y: auto; }
+            body { overflow: auto; }
+        }
+
+        .card {
+            background: var(--card); border: 1px solid var(--line);
+            border-radius: 12px; padding: 20px; box-shadow: var(--shadow);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        .sidebar { overflow-y: auto; }
+        .main-content { overflow-y: auto; gap: 10px; }
+
+        h1 { font-size: 20px; margin: 0; color: var(--txt); }
+        h2 { font-size: 13px; margin: 0 0 5px; color: var(--muted); border-bottom: 2px solid var(--line); padding-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;}
+        h3 { font-size: 15px; margin: 0; color: var(--txt); }
+
+        .row-header, .row {
+            display: grid; grid-template-columns: 2fr 1fr 1fr 30px; gap: 8px; align-items: center;
+        }
+        .row-header { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 5px; }
+        .row { margin-bottom: 8px; }
+
+        input, select, button {
+            width: 100%; padding: 8px 10px; border-radius: 6px;
+            border: 1px solid var(--line); background: #fff;
+            color: var(--txt); font-size: 13px; outline: none; transition: all 0.2s;
+        }
+        
+        input:disabled { background: #f1f5f9; color: var(--muted); font-weight: bold; }
+
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+
+        button { cursor: pointer; background: #f8f9fa; font-weight: 600; border: 1px solid var(--line); color: var(--txt); }
+        button:hover { background: #e2e8f0; }
+        button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+        button.primary:hover { background: #1d4ed8; }
+        button.success { background: #00cc44; color: white; border-color: #00cc44; }
+        button.success:hover { background: #16a34a; }
+        button.excel { background: #107c41; color: white; border-color: #107c41; }
+        button.excel:hover { background: #0b5e31; }
+        button.danger-text { background: transparent; color: var(--c-poor); border: none; font-size: 18px; padding: 0;}
+        button.danger-text:hover { color: #b91c1c; transform: scale(1.1); }
+
+        .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .mini { font-size: 11px; color: var(--muted); line-height: 1.4; display: flex; align-items: center;}
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;}
+
+        /* Radio Toggle Group */
+        .radio-group {
+            display: flex; background: #e2e8f0; border-radius: 6px; overflow: hidden; border: 1px solid var(--line);
+        }
+        .radio-group input[type="radio"] { display: none; }
+        .radio-group label {
+            flex: 1; text-align: center; padding: 6px 10px; font-size: 11px; font-weight: bold;
+            color: var(--muted); cursor: pointer; transition: background 0.2s, color 0.2s;
+        }
+        .radio-group input[type="radio"]:checked + label { background: var(--accent); color: white; }
+
+        /* Allocation Tracker (Floating Pop Up Style) */
+        #alloc-tracker {
+            display: none; background: #f8fafc; border: 1px solid var(--line); 
+            border-left: 4px solid var(--accent); border-radius: 6px; 
+            padding: 8px 12px; font-size: 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #alloc-tracker span { font-weight: bold; font-size: 14px; }
+
+        /* Stat Cards */
+        .stat-card {
+            background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+            padding: 10px; text-align: center;
+        }
+        .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 18px; font-weight: bold; color: var(--accent); margin-top: 4px; }
+
+        .info-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; font-size: 14px; color: #166534; line-height: 1.5; }
+        .info-box.warning { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+        .info-box.danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+        #chart { width: 100%; height: 38vh; min-height: 280px; }
+        #bar-chart { width: 100%; height: 220px; margin-top: 5px; }
+        #basic-chart { width: 100%; height: 30vh; min-height: 250px; }
+
+        #toast {
+            position: fixed; bottom: 20px; right: 20px; background: var(--c-poor); color: white;
+            padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 14px; font-weight: bold; opacity: 0; transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s; pointer-events: none; z-index: 1000;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; border: 1px solid rgba(0,0,0,0.2); }
+
+        /* Info Icon / Hover Button */
+        .info-icon {
+            display: inline-flex; justify-content: center; align-items: center;
+            width: 14px; height: 14px; border-radius: 50%; background: var(--muted);
+            color: white; font-size: 10px; font-weight: bold; cursor: help;
+            margin-left: 6px; vertical-align: middle; transition: background 0.2s;
+        }
+        .info-icon:hover { background: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+    <div class="card sidebar">
+        <div style="padding-bottom: 10px; border-bottom: 2px solid var(--line); margin-bottom: 5px;">
+            <div style="font-size: 12px; font-weight: 900; color: var(--accent); letter-spacing: 1.5px; margin-bottom: 6px;">MECTS.... SET....GO</div>
+            <h1 style="font-size: 19px; margin: 0; color: var(--txt); line-height: 1.2;">Master Class Industry Bell Curve</h1>
+            <div class="mini" style="margin-top: 6px;">Advanced Kernel Density, Skewness & Kurtosis Tracking.</div>
+        </div>
+
+        <div>
+            <h2>Global Industry Segment <span class="info-icon" title="Select a preset industry to auto-populate parameters and standard industry weights.">?</span></h2>
+            <select id="industry" onchange="changeIndustry()"></select>
+        </div>
+
+        <div>
+            <h2>Outlier SD Range (Min & Max) <span class="info-icon" title="Defines the boundary for extreme outliers based on standard deviations from the mean.">?</span></h2>
+            <div class="grid-2">
+                <div>
+                    <label class="mini">Negative SD (-)</label>
+                    <input id="sdMin" type="number" step="0.1" min="0.5" max="5" value="2.0" onchange="renderAll()">
+                </div>
+                <div>
+                    <label class="mini">Positive SD (+)</label>
+                    <input id="sdMax" type="number" step="0.1" min="0.5" max="5" value="2.0" onchange="renderAll()">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--line); padding-bottom: 5px; margin-bottom: 8px;">
+                <h2 style="border: none; margin: 0; padding: 0;">6-Tier Split Thresholds <span class="info-icon" title="Set absolute data boundaries or force a percentage distribution across 6 tiers.">?</span></h2>
+                <!-- 2 Option UI Toggle -->
+                <div class="radio-group" style="width: 220px;">
+                    <input type="radio" id="modeVal" name="tMode" value="value" checked onchange="toggleThresholdMode()">
+                    <label for="modeVal">Absolute Score</label>
+                    <input type="radio" id="modePct" name="tMode" value="percent" onchange="toggleThresholdMode()">
+                    <label for="modePct">Forced % Dist</label>
+                </div>
+            </div>
+
+            <!-- LIVE ALLOCATION TRACKER -->
+            <div id="alloc-tracker" style="display:none;">
+                <div>Allocated: <span id="alloc-sum" style="color: var(--accent);">0%</span></div>
+                <div>Remaining: <span id="alloc-rem" style="color: #00cc44;">100%</span></div>
+            </div>
+
+            <div class="grid-3" style="margin-bottom: 8px;">
+                <div><label id="lbl1" class="mini"><span class="dot" style="background:var(--c-poor)"></span>Poor (<)</label><input id="t1" type="number" value="20" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+                <div><label id="lbl2" class="mini"><span class="dot" style="background:var(--c-sat)"></span>Satisfactory (<)</label><input id="t2" type="number" value="40" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+                <div><label id="lbl3" class="mini"><span class="dot" style="background:var(--c-avg)"></span>Average (<)</label><input id="t3" type="number" value="60" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+                <div><label id="lbl4" class="mini"><span class="dot" style="background:var(--c-good)"></span>Good (<)</label><input id="t4" type="number" value="75" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+                <div><label id="lbl5" class="mini"><span class="dot" style="background:var(--c-vgood)"></span>Very Good (<)</label><input id="t5" type="number" value="90" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+                <div><label id="lbl6" class="mini"><span class="dot" style="background:var(--c-outst)"></span>Outstanding (>=)</label><input id="t6" type="text" value="90+" disabled title="Auto-calculated remainder" oninput="trackPercentages()" onchange="validateAndRenderThresholds()"></div>
+            </div>
+            <button class="primary" onclick="validateAndRenderThresholds()" style="padding: 6px; font-size: 12px;">Update Percentages & Charts</button>
+        </div> <!-- Added the missing closing div for the 6-Tier Split Thresholds -->
+
+        <div>
+            <h2>Parameters & Data (Weighted) <span class="info-icon" title="Assign weights to metrics. Higher weights pull the curve's center of gravity toward their values.">?</span></h2>
+            <div class="row-header">
+                <span>Name</span>
+                <span>Value</span>
+                <span>Weight</span>
+                <span></span>
+            </div>
+            <div id="rows-container"></div>
+            <div class="btns" style="margin-top: 10px;">
+                <button onclick="addRow()" style="border-style: dashed;">+ Add Row</button>
+                <button onclick="randomizeData()">🎲 Randomize Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card main-content">
+        
+        <div class="btns" style="grid-template-columns: 1fr 1fr 1fr;">
+            <button class="success" onclick="applyCapa()" id="btn-capa" style="font-size: 13px;">✨ Apply CAPA</button>
+            <button onclick="revertData()" id="btn-revert" disabled style="font-size: 13px;">↺ Revert Data</button>
+            <button class="excel" onclick="exportGodModeExcel()" style="font-size: 13px;">📊 Excel Replica</button>
+        </div>
+
+        <div class="grid-4">
+            <div class="stat-card">
+                <div class="label" title="1st Moment: Center of gravity">W-Mean (μ)</div>
+                <div class="value" id="s-mean">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label" title="2nd Moment: Spread of data">W-Std Dev (σ)</div>
+                <div class="value" id="s-sd">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label" title="3rd Moment: Symmetry of the curve">Skewness (γ)</div>
+                <div class="value" id="s-skew">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="label" title="4th Moment: Tail fatness / Outlier Risk">Ex-Kurtosis (κ)</div>
+                <div class="value" id="s-kurt">--</div>
+            </div>
+        </div>
+
+        <div id="interpretation" class="info-box">
+            </div>
+
+        <div id="chart"></div>
+
+        <div>
+            <h3 style="margin-left: 20px; color: var(--muted); font-size: 12px; text-transform: uppercase;">Horizontal Performance Percentage Split</h3>
+            <div id="bar-chart"></div>
+        </div>
+
+        <div style="margin-top: 20px; border-top: 2px solid var(--line); padding-top: 20px;">
+            <h3 style="color: var(--txt); font-size: 16px;">Novice View: Understanding the Standard Bell Curve</h3>
+            <p class="mini" style="margin-top: 5px; margin-bottom: 10px; font-size: 13px;">This simplified, perfectly symmetrical chart shows how the Gaussian curve works. Most points should cluster near the Center (Mean). Points falling into the red tails are your Outliers.</p>
+            <div id="basic-chart"></div>
+        </div>
+
+    </div>
+</div>
+
+<div id="toast">Error Message</div>
+
+<script>
+    // --- Data Dictionaries & Presets ---
+    const industryPresets = {
+        'HR': [
+            { n: 'Aarav Sharma', w: 1.0 }, { n: 'Aditi Desai', w: 1.2 }, { n: 'Arjun Patel', w: 0.8 },
+            { n: 'Diya Reddy', w: 1.5 }, { n: 'Kabir Singh', w: 1.0 }, { n: 'Neha Gupta', w: 1.1 },
+            { n: 'Rohan Iyer', w: 1.3 }, { n: 'Sanya Kapoor', w: 0.9 }, { n: 'Vikram Joshi', w: 1.0 }, { n: 'Zara Ali', w: 1.2 }
+        ],
+        'Call Center': [
+            { n: 'Avg Handling Time (AHT)', w: 2.5 }, { n: 'First Call Res (FCR)', w: 3.0 }, { n: 'CSAT Score', w: 4.5 },
+            { n: 'Net Promoter (NPS)', w: 3.0 }, { n: 'Abandonment Rate', w: 2.5 }, { n: 'Hold Time', w: 1.5 },
+            { n: 'QA Quality Score', w: 2.0 }, { n: 'Schedule Adherence', w: 1.0 }
+        ],
+        'Manufacturing': [
+            { n: 'Production Yield', w: 3.0 }, { n: 'Cycle Time', w: 2.0 }, { n: 'Machine Downtime', w: 2.5 },
+            { n: 'Defect Rate', w: 3.5 }, { n: 'Overall Equip Effectiveness', w: 4.0 }, { n: 'Throughput', w: 2.0 }
+        ],
+        'IT Services': [
+            { n: 'Code Quality', w: 2.5 }, { n: 'Sprint Velocity', w: 2.0 }, { n: 'Bug Escape Rate', w: 3.0 },
+            { n: 'System Uptime', w: 4.0 }, { n: 'MTTR', w: 2.5 }, { n: 'Security Score', w: 3.5 }
+        ]
+    };
+
+    const extraIndustries = ['Healthcare', 'Retail', 'Banking', 'Logistics', 'Education', 'Telecom', 'Energy', 'Automotive', 'Pharma', 'Insurance', 'Construction', 'Hospitality', 'Aerospace', 'FMCG', 'Government', 'E-commerce'];
+
+    let rows = [];
+    let backupRows = []; 
+    let isCapaActive = false;
+    let thresholdMode = 'value'; // 'value' or 'percent'
+
+    // Fetch CSS Colors dynamically
+    const styleObj = getComputedStyle(document.body);
+    const colors = {
+        poor: styleObj.getPropertyValue('--c-poor').trim(), sat: styleObj.getPropertyValue('--c-sat').trim(),
+        avg: styleObj.getPropertyValue('--c-avg').trim(), good: styleObj.getPropertyValue('--c-good').trim(),
+        vgood: styleObj.getPropertyValue('--c-vgood').trim(), outst: styleObj.getPropertyValue('--c-outst').trim()
+    };
+
+    window.onload = () => {
+        const indDropdown = document.getElementById('industry');
+        Object.keys(industryPresets).concat(extraIndustries).forEach(ind => { indDropdown.insertAdjacentHTML('beforeend', `<option value="${ind}">${ind}</option>`); });
+        changeIndustry();
+    };
+
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast'); toast.innerText = msg;
+        toast.style.background = isError ? "var(--c-poor)" : "#107c41";
+        toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    // --- LIVE ALLOCATION TRACKER (Free Typing) ---
+    function trackPercentages() {
+        if (thresholdMode !== 'percent') return;
+
+        let t1 = parseFloat(document.getElementById('t1').value) || 0;
+        let t2 = parseFloat(document.getElementById('t2').value) || 0;
+        let t3 = parseFloat(document.getElementById('t3').value) || 0;
+        let t4 = parseFloat(document.getElementById('t4').value) || 0;
+        let t5 = parseFloat(document.getElementById('t5').value) || 0;
+        let t6 = parseFloat(document.getElementById('t6').value) || 0;
+
+        let sum = t1 + t2 + t3 + t4 + t5 + t6;
+        let rem = 100 - sum;
+        
+        // Update Live Floating Tracker UI dynamically as they type
+        document.getElementById('alloc-sum').innerText = sum + "%";
+        document.getElementById('alloc-rem').innerText = rem + "%";
+        
+        // Visual warning colors: Green if perfectly 100, Red if over/under
+        document.getElementById('alloc-sum').style.color = sum > 100 ? "var(--c-poor)" : "var(--accent)";
+        document.getElementById('alloc-rem').style.color = rem === 0 ? "#00cc44" : "var(--c-poor)"; 
+    }
+
+    function toggleThresholdMode() {
+        thresholdMode = document.querySelector('input[name="tMode"]:checked').value;
+        const lbl1 = document.getElementById('lbl1'); const lbl2 = document.getElementById('lbl2');
+        const lbl3 = document.getElementById('lbl3'); const lbl4 = document.getElementById('lbl4');
+        const lbl5 = document.getElementById('lbl5'); const lbl6 = document.getElementById('lbl6');
+        const t6Input = document.getElementById('t6');
+
+        if (thresholdMode === 'percent') {
+            document.getElementById('alloc-tracker').style.display = 'flex';
+            lbl1.innerHTML = `<span class="dot" style="background:var(--c-poor)"></span>Poor (%)`;
+            lbl2.innerHTML = `<span class="dot" style="background:var(--c-sat)"></span>Satisfactory (%)`;
+            lbl3.innerHTML = `<span class="dot" style="background:var(--c-avg)"></span>Average (%)`;
+            lbl4.innerHTML = `<span class="dot" style="background:var(--c-good)"></span>Good (%)`;
+            lbl5.innerHTML = `<span class="dot" style="background:var(--c-vgood)"></span>Very Good (%)`;
+            lbl6.innerHTML = `<span class="dot" style="background:var(--c-outst)"></span>Outstanding (%)`;
+            
+            t6Input.type = "number";
+            t6Input.disabled = false;
+            t6Input.title = "Outstanding Percentage";
+
+            // Initialize Standard 100% Allocation
+            document.getElementById('t1').value = 10;
+            document.getElementById('t2').value = 15;
+            document.getElementById('t3').value = 50;
+            document.getElementById('t4').value = 15;
+            document.getElementById('t5').value = 5;
+            t6Input.value = 5;
+            
+            trackPercentages(); 
+            showToast("Forced Dist (%) Mode: All boxes editable. Must total exactly 100%.");
+        } else {
+            document.getElementById('alloc-tracker').style.display = 'none';
+            lbl1.innerHTML = `<span class="dot" style="background:var(--c-poor)"></span>Poor (<)`;
+            lbl2.innerHTML = `<span class="dot" style="background:var(--c-sat)"></span>Satisfactory (<)`;
+            lbl3.innerHTML = `<span class="dot" style="background:var(--c-avg)"></span>Average (<)`;
+            lbl4.innerHTML = `<span class="dot" style="background:var(--c-good)"></span>Good (<)`;
+            lbl5.innerHTML = `<span class="dot" style="background:var(--c-vgood)"></span>Very Good (<)`;
+            lbl6.innerHTML = `<span class="dot" style="background:var(--c-outst)"></span>Outstanding (>=)`;
+            
+            t6Input.type = "text";
+            t6Input.disabled = true;
+            t6Input.title = "Auto-calculated remainder";
+
+            document.getElementById('t1').value = 20;
+            document.getElementById('t2').value = 40;
+            document.getElementById('t3').value = 60;
+            document.getElementById('t4').value = 75;
+            document.getElementById('t5').value = 90;
+            t6Input.value = "90+";
+            showToast("Absolute Values Mode: Data limits are set by literal scores.");
+        }
+        validateAndRenderThresholds();
+    }
+
+    function changeIndustry() {
+        const ind = document.getElementById('industry').value; const preset = industryPresets[ind]; rows = [];
+        if (preset) { preset.forEach(p => rows.push({ name: p.n, value: getRandomVal(), weight: p.w })); } 
+        else { for(let i=1; i<=8; i++) rows.push({ name: `${ind} Metric ${i}`, value: getRandomVal(), weight: (Math.random() * 2 + 1).toFixed(1) }); }
+        saveBackup(); renderAll();
+    }
+
+    function getRandomVal() { 
+        let raw = Math.random() * Math.random() * 100;
+        return (Math.max(10, Math.min(98, 90 - raw))).toFixed(1); 
+    }
+
+    function addRow() { rows.push({ name: 'New Parameter', value: getRandomVal(), weight: 1.0 }); saveBackup(); renderAll(); }
+    function removeRow(idx) { rows.splice(idx, 1); saveBackup(); renderAll(); }
+
+    function validateAndRenderThresholds() {
+        if (thresholdMode === 'percent') {
+            trackPercentages(); 
+            
+            let t1 = parseFloat(document.getElementById('t1').value) || 0;
+            let t2 = parseFloat(document.getElementById('t2').value) || 0;
+            let t3 = parseFloat(document.getElementById('t3').value) || 0;
+            let t4 = parseFloat(document.getElementById('t4').value) || 0;
+            let t5 = parseFloat(document.getElementById('t5').value) || 0;
+            let t6 = parseFloat(document.getElementById('t6').value) || 0;
+            
+            let sum = t1 + t2 + t3 + t4 + t5 + t6;
+            if (sum !== 100) {
+                showToast(`Error: Allocation must exactly equal 100%. Currently at ${sum}%. Adjust inputs to proceed.`, true);
+                return; // Stop rendering charts until math is fixed
+            }
+        } else {
+            const t1 = document.getElementById('t1'), t2 = document.getElementById('t2'), t3 = document.getElementById('t3'), t4 = document.getElementById('t4'), t5 = document.getElementById('t5');
+            [t1, t2, t3, t4, t5].forEach(el => { let val = parseFloat(el.value); if (val < 0) el.value = 0; if (val > 100) el.value = 100; });
+            document.getElementById('t6').value = t5.value + "+";
+        }
+        renderAll(); 
+    }
+
+    function validateRowInput(idx, field, val) {
+        let num = parseFloat(val);
+        if (field === 'value') { if (num < 0) num = 0; if (num > 100) num = 100; rows[idx][field] = num; } 
+        else if (field === 'weight') { if(num < 0.1) num = 0.1; rows[idx][field] = num; } 
+        else { rows[idx][field] = val; }
+        saveBackup(); renderAll();
+    }
+
+    function randomizeData() { rows.forEach(r => r.value = getRandomVal()); saveBackup(); renderAll(); }
+    function saveBackup() { if(!isCapaActive) backupRows = JSON.parse(JSON.stringify(rows)); }
+
+    function applyCapa() {
+        if (rows.length < 2) return;
+        const idealMean = 65, idealSd = 12; 
+        let sorted = [...rows].map((r, i) => ({...r, origIdx: i})).sort((a,b) => a.value - b.value);
+        sorted.forEach((r, i) => {
+            const zScore = -2.5 + (5 * (i / (sorted.length - 1 || 1)));
+            rows[r.origIdx].value = Math.max(0, Math.min(100, idealMean + (zScore * idealSd))).toFixed(1);
+        });
+        isCapaActive = true; document.getElementById('btn-revert').disabled = false; document.getElementById('btn-capa').disabled = true;
+        showToast("CAPA Applied: Normalizing Process..."); renderAll();
+    }
+
+    function revertData() {
+        rows = JSON.parse(JSON.stringify(backupRows));
+        isCapaActive = false; document.getElementById('btn-revert').disabled = true; document.getElementById('btn-capa').disabled = false;
+        renderAll();
+    }
+
+    // --- CSV GOD MODE EXPORT ---
+    function exportGodModeExcel() {
+        const indName = document.getElementById('industry').value.replace(/\s+/g, '_');
+        
+        let csv = "Parameter Name,Performance Value,Weighting,,Statistical Metric,Excel Formula Engine Output\n";
+        const rowCount = rows.length + 1; 
+        
+        rows.forEach((r, i) => {
+            let v = Number(r.value).toFixed(2);
+            let w = Number(r.weight).toFixed(2);
+            let rowStr = `"${r.name}",${v},${w},,`;
+            
+            if (i === 0) rowStr += `Unweighted Mean,"=AVERAGE(B2:B${rowCount})"`;
+            else if (i === 1) rowStr += `Unweighted Std Dev,"=STDEV.P(B2:B${rowCount})"`;
+            else if (i === 2) rowStr += `Unweighted Skewness,"=SKEW(B2:B${rowCount})"`;
+            else if (i === 3) rowStr += `Unweighted Kurtosis,"=KURT(B2:B${rowCount})"`;
+            else if (i === 4) rowStr += `Total Weight,"=SUM(C2:C${rowCount})"`;
+            else if (i === 5) rowStr += `Weighted Mean,"=SUMPRODUCT(B2:B${rowCount},C2:C${rowCount})/F6"`;
+            else if (i === 6) rowStr += `Notice:,"Formulas update live when you edit values in Column B!"`;
+            
+            csv += rowStr + "\n";
+        });
+
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `MasterClass_Data_Replica_${indName}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // --- MASTER CLASS MATH CORE ---
+    function calcMoments() {
+        let sumW = 0, sumWX = 0;
+        rows.forEach(r => { const w = parseFloat(r.weight)||1; sumW += w; sumWX += (parseFloat(r.value)||0) * w; });
+        const mean = sumW > 0 ? sumWX / sumW : 50;
+
+        let varSum = 0, skewSum = 0, kurtSum = 0;
+        rows.forEach(r => {
+            const v = parseFloat(r.value)||0, w = parseFloat(r.weight)||1;
+            const dev = v - mean;
+            varSum += w * Math.pow(dev, 2);
+            skewSum += w * Math.pow(dev, 3);
+            kurtSum += w * Math.pow(dev, 4);
+        });
+
+        const sd = sumW > 0 ? Math.sqrt(varSum / sumW) : 5;
+        const safeSd = Math.max(sd, 0.01);
+        
+        const skew = (safeSd > 0) ? (skewSum / sumW) / Math.pow(safeSd, 3) : 0;
+        const kurt = (safeSd > 0) ? (kurtSum / sumW) / Math.pow(safeSd, 4) - 3 : 0; 
+
+        return { mean, sd: safeSd, skew, kurt, sumW };
+    }
+
+    function getKDE(xVal, h, sumW) {
+        let density = 0;
+        rows.forEach(r => {
+            const v = parseFloat(r.value)||0, w = parseFloat(r.weight)||1;
+            const u = (xVal - v) / h;
+            density += w * (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * u * u);
+        });
+        return density / (sumW * h);
+    }
+
+    function renderRows() {
+        const container = document.getElementById('rows-container'); container.innerHTML = '';
+        rows.forEach((r, i) => {
+            container.insertAdjacentHTML('beforeend', `
+                <div class="row">
+                    <input value="${r.name}" onchange="validateRowInput(${i}, 'name', this.value)">
+                    <input type="number" step="0.1" value="${r.value}" onchange="validateRowInput(${i}, 'value', this.value)">
+                    <input type="number" step="0.1" value="${r.weight}" onchange="validateRowInput(${i}, 'weight', this.value)">
+                    <button class="danger-text" onclick="removeRow(${i})">×</button>
+                </div>
+            `);
+        });
+    }
+
+    function updateMasterClassUI(m) {
+        document.getElementById('s-mean').innerText = m.mean.toFixed(1);
+        document.getElementById('s-sd').innerText = m.sd.toFixed(1);
+        document.getElementById('s-skew').innerText = m.skew.toFixed(2);
+        document.getElementById('s-kurt').innerText = m.kurt.toFixed(2);
+
+        const box = document.getElementById('interpretation');
+        box.className = 'info-box'; 
+
+        if (isCapaActive) {
+            box.innerHTML = `<strong>✔ CAPA Verified:</strong> Data is perfectly normal. Skewness is near 0 (Symmetrical) and Kurtosis is optimal. The Process matches the Ideal Curve.`;
+            box.style.borderColor = "var(--accent)"; box.style.backgroundColor = "#eff6ff"; box.style.color = "#1e3a8a";
+            return;
+        }
+
+        let txt = `<strong>Deep Dive Analysis:</strong><br>`;
+        if (m.skew > 0.5) { txt += `• <strong>Right-Skewed (Positive):</strong> Bulk of performance is low, pulling the tail to the right. Indicates tough targets or severe bottlenecks.<br>`; box.classList.add('warning'); }
+        else if (m.skew < -0.5) { txt += `• <strong>Left-Skewed (Negative):</strong> Bulk of performance is high. Indicates a highly mature process (or targets are too easy).<br>`; }
+        else { txt += `• <strong>Symmetrical:</strong> Data is relatively balanced around the mean.<br>`; }
+
+        if (m.kurt > 1.0) { txt += `• <strong>Leptokurtic (Fat Tails):</strong> High Excess Kurtosis. <em>Warning: Extreme outliers are occurring frequently.</em> Standard Deviation is not telling the whole story.`; box.classList.remove('warning'); box.classList.add('danger'); }
+        else if (m.kurt < -1.0) { txt += `• <strong>Platykurtic (Flat):</strong> Low Excess Kurtosis. Data is highly dispersed with no clear peak. Consistency is failing.`; }
+        else { txt += `• <strong>Mesokurtic:</strong> Outlier risk is standard/predictable.`; }
+
+        box.innerHTML = txt;
+    }
+
+    function getPercentile(dataArr, pct) {
+        if(dataArr.length === 0) return 0;
+        if(pct <= 0) return 0;
+        if(pct >= 100) return 100;
+        const sorted = [...dataArr].sort((a,b) => a - b);
+        const idx = (pct / 100) * (sorted.length - 1);
+        const lower = Math.floor(idx); const upper = Math.ceil(idx);
+        const weight = idx - lower;
+        if (upper >= sorted.length) return sorted[lower];
+        return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+    }
+
+    function renderAll() {
+        renderRows();
+        const m = calcMoments();
+        updateMasterClassUI(m);
+
+        let pPoor=0, pSat=0, pAvg=0, pGood=0, pVgood=0, pOutst=0;
+        let b1=0, b2=0, b3=0, b4=0, b5=0;
+        
+        const isPct = (thresholdMode === 'percent');
+        const vals = rows.map(r => parseFloat(r.value));
+        const totalRows = rows.length || 1; 
+
+        if (isPct) {
+            pPoor = parseFloat(document.getElementById('t1').value) || 0;
+            pSat = parseFloat(document.getElementById('t2').value) || 0;
+            pAvg = parseFloat(document.getElementById('t3').value) || 0;
+            pGood = parseFloat(document.getElementById('t4').value) || 0;
+            pVgood = parseFloat(document.getElementById('t5').value) || 0;
+            pOutst = parseFloat(document.getElementById('t6').value) || 0;
+
+            b1 = getPercentile(vals, pPoor);
+            b2 = getPercentile(vals, pPoor + pSat);
+            b3 = getPercentile(vals, pPoor + pSat + pAvg);
+            b4 = getPercentile(vals, pPoor + pSat + pAvg + pGood);
+            b5 = getPercentile(vals, pPoor + pSat + pAvg + pGood + pVgood);
+
+        } else {
+            b1 = parseFloat(document.getElementById('t1').value) || 0;
+            b2 = parseFloat(document.getElementById('t2').value) || 0;
+            b3 = parseFloat(document.getElementById('t3').value) || 0;
+            b4 = parseFloat(document.getElementById('t4').value) || 0;
+            b5 = parseFloat(document.getElementById('t5').value) || 0;
+
+            let cPoor=0, cSat=0, cAvg=0, cGood=0, cVgood=0, cOutst=0;
+            rows.forEach(r => { 
+                let v = parseFloat(r.value); 
+                if (v <= b1) cPoor++; else if (v <= b2) cSat++; else if (v <= b3) cAvg++; 
+                else if (v <= b4) cGood++; else if (v <= b5) cVgood++; else cOutst++; 
+            });
+
+            // MATH FIX: Largest Remainder Algorithm to Guarantee exactly 100% total
+            let rawPcts = [cPoor, cSat, cAvg, cGood, cVgood, cOutst].map(c => (c/totalRows)*100);
+            let flooredPcts = rawPcts.map(Math.floor);
+            let remainders = rawPcts.map((p, i) => ({ idx: i, rem: p - flooredPcts[i] }));
+            
+            let currentSum = flooredPcts.reduce((a, b) => a + b, 0);
+            let diffTo100 = 100 - currentSum;
+            
+            remainders.sort((a, b) => b.rem - a.rem);
+            for(let i=0; i < diffTo100; i++) {
+                flooredPcts[remainders[i].idx]++;
+            }
+            [pPoor, pSat, pAvg, pGood, pVgood, pOutst] = flooredPcts;
+        }
+
+        const sdMinMult = parseFloat(document.getElementById('sdMin').value) || 2, sdMaxMult = parseFloat(document.getElementById('sdMax').value) || 2;
+        const out1 = m.mean - (sdMinMult * m.sd), out2 = m.mean + (sdMaxMult * m.sd);
+        const minPlotX = Math.floor(Math.min(0, out1 - 10)), maxPlotX = Math.ceil(Math.max(100, out2 + 10)); 
+
+        // --- 1. Horizontal Progress Bar ---
+        const pctText = (p) => (p > 0) ? `<b>${p}%</b>` : '';
+
+        const lbl1 = isPct ? `Poor (${pPoor}%)` : `Poor (<${b1.toFixed(1)})`;
+        const lbl2 = isPct ? `Satisfactory (${pSat}%)` : `Satisfactory (<${b2.toFixed(1)})`;
+        const lbl3 = isPct ? `Average (${pAvg}%)` : `Average (<${b3.toFixed(1)})`;
+        const lbl4 = isPct ? `Good (${pGood}%)` : `Good (<${b4.toFixed(1)})`;
+        const lbl5 = isPct ? `Very Good (${pVgood}%)` : `Very Good (<${b5.toFixed(1)})`;
+        const lbl6 = isPct ? `Outstanding (${pOutst}%)` : `Outstanding (>=${b5.toFixed(1)})`;
+
+        const barData = [{
+            x: [pPoor, pSat, pAvg, pGood, pVgood, pOutst],
+            y: [lbl1, lbl2, lbl3, lbl4, lbl5, lbl6],
+            type: 'bar', orientation: 'h', marker: { color: [colors.poor, colors.sat, colors.avg, colors.good, colors.vgood, colors.outst] },
+            text: [pctText(pPoor), pctText(pSat), pctText(pAvg), pctText(pGood), pctText(pVgood), pctText(pOutst)], 
+            textposition: 'auto', insidetextanchor: 'middle', 
+            textfont: { size: 18, color: ['#ffffff', '#ffffff', '#000000', '#000000', '#ffffff', '#ffffff'] }, hoverinfo: 'y+text', width: 0.85
+        }];
+        
+        Plotly.newPlot('bar-chart', barData, { margin: { l: 160, r: 20, t: 5, b: 20 }, height: 220, xaxis: { visible: false, range: [0, 100] }, yaxis: { visible: true, tickfont: { size: 12, color: 'var(--txt)', weight: 'bold' } }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent' }, { displayModeBar: false, responsive: true });
+
+        // --- 2. Master Class Double Bell Curve ---
+        const xVals = [], yIdeal = [], yActual = [];
+        let bandwidth = 1.06 * m.sd * Math.pow(rows.length, -0.2);
+        bandwidth = Math.max(bandwidth, 3); 
+
+        for (let i = 0; i <= 200; i++) {
+            const xi = minPlotX + ((maxPlotX - minPlotX) * i) / 200; 
+            xVals.push(xi); 
+            yIdeal.push((1 / (m.sd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((xi - m.mean)/m.sd, 2)));
+            yActual.push(getKDE(xi, bandwidth, m.sumW));
+        }
+
+        const traces = [
+            { x: xVals, y: yIdeal, type: 'scatter', mode: 'lines', name: 'Ideal Normal', line: { color: '#94a3b8', width: 2, dash: 'dash' }, hoverinfo: 'skip' },
+            { x: xVals, y: yActual, type: 'scatter', mode: 'lines', name: 'Actual Process', line: { color: 'var(--accent)', width: 3, shape: 'spline' }, fill: 'tozeroy', fillcolor: 'rgba(37,99,235,0.15)', hoverinfo: 'skip' }
+        ];
+
+        const pointX = [], pointY = [], pointText = [], pointColors = [], pointSizes = [];
+        rows.forEach(r => {
+            let v = parseFloat(r.value); pointX.push(v); pointY.push(getKDE(v, bandwidth, m.sumW));
+            pointText.push(`<b>${r.name}</b><br>Value: ${v}<br>Weight: ${r.weight}`);
+            
+            let c = colors.outst; 
+            if (v <= b1) c = colors.poor; 
+            else if (v <= b2) c = colors.sat; 
+            else if (v <= b3) c = colors.avg; 
+            else if (v <= b4) c = colors.good; 
+            else if (v <= b5) c = colors.vgood;
+            
+            pointColors.push(c); pointSizes.push(Math.min(18, Math.max(8, 8 + parseFloat(r.weight || 1) * 1.5)));
+        });
+
+        traces.push({ x: pointX, y: pointY, type: 'scatter', mode: 'markers', name: 'Raw Data', text: pointText, hoverinfo: 'text', marker: { size: pointSizes, color: pointColors, line: { color: '#fff', width: 1.5 } } });
+
+        const maxY = Math.max(...yIdeal, ...yActual, 0.01);
+        const chartLayout = {
+            margin: { l: 65, r: 20, t: 20, b: 40 }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: 'var(--txt)' },
+            xaxis: { title: 'Weighted Performance Score', range: [minPlotX, maxPlotX], gridcolor: 'var(--line)' },
+            yaxis: { title: { text: 'Density (Probability)', standoff: 15 }, gridcolor: 'var(--line)', zeroline: false }, showlegend: true, legend: { orientation: 'h', y: 1.15, x: 0.5, xanchor: 'center' },
+            shapes: [
+                { type: 'rect', x0: minPlotX, x1: b1, y0: 0, y1: maxY, fillcolor: colors.poor, opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: b1, x1: b2, y0: 0, y1: maxY, fillcolor: colors.sat, opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: b2, x1: b3, y0: 0, y1: maxY, fillcolor: colors.avg, opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: b3, x1: b4, y0: 0, y1: maxY, fillcolor: colors.good, opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: b4, x1: b5, y0: 0, y1: maxY, fillcolor: colors.vgood, opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: b5, x1: maxPlotX, y0: 0, y1: maxY, fillcolor: colors.outst, opacity: 0.15, line: {width:0} },
+                
+                { type: 'line', x0: m.mean, x1: m.mean, y0: 0, y1: maxY, line: { color: 'var(--txt)', width: 1, dash: 'dot' } },
+                { type: 'line', x0: out1, x1: out1, y0: 0, y1: maxY, line: { color: 'var(--c-poor)', width: 2, dash: 'dot' } },
+                { type: 'line', x0: out2, x1: out2, y0: 0, y1: maxY, line: { color: 'var(--c-poor)', width: 2, dash: 'dot' } }
+            ],
+            annotations: [
+                { x: m.mean, y: maxY, text: `W-Mean`, showarrow: true, arrowhead: 2, ax: 0, ay: -20, font: { color: 'var(--txt)', size: 11 } },
+                { x: out1, y: maxY * 0.5, text: `-${sdMinMult} SD (Outlier Limit)`, showarrow: false, textangle: -90, xanchor: 'right', xshift: -5, font: { color: 'var(--c-poor)', size: 10, weight: 'bold' } },
+                { x: out2, y: maxY * 0.5, text: `+${sdMaxMult} SD (Outlier Limit)`, showarrow: false, textangle: -90, xanchor: 'left', xshift: 5, font: { color: 'var(--c-poor)', size: 10, weight: 'bold' } }
+            ]
+        };
+        Plotly.newPlot('chart', traces, chartLayout, { responsive: true, displayModeBar: false });
+
+        // --- 3. Novice View: Basic Gaussian Bell Curve ---
+        const basicX = [], basicY = [];
+        const basicMaxY = Math.max(...yIdeal, 0.01);
+        
+        for (let i = 0; i <= 200; i++) {
+            const xi = minPlotX + ((maxPlotX - minPlotX) * i) / 200;
+            basicX.push(xi);
+            basicY.push((1 / (m.sd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((xi - m.mean)/m.sd, 2)));
+        }
+
+        const basicTraceCurve = { x: basicX, y: basicY, type: 'scatter', mode: 'lines', name: 'Perfect Bell', line: { color: '#64748b', width: 3 }, fill: 'tozeroy', fillcolor: 'rgba(100,116,139,0.1)', hoverinfo: 'skip' };
+
+        const basicPtsX = [], basicPtsY = [], basicPtsCol = [];
+        rows.forEach(r => {
+            let v = parseFloat(r.value); basicPtsX.push(v);
+            basicPtsY.push((1 / (m.sd * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - m.mean)/m.sd, 2)));
+            basicPtsCol.push((v < out1 || v > out2) ? 'var(--c-poor)' : 'var(--accent)');
+        });
+
+        const basicTracePoints = { x: basicPtsX, y: basicPtsY, type: 'scatter', mode: 'markers', name: 'Your Data', text: pointText, hoverinfo: 'text', marker: { size: 12, color: basicPtsCol, line: { color: '#fff', width: 1.5 } } };
+
+        const basicLayout = {
+            margin: { l: 20, r: 20, t: 30, b: 30 }, paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: 'var(--txt)' },
+            xaxis: { title: 'Score', range: [minPlotX, maxPlotX], gridcolor: 'var(--line)' },
+            yaxis: { visible: false }, showlegend: false,
+            shapes: [
+                { type: 'rect', x0: minPlotX, x1: out1, y0: 0, y1: basicMaxY, fillcolor: 'var(--c-poor)', opacity: 0.15, line: {width:0} },
+                { type: 'rect', x0: out2, x1: maxPlotX, y0: 0, y1: basicMaxY, fillcolor: 'var(--c-poor)', opacity: 0.15, line: {width:0} },
+                { type: 'line', x0: m.mean, x1: m.mean, y0: 0, y1: basicMaxY, line: { color: 'var(--txt)', width: 2, dash: 'dash' } }
+            ],
+            annotations: [
+                { x: m.mean, y: basicMaxY, text: `Center (Mean)`, showarrow: true, arrowhead: 2, ax: 0, ay: -20, font: { color: 'var(--txt)', size: 11, weight: 'bold' } },
+                { x: out1 - 2, y: basicMaxY * 0.5, text: `Low Outliers`, showarrow: false, font: { color: 'var(--c-poor)', size: 12, weight: 'bold' } },
+                { x: out2 + 2, y: basicMaxY * 0.5, text: `High Outliers`, showarrow: false, font: { color: 'var(--c-poor)', size: 12, weight: 'bold' } }
+            ]
+        };
+        Plotly.newPlot('basic-chart', [basicTraceCurve, basicTracePoints], basicLayout, { responsive: true, displayModeBar: false });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Understanding Value Stream Mapping</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f1f5f9; 
+            color: #000000; 
+        }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(5px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        /* Ensuring text is black and fonts are moderate */
+        p, li, label, span, td, th { color: #000000; font-size: 0.875rem; }
+        h1 { font-size: 1.25rem; }
+        h2 { font-size: 1.125rem; }
+        h3 { font-size: 1rem; }
+        h4 { font-size: 0.875rem; }
+        
+        /* Prominent Box Styles */
+        .box-def { background-color: #dbeafe; border-left: 5px solid #3b82f6; } /* Blue */
+        .box-form { background-color: #dcfce7; border-left: 5px solid #22c55e; } /* Green */
+        .box-ana { background-color: #fef9c3; border-left: 5px solid #eab308; } /* Yellow */
+        .box-exam { background-color: #f3e8ff; border-left: 5px solid #a855f7; } /* Purple */
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+ 
+    <!-- Header Section -->
+    <header class="bg-black text-white p-4 shadow-md border-b-4 border-red-600">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-sm font-bold text-red-500 tracking-wider">MECTS SET...GO</h2>
+            <h3 class="text-xs text-gray-300 mb-2 font-semibold">MANAGING EFFECTIVE CORPORATE TRAINING SOLUTIONS</h3>
+            <h1 class="text-xl font-bold uppercase text-white">Understanding Value Stream Mapping</h1>
+        </div>
+    </header>
+ 
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-4 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-2">
+        
+        <!-- Sidebar / Controls -->
+        <aside class="lg:col-span-1 bg-white p-5 rounded shadow-md border-t-4 border-slate-800 h-fit">
+            <h3 class="font-bold mb-4 border-b-2 border-slate-200 pb-2 text-black uppercase">Select Module</h3>
+            
+            <div class="mb-5">
+                <label for="levelSelect" class="block font-bold mb-1">1. Learning Level</label>
+                <select id="levelSelect" class="w-full p-2 border-2 border-slate-400 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-shadow font-medium text-black bg-slate-50">
+                    <option value="">-- Select Level --</option>
+                    <option value="Basics">Basics (Foundation)</option>
+                    <option value="Intermediate">Intermediate (Application)</option>
+                    <option value="Advanced">Advanced (Strategic VSM)</option>
+                </select>
+            </div>
+ 
+            <div class="mb-5">
+                <label for="topicSelect" class="block font-bold mb-1">2. VSM Concept</label>
+                <select id="topicSelect" class="w-full p-2 border-2 border-slate-400 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-shadow font-medium text-black bg-slate-50 disabled:bg-slate-200" disabled>
+                    <option value="">-- Select Topic --</option>
+                </select>
+            </div>
+        </aside>
+ 
+        <!-- Content Display Area -->
+        <section id="contentArea" class="lg:col-span-3 hidden fade-in">
+            
+            <!-- Theory & Concept Cards -->
+            <div class="bg-white p-6 rounded shadow-md border border-slate-300 mb-6 relative">
+                <div class="mb-4 border-b-2 border-slate-200 pb-4">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center space-x-3">
+                            <h2 id="topicTitle" class="font-bold uppercase tracking-wide text-black text-[1.125rem]"></h2>
+                            <!-- Benchmarking Trigger Button -->
+                            <button id="benchmarkBtn" class="hidden bg-slate-800 hover:bg-black text-white px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider flex items-center shadow border border-slate-600 transition-colors">
+                                <svg class="w-4 h-4 mr-1 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                View Benchmarks
+                            </button>
+                        </div>
+                        <span id="levelBadge" class="font-bold px-3 py-1 rounded text-black border-2"></span>
+                    </div>
+                    
+                    <div style="margin-top: 1cm;" class="font-bold text-[1.125rem] text-black whitespace-nowrap overflow-x-auto pb-1">
+                        <span id="topicFormula"></span>
+                    </div>
+                    
+                    <!-- Jargon Expansion Area -->
+                    <div id="jargonContainer" class="hidden mt-2 bg-slate-100 border border-slate-300 rounded px-3 py-1.5 inline-flex items-center shadow-sm">
+                        <span class="font-bold text-red-600 mr-2 text-xs uppercase tracking-wider">Acronyms:</span>
+                        <span id="topicJargon" class="text-sm font-bold text-slate-800"></span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="box-def p-4 rounded shadow-sm md:col-span-2">
+                        <h4 class="font-bold text-blue-900 mb-2 uppercase">Definition</h4>
+                        <p id="topicDef" class="font-medium leading-relaxed"></p>
+                    </div>
+                    <div class="box-ana p-4 rounded shadow-sm">
+                        <h4 class="font-bold text-yellow-900 mb-2 uppercase">MECTS Analogy</h4>
+                        <p id="topicAnalogy" class="font-medium italic leading-relaxed"></p>
+                    </div>
+                    <div class="box-exam p-4 rounded shadow-sm">
+                        <h4 class="font-bold text-purple-900 mb-2 uppercase">Dynamic Case Study</h4>
+                        <p id="topicExample" class="font-medium leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+ 
+            <!-- Interactive Calculator & Results -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Calculator -->
+                <div class="bg-white p-6 rounded shadow-md border-t-4 border-slate-800">
+                    <h3 class="font-bold mb-4 border-b-2 border-slate-200 pb-2 uppercase text-black">Interactive Simulation</h3>
+                    <div id="calculatorInputs" class="space-y-3 mb-4">
+                        <!-- Inputs injected via JS -->
+                    </div>
+                    <button id="calcBtn" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-2 px-4 rounded transition-colors uppercase tracking-wide border-2 border-transparent focus:border-red-500">
+                        Calculate & Analyze
+                    </button>
+                </div>
+ 
+                <!-- Results & Interpretation -->
+                <div class="bg-black p-6 rounded shadow-md border-t-4 border-red-600 text-white flex flex-col justify-center">
+                    <h3 class="font-bold text-red-500 mb-2 uppercase tracking-wide border-b border-gray-700 pb-1">Outcome</h3>
+                    <div id="calcResult" class="text-2xl font-bold mb-4 text-white">--</div>
+                    
+                    <h3 class="font-bold text-red-500 mb-1 uppercase tracking-wide border-b border-gray-700 pb-1">Interpretation</h3>
+                    <p id="calcInterpretation" class="font-medium text-gray-200 leading-relaxed">Enter values and calculate to see the analysis based on lean manufacturing principles.</p>
+                </div>
+            </div>
+ 
+            <!-- Pros, Cons & CAPA -->
+            <div class="bg-white p-6 rounded shadow-md border border-slate-300">
+                <h3 class="font-bold mb-4 border-b-2 border-slate-200 pb-2 uppercase text-black">Strategic Evaluation & CAPA</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-green-50 p-3 rounded border border-green-200">
+                        <h4 class="font-bold text-green-800 mb-2 uppercase border-b border-green-300 pb-1">⊕ Pros</h4>
+                        <ul id="listPros" class="list-disc pl-5 font-medium space-y-1"></ul>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded border border-red-200">
+                        <h4 class="font-bold text-red-800 mb-2 uppercase border-b border-red-300 pb-1">⊖ Cons / Limitations</h4>
+                        <ul id="listCons" class="list-disc pl-5 font-medium space-y-1"></ul>
+                    </div>
+                    <div class="bg-orange-50 p-3 rounded border border-orange-200">
+                        <h4 class="font-bold text-orange-900 mb-2 uppercase border-b border-orange-300 pb-1">CAPA Action Plan</h4>
+                        <ul id="listCapa" class="list-disc pl-5 font-bold space-y-1"></ul>
+                    </div>
+                </div>
+            </div>
+ 
+        </section>
+        
+        <!-- Placeholder when no topic is selected -->
+        <section id="placeholderArea" class="lg:col-span-3 flex items-center justify-center flex-col text-center p-10 border-4 border-dashed border-slate-300 rounded bg-white shadow-sm">
+            <svg class="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <h2 class="font-bold text-black mb-2 uppercase tracking-wide">Platform Ready</h2>
+            <p class="font-medium max-w-md text-slate-600">Select a Learning Level and a specific VSM Concept from the sidebar to begin your analysis.</p>
+        </section>
+ 
+    </main>
+ 
+    <!-- Benchmarking Modal Overlay -->
+    <div id="benchmarkModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 hidden flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded shadow-2xl w-full max-w-lg border-t-4 border-red-600 flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b-2 border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg uppercase text-black flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Industry Benchmarks
+                </h3>
+                <button id="closeModalBtn" class="text-slate-500 hover:text-red-600 transition-colors focus:outline-none bg-slate-200 hover:bg-red-100 rounded-full p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <table class="w-full text-left border-collapse bg-white border border-slate-300">
+                    <thead>
+                        <tr>
+                            <th class="p-3 border border-slate-300 bg-black text-white font-bold uppercase text-xs tracking-wider">Metric Value</th>
+                            <th class="p-3 border border-slate-300 bg-black text-white font-bold uppercase text-xs tracking-wider">Lean Interpretation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="benchmarkTableBody">
+                        <!-- Dynamic rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-4 border-t border-slate-200 bg-slate-50 text-right">
+                <button id="closeModalBtnBottom" class="bg-slate-800 hover:bg-black text-white font-bold py-2 px-6 rounded uppercase text-sm tracking-wide transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+ 
+    <script>
+        // Data Linking State Memory
+        const sharedState = {};
+
+        // Comprehensive Database containing ALL MECTS VSM concepts with Deep Explanations
+        const vsmData = {
+            "Basics": {
+                "1.1 TAKT TIME": {
+                    definition: "Takt Time is the theoretical drumbeat of your factory, synchronized exactly with your customer's demand. It represents the exact speed at which you need to produce one single unit to satisfy your buyers without building excess inventory or falling behind schedule.",
+                    formula: "Total Available Working Time / Number of Units Customer Needs",
+                    jargon: "",
+                    analogy: "Think of a high-pressure cricket run chase. If the required run rate is 6 runs per over (Takt Time), scoring 10 runs per over early on exhausts the batsmen and risks unnecessary wickets (overproduction waste). Conversely, scoring 3 runs per over means you lose the match (missed delivery). Takt is hitting exactly those 6 runs every single over to win smoothly.",
+                    example: "<strong>Given:</strong><br>Available Time = 420 mins<br>Demand = 20 units<br>Current Cycle Time = 18 mins<br><br><strong>Calculation:</strong><br>Takt Time = 420 / 20 = 21 mins/unit",
+                    benchmark: [
+                        { range: "CT = 85-95% of Takt", meaning: "Healthy Lean Flow (Safe buffer for variation)" },
+                        { range: "CT = 100% of Takt", meaning: "Dangerous - Zero room for error" },
+                        { range: "CT > Takt", meaning: "Cannot meet demand (Bottleneck)" }
+                    ],
+                    inputs: [
+                        { id: "availTime", label: "Available Production Time (mins)", value: 480 },
+                        { id: "demand", label: "Customer Demand (units)", value: 23 },
+                        { id: "ct", label: "Current Cycle Time (mins)", value: 18 }
+                    ],
+                    calculate: (vals) => {
+                        const takt = vals.availTime / vals.demand;
+                        sharedState['takt'] = parseFloat(takt.toFixed(2));
+                        const diff = vals.ct - takt;
+                        let msg = vals.ct > takt ? `WARNING: Your line is too slow. You will miss demand by ${diff.toFixed(1)} mins/unit.` : `GOOD: You have a safe speed buffer of ${(takt - vals.ct).toFixed(1)} mins per unit.`;
+                        let ratio = (vals.ct / takt) * 100;
+                        let ideal = ratio < 80 ? "However, you are running too fast and risk overproducing inventory waste." : "";
+                        return { 
+                            result: `${takt.toFixed(2)} mins/unit`,
+                            interpretation: `Takt Time dictates the customer needs one unit exactly every ${takt.toFixed(2)} minutes. ${msg} ${ideal}`
+                        };
+                    },
+                    pros: ["Aligns production with demand", "Prevents overproduction"],
+                    cons: ["Demand can be volatile"],
+                    capa: ["If Takt drops, add shifts.", "If Takt rises, do Kaizen."]
+                },
+                "1.2 CYCLE TIME (CT)": {
+                    definition: "Cycle Time measures the actual time it takes for an operator or machine to complete a single task from start to finish. It is the raw, stopwatch speed of your floor, which you must constantly compare against your Takt Time to ensure your workstations aren't holding back the entire factory.",
+                    formula: "Total Time Taken / Units Produced",
+                    jargon: "CT = Cycle Time",
+                    analogy: "Imagine a busy street-side Dosa stall. Takt Time is how fast customers are placing orders (e.g., one order every 3 minutes). Cycle Time is how fast the chef can actually pour the batter, cook the dosa, and serve it on a plate. If his cycle time is 4 minutes, a massive line of angry customers will quickly form.",
+                    example: "<strong>Given:</strong><br>Time Taken = 180 mins<br>Units Produced = 10<br><br><strong>Calculation:</strong><br>Cycle Time = 180 / 10 = 18 mins/unit",
+                    inputs: [
+                        { id: "timeTaken", label: "Total Time Taken (mins)", value: 180 },
+                        { id: "unitsProd", label: "Units Produced", value: 10 },
+                        { id: "takt", label: "Current Takt Time (mins)", value: 21 }
+                    ],
+                    calculate: (vals) => {
+                        const ct = vals.timeTaken / vals.unitsProd;
+                        sharedState['ct'] = parseFloat(ct.toFixed(2));
+                        let excess = ct - vals.takt;
+                        let capacityMsg = ct > vals.takt ? `CRITICAL: Your station is ${excess.toFixed(1)} mins slower than Takt. You are a bottleneck.` : `CAPABLE: Station meets demand rhythm easily.`;
+                        return { 
+                            result: `${ct.toFixed(2)} mins (CT)`,
+                            interpretation: `Cycle Time (CT) represents the actual operation pace, which is ${ct.toFixed(2)} mins vs target Takt pace of ${vals.takt} mins. ${capacityMsg}`
+                        };
+                    },
+                    pros: ["Identifies bottlenecks immediately"],
+                    cons: ["Fluctuates due to fatigue"],
+                    capa: ["If CT > Takt, balance the line.", "Use Standard Work."]
+                },
+                "1.3 LEAD TIME (LT)": {
+                    definition: "Lead Time is the entire lifespan of a product within your system, from the moment a customer places an order (or raw material arrives) until the final product is delivered. It aggressively highlights the non-value-added waiting times that hide quietly between your active operations.",
+                    formula: "Waiting Time + Processing Time",
+                    jargon: "LT = Lead Time | WIP = Work In Progress",
+                    analogy: "Think of ordering a custom piece of furniture online. The carpenter only takes 2 solid days to actually carve and build the chair (Processing Time). However, the chair then sits in a warehouse for 5 days waiting for the delivery truck. The Lead Time the customer experiences is a frustrating 7 days, mostly driven by waiting waste.",
+                    example: "<strong>Given:</strong><br>Processing = 2 hours<br>Waiting = 22 hours<br><br><strong>Calculation:</strong><br>LT = 2 + 22 = 24 hours",
+                    inputs: [
+                        { id: "process", label: "Total Processing Time (Hours)", value: 2 },
+                        { id: "wait", label: "Total Waiting / WIP Time (Hours)", value: 22 }
+                    ],
+                    calculate: (vals) => {
+                        const lt = vals.process + vals.wait;
+                        sharedState['lt'] = parseFloat(lt.toFixed(2));
+                        const eff = (vals.process / lt) * 100;
+                        let eval = eff < 10 ? `Extremely low efficiency. ${(100-eff).toFixed(1)}% of your time is spent just sitting in queues.` : `Good lean flow. Parts are constantly moving.`;
+                        let whatIf = vals.wait > 0 ? `WHAT-IF: By eliminating half your waiting time, your Lead Time instantly drops to ${(vals.process + (vals.wait/2)).toFixed(1)} hours.` : "";
+                        return { result: `${lt.toFixed(1)} Hours Total`, interpretation: `Lead Time (LT) totals ${lt.toFixed(1)} hours with a Flow Efficiency of ${eff.toFixed(1)}%. ${eval} ${whatIf}` };
+                    },
+                    pros: ["Ultimate measure of flow"],
+                    cons: ["Hard to measure exactly without VSM"],
+                    capa: ["Use Kanban to reduce waiting."]
+                },
+                "1.4 TOTAL WORK CONTENT": {
+                    definition: "This is the absolute minimum amount of direct labor time required to build one complete product, assuming zero waiting, zero walking, and perfect continuous flow. It serves as the mathematical baseline used by management to calculate exactly how many human operators are needed on the floor.",
+                    formula: "CT1 + CT2 + CT3 ... CTn",
+                    jargon: "TWC = Total Work Content | CT = Cycle Time",
+                    analogy: "Imagine hosting a large dinner party. It takes exactly 15 minutes to chop the veggies, 20 minutes to cook the dal, and 10 minutes to make the rotis. The Total Work Content is fixed at 45 minutes. Whether one person does it all sequentially, or three people do it simultaneously, the fundamental 'work' remains exactly 45 minutes.",
+                    example: "<strong>Given:</strong><br>Op 1 = 12m<br>Op 2 = 15m<br>Op 3 = 10m<br><br><strong>Calculation:</strong><br>12 + 15 + 10 = 37 mins",
+                    inputs: [
+                        { id: "ct1", label: "Station 1 CT (mins)", value: 12 },
+                        { id: "ct2", label: "Station 2 CT (mins)", value: 15 },
+                        { id: "ct3", label: "Station 3 CT (mins)", value: 10 }
+                    ],
+                    calculate: (vals) => {
+                        const twc = vals.ct1 + vals.ct2 + vals.ct3;
+                        sharedState['work'] = twc;
+                        let max = Math.max(vals.ct1, vals.ct2, vals.ct3);
+                        return { result: `${twc} Mins Work`, interpretation: `Total Work Content (TWC) takes exactly ${twc} mins of absolute direct labor to finish one unit. The longest single step is ${max} mins, which serves as your absolute limit for pacing.` };
+                    },
+                    pros: ["Baseline for labor requirements"],
+                    cons: ["Ignores machine auto-time"],
+                    capa: ["Kaizen to reduce non-value manual steps."]
+                },
+                "1.5 WAITING TIME": {
+                    definition: "Waiting Time represents the dormant periods where a product or material is literally doing nothing but gathering dust in a queue. It is the single largest contributor to extended Lead Times, often caused by unbalanced workstations producing faster than the next step can consume.",
+                    formula: "Total Lead Time - Total Processing Time",
+                    jargon: "LT = Lead Time | PT = Processing Time",
+                    analogy: "Think of commuting to work in heavy city traffic. Your actual driving time at speed (Processing) might only be 20 minutes, but you spend 45 agonizing minutes completely stationary at red lights and in traffic jams (Waiting Time). True value is only generated when the wheels are moving.",
+                    example: "<strong>Given:</strong><br>Lead Time = 48 hours<br>Processing = 4 hours<br><br><strong>Calculation:</strong><br>Wait = 48 - 4 = 44 hours",
+                    inputs: [
+                        { id: "lt", label: "Total Lead Time (Hours)", value: 48 },
+                        { id: "pt", label: "Total Processing Time (Hours)", value: 4 }
+                    ],
+                    calculate: (vals) => {
+                        const wt = vals.lt - vals.pt;
+                        const pct = (wt/vals.lt)*100;
+                        let flowMsg = pct > 80 ? `CRITICAL: Your system is heavily backlogged. Product stagnates on the floor.` : `Healthy ratio of movement.`;
+                        return { result: `${wt} Hours Waiting`, interpretation: `Waiting Time accounts for ${pct.toFixed(0)}% of your timeline where the product is doing absolutely nothing. ${flowMsg}` };
+                    },
+                    pros: ["Exposes hidden inventory costs"],
+                    cons: ["None, it's a pure waste metric"],
+                    capa: ["Implement FIFO lanes.", "Connect processes to eliminate queues."]
+                },
+                "1.6 CHANGEOVER TIME": {
+                    definition: "The total downtime incurred when a machine must transition from producing one specific model to a completely different one. Critically, this is measured strictly from the output of the *last good piece* of Product A to the *first good piece* of Product B running at full production speed.",
+                    formula: "Internal Setup Time + External Setup Time",
+                    jargon: "SMED = Single-Minute Exchange of Die",
+                    analogy: "Consider a cricket match innings break. The players must switch from fielding to batting. A slow changeover means the crowd loses interest. To speed it up, professional teams hold their strategy meetings and put on their batting pads *before* the innings even ends (External setup), so they can walk straight onto the pitch instantly (Internal setup).",
+                    example: "<strong>Given:</strong><br>Internal = 45m<br>External = 30m<br><br><strong>Calculation:</strong><br>Total = 75 mins",
+                    inputs: [
+                        { id: "int", label: "Internal Setup (Machine Off) mins", value: 45 },
+                        { id: "ext", label: "External Setup (Machine On) mins", value: 30 }
+                    ],
+                    calculate: (vals) => {
+                        const tot = vals.int + vals.ext;
+                        sharedState['su'] = tot;
+                        let smedMsg = vals.int > 10 ? `WHAT-IF: By finding ways to move ${Math.floor(vals.int/2)} mins of Internal work to External prep, you instantly regain ${Math.floor(vals.int/2)} mins of pure manufacturing time.` : `World-Class Single Minute Exchange of Die (SMED) achieved.`;
+                        return { result: `${tot} Mins Total Setup`, interpretation: `Changeover Time completely loses ${vals.int} mins of machine capacity during this switch. ${smedMsg}` };
+                    },
+                    pros: ["Enables smaller batches"],
+                    cons: ["Requires engineering discipline"],
+                    capa: ["Convert Internal steps to External (SMED)."]
+                },
+                "1.7 SMED AGILITY INDEX": {
+                    definition: "This dynamic index compares the pain and duration of your machine setup against the speed and ease of making a single product. A high index forces factory management into building massive, wasteful product batches simply to mathematically justify the painful downtime caused by the changeover.",
+                    formula: "Changeover Time / Average Cycle Time",
+                    jargon: "SMED = Single-Minute Exchange of Die | CT = Cycle Time",
+                    analogy: "Imagine heating up a massive traditional tandoor oven. If it takes 2 solid hours to get the clay to the right baking temperature (Setup), you would never do it just to bake a single naan (Cycle). You are forced to wait and bake 100 naans at once (Batching) to justify the enormous setup effort.",
+                    example: "<strong>Given:</strong><br>Setup = 60m<br>Cycle = 5m<br><br><strong>Calculation:</strong><br>60 / 5 = 12",
+                    inputs: [
+                        { id: "su", label: "Total Setup Time (mins)", value: 60 },
+                        { id: "ct", label: "Cycle Time (mins)", value: 5 }
+                    ],
+                    calculate: (vals) => {
+                        const idx = vals.su / vals.ct;
+                        let adv = idx > 10 ? `Because your index is ${idx.toFixed(1)} (very high), you are mathematically forced to run huge batches just to justify the setup cost.` : `Agile system. Setup is fast enough to allow quick model changes.`;
+                        return { result: `Index: ${idx.toFixed(1)}`, interpretation: `SMED Agility Index calculates your setup takes ${idx.toFixed(1)} times longer than making a single part. ${adv}` };
+                    },
+                    pros: ["Links setup to actual flow"],
+                    cons: ["Abstract number"],
+                    capa: ["Reduce setup time to approach an index of < 5."]
+                },
+                "2.1 CAPACITY UTILIZATION %": {
+                    definition: "A critical operational health metric comparing how hard your equipment or people are working against their maximum theoretical potential. While hitting 100% sounds ideal on paper, running at absolute maximum leaves zero buffer for breakdowns, inevitably causing cascading delivery failures.",
+                    formula: "(Cycle Time / Takt Time) x 100",
+                    jargon: "CU = Capacity Utilization | CT = Cycle Time",
+                    analogy: "Think of driving a car engine constantly at the redline on the RPM meter. Yes, you are extracting maximum speed out of the vehicle, but the engine will inevitably overheat and break down. The lean sweet spot is cruising efficiently at 80% to allow emergency power for sudden overtakes or steep uphill climbs.",
+                    example: "<strong>Given:</strong><br>CT = 18m<br>Takt = 21m<br><br><strong>Calculation:</strong><br>(18/21) x 100 = 85.7%",
+                    benchmark: [
+                        { range: "< 70%", meaning: "Underloaded process (Idle capacity)" },
+                        { range: "70% - 90%", meaning: "Healthy operating zone (Good buffer)" },
+                        { range: "90% - 99%", meaning: "High risk of delays" },
+                        { range: "100% or more", meaning: "Demand cannot be met" }
+                    ],
+                    inputs: [
+                        { id: "ct", label: "Cycle Time (mins)", value: 18 },
+                        { id: "takt", label: "Takt Time (mins)", value: 21 }
+                    ],
+                    calculate: (vals) => {
+                        const util = (vals.ct / vals.takt)*100;
+                        let msg = util < 70 ? "Process is heavily underloaded. Consolidate stations." : (util > 95 ? "DANGER: You have no buffer. A 5 minute jam will cause late deliveries." : "Perfect sweet spot.");
+                        return { result: `${util.toFixed(1)}% Utilization`, interpretation: `Capacity Utilization (CU) uses ${util.toFixed(1)}% of available time per cycle. ${msg}` };
+                    },
+                    pros: ["Prevents burnout"],
+                    cons: ["100% causes bottlenecks"],
+                    capa: ["If >95%, offload tasks."]
+                },
+                "2.2 BOTTLENECK IDENTIFICATION": {
+                    definition: "Applying the Theory of Constraints to locate the single slowest operation in your entire value stream. Because an assembly line can only move as fast as its slowest station, any improvement or investment made *anywhere else* but the bottleneck is a complete financial illusion.",
+                    formula: "Identify Station with Maximum Cycle Time",
+                    jargon: "TOC = Theory of Constraints | CT = Cycle Time",
+                    analogy: "Picture pouring water out of a bottle. It doesn't matter if the base of the bottle holds 5 liters or if the internal plastic is incredibly wide; the water can only empty as fast as the narrow neck at the top allows. Your factory's output is entirely dictated by its narrowest 'neck'.",
+                    example: "<strong>Given:</strong><br>A=10m, B=25m, C=15m<br><br><strong>Calculation:</strong><br>Max = 25m (Station B)",
+                    inputs: [
+                        { id: "s1", label: "Station A CT (mins)", value: 10 },
+                        { id: "s2", label: "Station B CT (mins)", value: 25 },
+                        { id: "s3", label: "Station C CT (mins)", value: 15 },
+                        { id: "takt", label: "Customer Takt Time (mins)", value: 20 }
+                    ],
+                    calculate: (vals) => {
+                        const max = Math.max(vals.s1, vals.s2, vals.s3);
+                        let bottleneckId = max === vals.s1 ? "A" : (max === vals.s2 ? "B" : "C");
+                        let taktMsg = max > vals.takt ? `CRITICAL: Your bottleneck (${max}m) is slower than customer demand (${vals.takt}m). You WILL fail deliveries.` : `Your bottleneck is safely within demand limits.`;
+                        return { result: `${max} Mins (Station ${bottleneckId})`, interpretation: `Bottleneck Identification shows Station ${bottleneckId} limits the speed of the entire factory. ${taktMsg}` };
+                    },
+                    pros: ["Focuses improvement efforts immediately"],
+                    cons: ["Bottlenecks shift when improved"],
+                    capa: ["Deploy 5S, SMED, and additional labor exclusively to the bottleneck."]
+                },
+                "2.3 LINE BALANCING EFFICIENCY": {
+                    definition: "The strategic measurement and redistribution of work elements across multiple operators to ensure everyone has a nearly identical workload. High balancing efficiency prevents the toxic scenario where one worker is sweating intensely while the next worker stands idle waiting for parts.",
+                    formula: "[Total Work / (Operators x Bottleneck CT)] x 100",
+                    jargon: "LBE = Line Balancing Efficiency | CT = Cycle Time",
+                    analogy: "Imagine a tug-of-war team. If two incredibly strong members at the front are pulling 80% of the weight and the rest of the team is barely holding the rope, the team is highly unbalanced and will quickly exhaust the top performers. Line balancing ensures every single team member is pulling with equal force.",
+                    example: "<strong>Given:</strong><br>Work = 60m<br>Ops = 4<br>Neck = 20m<br><br><strong>Calculation:</strong><br>[60 / (4x20)] x 100 = 75%",
+                    benchmark: [
+                        { range: "< 60%", meaning: "Poor balance (Heavy idle time)" },
+                        { range: "60% - 75%", meaning: "Moderate balance" },
+                        { range: "75% - 90%", meaning: "Good balance" },
+                        { range: "> 90%", meaning: "World Class Lean Execution" }
+                    ],
+                    inputs: [
+                        { id: "work", label: "Total Work Content (mins)", value: 60 },
+                        { id: "ops", label: "Total Operators", value: 4 },
+                        { id: "neck", label: "Bottleneck CT (mins)", value: 20 }
+                    ],
+                    calculate: (vals) => {
+                        const eff = (vals.work / (vals.ops * vals.neck)) * 100;
+                        const idle = (vals.ops * vals.neck) - vals.work;
+                        let msg = eff < 75 ? `WHAT-IF: By redistributing the workload, you can recover ${idle} minutes of lost capacity every single cycle.` : `Excellent balance. Minimal idle time.`;
+                        return { result: `${eff.toFixed(1)}% Balanced`, interpretation: `Line Balancing Efficiency (LBE) operates at ${eff.toFixed(1)}% equality. ${msg}` };
+                    },
+                    pros: ["Maximizes human productivity"],
+                    cons: ["Requires precise time studies"],
+                    capa: ["Use a Yamazumi chart."]
+                },
+                "2.4 WORKFORCE REQUIREMENT": {
+                    definition: "A strict mathematical approach to staffing, calculating the exact headcount needed to meet current customer demand based purely on Total Work Content. This removes emotional guesswork from shift planning and prevents highly costly overstaffing during low-demand periods.",
+                    formula: "Total Work Content / Takt Time",
+                    jargon: "TWC = Total Work Content",
+                    analogy: "Think of ordering food for a massive wedding. If you know mathematically exactly how much food one average guest eats (Takt Time) and exactly how much food is contained in one massive cooking pot (Work Content), you can calculate the exact number of catering staff needed to serve the crowd smoothly without hiring unnecessary, expensive helpers.",
+                    example: "<strong>Given:</strong><br>Work = 120m<br>Takt = 25m<br><br><strong>Calculation:</strong><br>120 / 25 = 4.8 ops",
+                    inputs: [
+                        { id: "work", label: "Total Work Content (mins)", value: 120 },
+                        { id: "takt", label: "Target Takt Time (mins)", value: 25 }
+                    ],
+                    calculate: (vals) => {
+                        const exact = vals.work / vals.takt;
+                        const needed = Math.ceil(exact);
+                        let potentialSave = vals.work - ((needed-1)*vals.takt);
+                        let msg = needed > exact && exact > (needed-0.3) ? `WHAT-IF: You are currently rounding up to ${needed} operators. If Kaizen can remove just ${potentialSave.toFixed(1)} mins of work, you can run the line with ${needed - 1} people.` : `You securely need ${needed} personnel.`;
+                        return { result: `${needed} Operators`, interpretation: `Workforce Requirement dictates exactly ${exact.toFixed(2)} people mathematically. ${msg}` };
+                    },
+                    pros: ["Prevents overstaffing"],
+                    cons: ["Assumes 100% operator efficiency"],
+                    capa: ["Kaizen out fractions of work instead of hiring a full extra person."]
+                },
+                "3.1 WORK IN PROGRESS (WIP)": {
+                    definition: "Unfinished goods physically sitting on the factory floor trapped between processes. WIP is essentially frozen cash—capital that the company has already spent on raw materials and labor, but absolutely cannot bill to the customer because the item is incomplete.",
+                    formula: "Sum of all inventory between workstations",
+                    jargon: "WIP = Work In Progress",
+                    analogy: "Picture unfinished canvases in a professional painter's studio. The artist has already spent heavy money on expensive paint and canvas (Capital), and invested hours of effort (Labor). However, until the painting is 100% finished and sold to a gallery, it is just taking up valuable floor space and generating zero revenue.",
+                    example: "<strong>Given:</strong><br>Queue A = 50<br>Queue B = 100<br><br><strong>Calculation:</strong><br>Total WIP = 150 units",
+                    inputs: [
+                        { id: "q1", label: "Inventory at Station 1", value: 50 },
+                        { id: "q2", label: "Inventory at Station 2", value: 100 },
+                        { id: "unitCost", label: "Avg Cost per Unit (₹)", value: 1000 }
+                    ],
+                    calculate: (vals) => {
+                        const wip = vals.q1 + vals.q2;
+                        sharedState['wip'] = wip;
+                        const cap = wip * vals.unitCost;
+                        let msg = wip > 100 ? `WHAT-IF: Cutting this queue in half instantly liberates ₹${(cap/2).toLocaleString('en-IN')} in working capital.` : `Inventory looks contained.`;
+                        return { result: `${wip} Units WIP`, interpretation: `Work In Progress (WIP) ties up ${wip} unfinished units and ₹${cap.toLocaleString('en-IN')} on the floor. ${msg}` };
+                    },
+                    pros: ["Directly visible on the floor"],
+                    cons: ["Hard to count exactly in messy plants"],
+                    capa: ["Implement Kanban visual limits."]
+                },
+                "3.2 LITTLE'S LAW": {
+                    definition: "A fundamental mathematical theorem of Lean manufacturing demonstrating that Lead Time is directly proportional to the amount of Work in Progress (WIP). If you want to deliver products to customers faster, you must drastically reduce the amount of inventory clogging your floor.",
+                    formula: "Lead Time = WIP / Throughput",
+                    jargon: "LT = Lead Time | WIP = Work In Progress",
+                    analogy: "Imagine standing in line at a crowded bank teller. The time it takes for you to get out of the bank (Lead Time) is directly equal to the number of people standing in front of you (WIP) divided by how fast the teller processes each person (Throughput). Reduce the line size, reduce the wait time.",
+                    example: "<strong>Given:</strong><br>WIP = 45<br>Throughput = 9/day<br><br><strong>Calculation:</strong><br>LT = 45 / 9 = 5 days",
+                    inputs: [
+                        { id: "wip", label: "Current WIP Count", value: 45 },
+                        { id: "thru", label: "Current Throughput (Units/Day)", value: 9 }
+                    ],
+                    calculate: (vals) => {
+                        const lt = vals.wip / vals.thru;
+                        sharedState['lt'] = parseFloat(lt.toFixed(2));
+                        const halfWip = Math.floor(vals.wip / 2);
+                        const newLt = halfWip / vals.thru;
+                        let msg = vals.wip > 0 ? `WHAT-IF: Without buying any faster machines, simply capping your WIP at ${halfWip} units will instantly drop your customer delivery time from ${lt.toFixed(1)} days down to ${newLt.toFixed(1)} days.` : `Flow is perfectly continuous.`;
+                        return { result: `${lt.toFixed(1)} Days Lead Time`, interpretation: `By Little's Law, Lead Time is calculated to be ${lt.toFixed(1)} days to exit the system. ${msg}` };
+                    },
+                    pros: ["Mathematical proof for lean"],
+                    cons: ["Assumes averages"],
+                    capa: ["Reduce batch sizes."]
+                },
+                "3.3 INVENTORY TURNOVER": {
+                    definition: "A high-level financial metric showing how many times a company's entire inventory pool is sold and completely replaced over a year. A higher turnover signifies exceptional supply chain agility and proves that products aren't becoming obsolete or damaged in a warehouse.",
+                    formula: "Cost of Goods Sold (COGS) / Avg Inventory Value",
+                    jargon: "COGS = Cost of Goods Sold",
+                    analogy: "Compare a fresh vegetable street vendor versus a large hardware store. The vegetable vendor must sell his entire stock every single day, turning his inventory over 365 times a year to survive and keep things fresh. The hardware store might let an iron hammer sit on a shelf for 6 months, tying up cash unnecessarily.",
+                    example: "<strong>Given:</strong><br>COGS = ₹10,00,000<br>Avg Inv = ₹2,00,000<br><br><strong>Calculation:</strong><br>Turnover = 10L / 2L = 5 Turns",
+                    benchmark: [
+                        { range: "> 10 Turns/Year", meaning: "Excellent Lean Supply Chain" },
+                        { range: "4 - 6 Turns", meaning: "Average Manufacturing" },
+                        { range: "< 3 Turns", meaning: "Cash flow crisis warning" }
+                    ],
+                    inputs: [
+                        { id: "cogs", label: "Annual COGS (₹)", value: 1000000 },
+                        { id: "inv", label: "Avg Inventory Value (₹)", value: 200000 }
+                    ],
+                    calculate: (vals) => {
+                        const turns = vals.cogs / vals.inv;
+                        let msg = turns >= 10 ? "Excellent Lean velocity." : (turns <= 3 ? "CRITICAL: Inventory sits too long, risk of obsolescence." : "Standard turnaround rate.");
+                        let targetInv = vals.cogs / 10;
+                        let whatIf = turns < 10 ? `WHAT-IF: To achieve world-class 10 turns, you must reduce inventory to ₹${targetInv.toLocaleString('en-IN')}.` : "";
+                        return { result: `${turns.toFixed(1)} Turns/Year`, interpretation: `Inventory Turnover shows your cash cycles through the factory ${turns.toFixed(1)} times a year. ${msg} ${whatIf}` };
+                    },
+                    pros: ["Key financial health metric"],
+                    cons: ["Can be skewed by seasonal drops"],
+                    capa: ["Move to Just-In-Time (JIT) deliveries."]
+                },
+                "3.4 FLOW EFFICIENCY %": {
+                    definition: "The ultimate reality check of Lean mapping. It compares the actual time spent physically transforming the product (drilling, welding, coding) against the vast ocean of time the product spends just waiting around. Most traditional factories sit below a shocking 5%.",
+                    formula: "(Value Added Time / Lead Time) x 100",
+                    jargon: "FE = Flow Efficiency | VA = Value Added | LT = Lead Time",
+                    analogy: "Think about going to a massive theme park. You spend 9 full hours inside the park (Lead Time), but when you add up the actual duration of the exciting roller coaster rides (Value Added), it's only 20 minutes. Your Flow Efficiency for having fun is incredibly low because you spent the whole day standing in queues.",
+                    example: "<strong>Given:</strong><br>VA = 4 hrs<br>LT = 100 hrs<br><br><strong>Calculation:</strong><br>4 / 100 = 4%",
+                    benchmark: [
+                        { range: "< 5%", meaning: "Traditional Batch Manufacturing (Normal)" },
+                        { range: "10% - 20%", meaning: "Good Lean Implementation" },
+                        { range: "> 25%", meaning: "World Class Continuous Flow" }
+                    ],
+                    inputs: [
+                        { id: "va", label: "Value Added Time (hrs)", value: 4 },
+                        { id: "lt", label: "Total Lead Time (hrs)", value: 100 }
+                    ],
+                    calculate: (vals) => {
+                        const eff = (vals.va / vals.lt) * 100;
+                        let msg = eff < 5 ? "You are operating heavily in Batch-and-Queue mode." : (eff > 20 ? "World-Class flow achieved!" : "Good lean momentum.");
+                        return { result: `${eff.toFixed(1)}%`, interpretation: `Flow Efficiency (FE) shows ${(100-eff).toFixed(1)}% of your timeline is pure waste. ${msg} Link processes to close this gap.` };
+                    },
+                    pros: ["Core VSM output"],
+                    cons: ["Requires full map to calculate"],
+                    capa: ["Connect disparate operations."]
+                }
+            },
+            "Intermediate": {
+                "4.1 FIRST PASS YIELD (FPY)": {
+                    definition: "A strict measure of quality at a single workstation, calculating the percentage of products that pass through flawlessly on their very first attempt, without requiring any hidden rework, patching, or re-testing.",
+                    formula: "(Good Units / Total Units) x 100",
+                    jargon: "FPY = First Pass Yield",
+                    analogy: "Taking your final driving test. If you pass on the first attempt, you save time and money (High FPY). If you make a mistake, fail, and have to retake the test three weeks later, you've doubled your effort and cost for the exact same end result (Rework).",
+                    example: "<strong>Given:</strong><br>Produced = 500<br>Defects = 25<br><br><strong>Calculation:</strong><br>(475 / 500) x 100 = 95%",
+                    inputs: [
+                        { id: "tot", label: "Total Units Produced", value: 500 },
+                        { id: "def", label: "Defects/Rework Generated", value: 25 }
+                    ],
+                    calculate: (vals) => {
+                        const fpy = ((vals.tot - vals.def) / vals.tot) * 100;
+                        let msg = fpy < 95 ? `CRITICAL: You are losing massive capacity fixing ${vals.def} bad units before they even move.` : `Quality is stable at the source.`;
+                        return { result: `${fpy.toFixed(1)}% FPY`, interpretation: `First Pass Yield (FPY) is exactly ${fpy.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Uncovers hidden factory"],
+                    cons: ["Often underreported"],
+                    capa: ["Standardize work."]
+                },
+                "4.2 ROLLED THROUGHPUT YIELD": {
+                    definition: "The brutal reality of cumulative system quality. By multiplying the individual First Pass Yields of every station together, RTY exposes the true, often shockingly low probability that a product will make it through the entire factory without a single defect.",
+                    formula: "Yield 1 x Yield 2 x Yield 3",
+                    jargon: "RTY = Rolled Throughput Yield",
+                    analogy: "A 4x100m relay race where dropping the baton incurs a heavy penalty. Even if runners 1, 2, and 4 are world champions holding a 99% success rate, if runner 3 drops the baton (80% yield), the entire team's final time is completely destroyed. RTY exposes this compounding chain-reaction of failure.",
+                    example: "<strong>Given:</strong><br>S1 = 0.98, S2 = 0.95, S3 = 0.99<br><br><strong>Calculation:</strong><br>0.98 x 0.95 x 0.99 = 92.1%",
+                    benchmark: [
+                        { range: "95% - 100%", meaning: "Excellent System Quality" },
+                        { range: "90% - 95%", meaning: "Acceptable (but rework costs are accumulating)" },
+                        { range: "< 80%", meaning: "Major Quality Issues (High scrap burden)" }
+                    ],
+                    inputs: [
+                        { id: "y1", label: "Station 1 Yield (%)", value: 98 },
+                        { id: "y2", label: "Station 2 Yield (%)", value: 95 },
+                        { id: "y3", label: "Station 3 Yield (%)", value: 99 }
+                    ],
+                    calculate: (vals) => {
+                        const rty = (vals.y1/100) * (vals.y2/100) * (vals.y3/100) * 100;
+                        let worst = Math.min(vals.y1, vals.y2, vals.y3);
+                        let msg = rty < 85 ? `WHAT-IF: Even though individual stations seem fine, the compounding effect means ${(100-rty).toFixed(1)}% of ALL products fail somewhere. Target the ${worst}% station first.` : `System yield is robust.`;
+                        return { result: `${rty.toFixed(1)}% RTY`, interpretation: `Rolled Throughput Yield (RTY) shows your true system probability of success is just ${rty.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Shows true probability of success"],
+                    cons: ["Depressing to look at initially"],
+                    capa: ["Fix the lowest yield station first."]
+                },
+                "4.3 TOTAL DEFECTS CAPTURED": {
+                    definition: "The raw, absolute sum of every single error, defect, and non-conformance logged across the entire value stream. Unlike percentages, this gives a stark, tangible number to the volume of failure occurring daily.",
+                    formula: "Defects S1 + Defects S2 ...",
+                    jargon: "TDC = Total Defects Captured",
+                    analogy: "Imagine finding mosquitoes in your house. It doesn't really matter mathematically what percentage of rooms have them; the sheer total number of mosquito bites you get tells you that your window screens (processes) are fundamentally broken and need immediate fixing.",
+                    example: "<strong>Given:</strong><br>S1 = 12<br>S2 = 4<br><br><strong>Calculation:</strong><br>12 + 4 = 16 Defects",
+                    inputs: [
+                        { id: "d1", label: "Defects Station 1", value: 12 },
+                        { id: "d2", label: "Defects Station 2", value: 4 }
+                    ],
+                    calculate: (vals) => {
+                        let tot = vals.d1 + vals.d2;
+                        let focus = vals.d1 > vals.d2 ? "Station 1" : "Station 2";
+                        return { result: `${tot} Total Defects`, interpretation: `Total Defects Captured is an absolute measure of failure incidents. WHAT-IF: Directing 100% of Kaizen efforts purely at ${focus} will yield the fastest drop in absolute errors.` };
+                    },
+                    pros: ["Simple to understand"],
+                    cons: ["Lacks context of volume"],
+                    capa: ["Pareto chart the defects."]
+                },
+                "4.4 DEFECTS PER MILLION (DPMU)": {
+                    definition: "A statistical normalization technique used heavily in Six Sigma to compare quality across entirely different factories or product lines. It projects your current defect rate out to a hypothetical one million units to highlight the true scale of the problem.",
+                    formula: "(Total Defects / Total Units) x 10,00,000",
+                    jargon: "DPMU = Defects Per Million Units",
+                    analogy: "Consider grading a student's spelling. If a student spells 1 word wrong in a short 10-word sentence, it's 10%—which doesn't sound terrible. But if they write a massive, million-word novel, that exact same defect rate means 100,000 misspelled words. DPMU scales your errors so you truly feel their magnitude.",
+                    example: "<strong>Given:</strong><br>Defects = 5<br>Units = 1,000<br><br><strong>Calculation:</strong><br>(5/1000) x 10,00,000 = 5,000 DPMU",
+                    benchmark: [
+                        { range: "3.4 DPMO", meaning: "Six Sigma Quality (World Class)" },
+                        { range: "233 DPMO", meaning: "Five Sigma" },
+                        { range: "6,210 DPMO", meaning: "Four Sigma (Industry Average)" }
+                    ],
+                    inputs: [
+                        { id: "def", label: "Total Defects", value: 5 },
+                        { id: "tot", label: "Total Units", value: 1000 }
+                    ],
+                    calculate: (vals) => {
+                        const dpmu = (vals.def / vals.tot) * 1000000;
+                        let msg = dpmu <= 3.4 ? "You have achieved true Six Sigma quality." : `WHAT-IF: To hit Industry Average (6,210), you must drastically improve the process controls.`;
+                        return { result: `${dpmu.toFixed(0)} DPMU`, interpretation: `Defects Per Million Units (DPMU) is a standardized metric for Six Sigma comparison. ${msg}` };
+                    },
+                    pros: ["Allows cross-factory comparison"],
+                    cons: ["Abstract for floor workers"],
+                    capa: ["Implement Poka-Yoke."]
+                },
+                "4.4.1 DEFECTIVE PARTS PER MILLION (DPPM)": {
+                    definition: "Similar to DPMU, but specifically tracks whole units that are rejected. It is the gold-standard metric used by major automotive and aerospace manufacturers to judge the reliability of their external suppliers.",
+                    formula: "(Defective Parts / Total Parts Produced) x 10,00,000",
+                    jargon: "DPPM = Defective Parts Per Million",
+                    analogy: "A fruit vendor buying apples in bulk. If he buys 100 apples and 2 are rotten, it's manageable. But if he scales up and buys 1,00,000 apples for a major festival, that same DPPM rate means receiving 2,000 completely rotten, unsellable apples—a massive financial disaster.",
+                    example: "<strong>Given:</strong><br>Bad Parts = 2<br>Total Parts = 5,000<br><br><strong>Calculation:</strong><br>(2/5000) x 10,00,000 = 400 DPPM",
+                    inputs: [
+                        { id: "bad", label: "Defective Parts", value: 2 },
+                        { id: "totParts", label: "Total Parts", value: 5000 }
+                    ],
+                    calculate: (vals) => {
+                        const dppm = (vals.bad / vals.totParts) * 1000000;
+                        let msg = dppm > 1000 ? "Supplier Quality Warning. Defect rate is too high for scale production." : "Acceptable external ppm levels.";
+                        return { result: `${dppm.toFixed(0)} DPPM`, interpretation: `Defective Parts Per Million (DPPM) is the supplier quality metric standard indicating ${dppm.toFixed(0)} failures per million. ${msg}` };
+                    },
+                    pros: ["Strict part rejection metric"],
+                    cons: ["Ignores complexity"],
+                    capa: ["Supplier quality audits."]
+                },
+                "4.5 SCRAP RATE %": {
+                    definition: "The darkest metric in manufacturing. Scrap represents materials and products that are damaged so severely they cannot even be reworked. It is the absolute, non-recoverable loss of material, labor, and machine time.",
+                    formula: "(Scrap Units / Total Units) x 100",
+                    jargon: "",
+                    analogy: "Imagine baking a batch of expensive, premium cookies. If you leave them in the oven too long and they turn to black charcoal, they can't even be fed to the dog; they must go straight in the trash. That is scrap—raw materials, your physical labor, and electricity permanently lost with absolutely zero return on investment.",
+                    example: "<strong>Given:</strong><br>Scrap = 45<br>Total = 1000<br><br><strong>Calculation:</strong><br>(45/1000) x 100 = 4.5%",
+                    benchmark: [
+                        { range: "< 0.5%", meaning: "World Class Quality Control" },
+                        { range: "1% - 3%", meaning: "Acceptable but requires Kaizen" },
+                        { range: "> 5%", meaning: "Critical Financial Drain" }
+                    ],
+                    inputs: [
+                        { id: "scrap", label: "Scrap Units", value: 45 },
+                        { id: "tot", label: "Total Units Started", value: 1000 },
+                        { id: "unitCost", label: "Unit Cost (₹)", value: 500 }
+                    ],
+                    calculate: (vals) => {
+                        const r = (vals.scrap / vals.tot)*100;
+                        const loss = vals.scrap * vals.unitCost;
+                        let msg = r > 3 ? `CRITICAL: You are literally throwing away ₹${loss.toLocaleString('en-IN')} in the trash.` : `Scrap levels managed well.`;
+                        return { result: `${r.toFixed(1)}% Scrap`, interpretation: `Scrap Rate is an absolute waste of material and labor calculating to ${r.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Highly visible financial loss"],
+                    cons: ["Doesn't count rework"],
+                    capa: ["Machine maintenance improvements."]
+                },
+                "5.1 VALUE ADDED (VA) COST": {
+                    definition: "The exact portion of your operating budget that actually alters the product in a way the customer is willing to pay for. It represents the 'good' expenses in your factory, like the electricity running the drills or the wages of the assembly workers.",
+                    formula: "VA Hours x Cost Rate",
+                    jargon: "VA = Value Added",
+                    analogy: "Think of hiring a professional painter to redecorate your living room. You are extremely happy to pay him his hourly rate for the time his brush is physically touching the wall applying beautiful color (Value Add). You do not, however, want to pay him his high hourly rate for the 45 minutes he spends searching his van for the right brush.",
+                    example: "<strong>Given:</strong><br>VA Hours = 100<br>Rate = ₹500/hr<br><br><strong>Calculation:</strong><br>100 x 500 = ₹50,000",
+                    inputs: [
+                        { id: "hr", label: "VA Processing Hours", value: 100 },
+                        { id: "rate", label: "Hourly Rate (₹/hr)", value: 500 }
+                    ],
+                    calculate: (vals) => {
+                        const cost = vals.hr * vals.rate;
+                        return { result: `₹${cost.toLocaleString('en-IN')} VA Cost`, interpretation: `Value Added (VA) Cost is the 'good' cost. Customers are willingly paying this ₹${cost.toLocaleString('en-IN')} because it directly builds the product.` };
+                    },
+                    pros: ["Defines baseline cost"],
+                    cons: ["Requires time tracking"],
+                    capa: ["Maximize this ratio vs NVA."]
+                },
+                "5.2 NON-VALUE ADDED (NVA) COST": {
+                    definition: "The heavy financial burden of waste. This calculates the actual money spent on activities the customer doesn't care about—paying forklift drivers to move things unnecessarily, renting warehouses to store excess goods, or paying operators to stand around waiting.",
+                    formula: "Wait Labor Cost + Storage Cost",
+                    jargon: "NVA = Non-Value Added",
+                    analogy: "Imagine paying an exorbitant excess baggage fee at the airport check-in counter. The airline isn't flying you to your destination any faster, nor are they giving you a better seat or better food; you are paying a heavy premium strictly for the inefficiency of your own heavy, poorly packed luggage.",
+                    example: "<strong>Given:</strong><br>Wait Labor = ₹20,000<br>Storage = ₹15,000<br><br><strong>Calculation:</strong><br>Total = ₹35,000",
+                    inputs: [
+                        { id: "waitCost", label: "Wait/Move Labor Cost (₹)", value: 20000 },
+                        { id: "storeCost", label: "Warehouse Storage Cost (₹)", value: 15000 }
+                    ],
+                    calculate: (vals) => {
+                        const cost = vals.waitCost + vals.storeCost;
+                        let whatIf = cost > 10000 ? `WHAT-IF: By eliminating queues and storage, you add ₹${cost.toLocaleString('en-IN')} straight to your bottom line profit without selling a single extra unit.` : `Waste minimized.`;
+                        return { result: `₹${cost.toLocaleString('en-IN')} Pure Waste`, interpretation: `Non-Value Added (NVA) Cost is money burnt on activities the customer doesn't care about. ${whatIf}` };
+                    },
+                    pros: ["Justifies Lean budgets"],
+                    cons: ["Hard to extract from accounting"],
+                    capa: ["Eliminate warehouse storage (JIT)."]
+                },
+                "5.3 TOTAL SCRAP COST": {
+                    definition: "The direct, catastrophic financial translation of poor quality. It takes the abstract percentage of your scrap rate and attaches a hard, undeniable rupee value to it, commanding immediate executive attention.",
+                    formula: "Scrap Units x Unit Value",
+                    jargon: "",
+                    analogy: "It is the equivalent of opening your leather wallet, taking out crisp ₹500 notes, and throwing them directly into a roaring campfire. This money is gone forever; it is a pure, unrecoverable subtraction from the company's net profit at the end of the year.",
+                    example: "<strong>Given:</strong><br>Scrap = 50<br>Value = ₹2,000<br><br><strong>Calculation:</strong><br>50 x 2000 = ₹1,00,000",
+                    inputs: [
+                        { id: "scrap", label: "Scrap Units", value: 50 },
+                        { id: "unitCost", label: "Unit Value (₹)", value: 2000 }
+                    ],
+                    calculate: (vals) => {
+                        const total = vals.scrap * vals.unitCost;
+                        return { result: `₹${total.toLocaleString('en-IN')}`, interpretation: `Total Scrap Cost is a direct hit to net profit margin. You lost ₹${total.toLocaleString('en-IN')} that cannot be recovered.` };
+                    },
+                    pros: ["Gets executive attention"],
+                    cons: ["Lagging indicator"],
+                    capa: ["Source inspection."]
+                },
+                "5.4 WORKING CAPITAL BLOCKED": {
+                    definition: "A CFO's worst nightmare. This metric calculates the massive amounts of cold, hard cash that are physically trapped on the factory floor in the form of Work In Progress (WIP) and massive inventory buffers.",
+                    formula: "Total WIP Units x Unit Value",
+                    jargon: "WIP = Work In Progress",
+                    analogy: "Imagine taking your entire life savings and locking it inside a heavy, combination-locked steel safe in your basement. Inside that safe, the money earns zero interest, and it cannot be used to buy groceries, pay off loans, or invest in a new business. Until the inventory is sold, your capital is entirely paralyzed.",
+                    example: "<strong>Given:</strong><br>WIP = 1,000<br>Value = ₹500<br><br><strong>Calculation:</strong><br>1000 x 500 = ₹5,00,000",
+                    inputs: [
+                        { id: "wip", label: "WIP Units", value: 1000 },
+                        { id: "unitCost", label: "Unit Value (₹)", value: 500 }
+                    ],
+                    calculate: (vals) => {
+                        const blocked = vals.wip * vals.unitCost;
+                        let whatIf = vals.wip > 200 ? `WHAT-IF: Using Kanban to slash WIP in half frees up ₹${(blocked/2).toLocaleString('en-IN')} in cash for the business to use elsewhere.` : `WIP is lean.`;
+                        return { result: `₹${blocked.toLocaleString('en-IN')} Trapped`, interpretation: `Working Capital Blocked (WCB) means cash is physically stuck on the factory floor. ${whatIf}` };
+                    },
+                    pros: ["Links floor WIP to CFO metrics"],
+                    cons: ["Value changes through routing"],
+                    capa: ["Implement Kanban."]
+                },
+                "5.4.1 INVENTORY HOLDING COST": {
+                    definition: "The secondary, often-ignored penalty of having Working Capital Blocked. This is the literal premium you pay—in warehouse rent, security, insurance, and spoilage—simply for the 'privilege' of keeping excess inventory sitting around.",
+                    formula: "Inventory Value x Holding Rate %",
+                    jargon: "",
+                    analogy: "Renting a large, expensive storage unit across town just to hold onto old furniture you aren't even using. Not only is the furniture's value trapped, but you are actively bleeding money every single month paying the landlord to guard it.",
+                    example: "<strong>Given:</strong><br>Value = ₹5,00,000<br>Rate = 20%<br><br><strong>Calculation:</strong><br>5,00,000 x 0.20 = ₹1,00,000/yr",
+                    inputs: [
+                        { id: "inv", label: "Total Inventory Value (₹)", value: 500000 },
+                        { id: "rate", label: "Holding Rate % (Usually 15-25%)", value: 20 }
+                    ],
+                    calculate: (vals) => {
+                        const cost = vals.inv * (vals.rate/100);
+                        let whatIf = cost > 50000 ? `WHAT-IF: By reducing inventory value by 30%, you stop burning ₹${(cost*0.3).toLocaleString('en-IN')} every year on simple storage fees.` : ``;
+                        return { result: `₹${cost.toLocaleString('en-IN')}/yr`, interpretation: `Inventory Holding Cost is the premium you pay simply to keep the inventory sitting in the building. ${whatIf}` };
+                    },
+                    pros: ["Reveals true cost of overproduction"],
+                    cons: ["Holding rate is an estimate"],
+                    capa: ["Reduce safety stock safely."]
+                },
+                "6.1 EVERY PART EVERY INTERVAL (EPEI)": {
+                    definition: "The ultimate metric of factory agility. EPEI calculates exactly how many days it takes for your facility to cycle through and produce at least one batch of every single product variation in your catalog.",
+                    formula: "Total Setup Time / Available Setup Time per Day",
+                    jargon: "EPEI = Every Part Every Interval | SMED = Single-Minute Exchange of Die",
+                    analogy: "Think of your weekly meal prep at home. If you only chop vegetables, cook curries, and make rotis in massive batches on Sunday afternoons, your EPEI is 7 days. If a guest suddenly arrives on Wednesday asking for a special dish, you are entirely inflexible and cannot react without ruining your rigid batch schedule.",
+                    example: "<strong>Given:</strong><br>Setup = 180m<br>Avail = 36m/day<br><br><strong>Calculation:</strong><br>180 / 36 = 5 days",
+                    benchmark: [
+                        { range: "1 Day (or less)", meaning: "World Class / Very Flexible Production" },
+                        { range: "3 - 5 Days", meaning: "Moderate Flexibility (Weekly cycles)" },
+                        { range: "10+ Days", meaning: "Low Flexibility (High FG inventory needed)" }
+                    ],
+                    inputs: [
+                        { id: "totSetup", label: "Total Setup For All Models (mins)", value: 180 },
+                        { id: "avail", label: "Available Setup Time/Day (mins)", value: 36 }
+                    ],
+                    calculate: (vals) => {
+                        const epei = vals.totSetup / vals.avail;
+                        let whatIf = epei > 1 ? `WHAT-IF: If you use SMED to cut setups in half, your EPEI becomes ${(epei/2).toFixed(1)} days, meaning you can respond to customers twice as fast without holding finished goods.` : `Extreme agility achieved.`;
+                        return { result: `${epei.toFixed(1)} Days`, interpretation: `Every Part Every Interval (EPEI) means you can only cycle your product mix every ${epei.toFixed(1)} days. ${whatIf}` };
+                    },
+                    pros: ["Defines agility"],
+                    cons: ["Math is rigid"],
+                    capa: ["SMED to reduce setup."]
+                },
+                "6.2 KANBAN COUNT": {
+                    definition: "The mathematical formula ensuring your Pull system never starves. It calculates exactly how many physical bins or cards you need in circulation to cover the Lead Time of replenishment, plus a small buffer for safety.",
+                    formula: "[(Demand x LT) + Safety] / Bin Size",
+                    jargon: "LT = Lead Time",
+                    analogy: "Managing the milk jug in your refrigerator. You don't buy 50 liters of milk hoping you'll eventually drink it all. You keep 2 liters, and the exact moment one bottle is empty (a physical Kanban signal), it triggers you to go to the neighborhood store and buy exactly one replacement bottle.",
+                    example: "<strong>Given:</strong><br>Dem = 50, LT = 3, Safe = 10, Bin = 20<br><br><strong>Calculation:</strong><br>[(50x3)+10]/20 = 8 Bins",
+                    inputs: [
+                        { id: "demand", label: "Daily Demand", value: 50 },
+                        { id: "lt", label: "Lead Time (Days)", value: 3 },
+                        { id: "safety", label: "Safety Stock", value: 10 },
+                        { id: "bin", label: "Bin Size", value: 20 }
+                    ],
+                    calculate: (vals) => {
+                        const pipeline = vals.demand * vals.lt;
+                        const req = pipeline + vals.safety;
+                        const bins = Math.ceil(req / vals.bin);
+                        let safetyRatio = (vals.safety / req) * 100;
+                        let msg = safetyRatio > 30 ? `WARNING: ${safetyRatio.toFixed(0)}% of your inventory is just safety stock. Fix supplier reliability to reduce this.` : `System balanced.`;
+                        return { result: `${bins} Bins needed`, interpretation: `Kanban Count dictates pipeline stock covers ${pipeline} units. Safety covers ${vals.safety}. Hard caps max inventory at ${bins * vals.bin} units. ${msg}` };
+                    },
+                    pros: ["Visual inventory control"],
+                    cons: ["Fails if LT highly volatile"],
+                    capa: ["Audit bin cards regularly."]
+                },
+                "6.3 PITCH TIME": {
+                    definition: "Management's physical control rhythm on the shop floor. Instead of monitoring output one unit at a time (which is too fast), Pitch Time groups a standard pack of units together to create a manageable time interval for supervisors to check schedule adherence.",
+                    formula: "Takt Time x Pack Size",
+                    jargon: "",
+                    analogy: "Think of the steady, controlled heartbeat of a long-distance marathon runner. It represents a highly controlled, repetitive rhythm. Management checks the production pacing boards every 'Pitch' to ensure the factory's heartbeat is stable and the line hasn't suffered a sudden breakdown.",
+                    example: "<strong>Given:</strong><br>Takt = 10m<br>Pack = 5 units<br><br><strong>Calculation:</strong><br>10 x 5 = 50 mins",
+                    inputs: [
+                        { id: "takt", label: "Takt (mins)", value: 10 },
+                        { id: "pack", label: "Pack Size", value: 5 }
+                    ],
+                    calculate: (vals) => {
+                        const pitch = vals.takt * vals.pack;
+                        let msg = pitch > 120 ? `Pitch is over 2 hours. This is too long for effective visual management. Reduce pack size.` : `Excellent rhythm for the material spider.`;
+                        return { result: `${pitch} Mins Pitch`, interpretation: `Pitch Time rhythm means you move material and check schedules exactly every ${pitch} minutes. ${msg}` };
+                    },
+                    pros: ["Creates pacing"],
+                    cons: ["Requires discipline"],
+                    capa: ["Use a Heijunka box."]
+                },
+                "7.1 COEFFICIENT OF VARIATION": {
+                    definition: "A rigorous statistical measure of process unpredictability. It warns management if an operation's speed is fluctuating wildly from cycle to cycle, which completely destroys the ability to implement reliable Standard Work.",
+                    formula: "Standard Deviation / Mean",
+                    jargon: "COV = Coefficient of Variation",
+                    analogy: "Examine a cricket bowler's accuracy. A bowler with low variation hits the exact same spot on the pitch 6 times an over, suffocating the batsman. A bowler with high variation bowls wides, full tosses, and bouncers randomly, making it completely impossible for the captain to set a reliable fielding strategy.",
+                    example: "<strong>Given:</strong><br>Std Dev = 2m<br>Mean = 10m<br><br><strong>Calculation:</strong><br>2 / 10 = 0.20 (20%)",
+                    inputs: [
+                        { id: "sd", label: "Standard Deviation (mins)", value: 2 },
+                        { id: "m", label: "Mean Cycle Time (mins)", value: 10 }
+                    ],
+                    calculate: (vals) => {
+                        const cov = vals.sd / vals.m;
+                        const pct = cov * 100;
+                        let msg = pct > 15 ? `WARNING: High variation (${pct.toFixed(1)}%). The station is highly unpredictable, forcing you to hold buffer inventory.` : `Station is stable and predictable.`;
+                        return { result: `${pct.toFixed(1)}% Variation`, interpretation: `Coefficient of Variation (COV) shows ${pct.toFixed(1)}% Variation. ${msg}` };
+                    },
+                    pros: ["Statistical proof of instability"],
+                    cons: ["Hard for operators to calculate"],
+                    capa: ["Standardize operator training."]
+                },
+                "7.2 SERVICE LEVEL %": {
+                    definition: "The ultimate reality of whether you kept your promise to the market. It measures the strict percentage of orders that were successfully delivered on the exact date agreed upon with the buyer.",
+                    formula: "(On-Time Deliveries / Total Orders) x 100",
+                    jargon: "SL = Service Level",
+                    analogy: "Think of a famous 30-minute pizza delivery guarantee. The hungry customer doesn't care about your broken ovens, your internal traffic jams, or your missing delivery drivers. They only care if a hot pizza arrived exactly at the promised time.",
+                    example: "<strong>Given:</strong><br>On-Time = 95<br>Total = 100<br><br><strong>Calculation:</strong><br>95 / 100 = 95%",
+                    benchmark: [
+                        { range: "> 98%", meaning: "World Class Customer Trust" },
+                        { range: "95% - 98%", meaning: "Excellent, Industry Standard" },
+                        { range: "< 90%", meaning: "Poor, High Risk of Losing Customers" }
+                    ],
+                    inputs: [
+                        { id: "ot", label: "On Time Orders", value: 95 },
+                        { id: "totOrders", label: "Total Orders", value: 100 }
+                    ],
+                    calculate: (vals) => {
+                        const sl = (vals.ot / vals.totOrders)*100;
+                        let msg = sl < 95 ? `CRITICAL: You failed ${vals.totOrders - vals.ot} customers. Find root cause immediately.` : `Strong customer reliability.`;
+                        return { result: `${sl.toFixed(1)}%`, interpretation: `Service Level (SL) shows process reliability in fulfilling demand is at ${sl.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Customer facing metric"],
+                    cons: ["Lagging"],
+                    capa: ["Reduce cycle time variation."]
+                }
+            },
+            "Advanced": {
+                "8.1 OVERALL EQUIPMENT EFFECTIVENESS": {
+                    definition: "The undisputed gold standard metric for Total Productive Maintenance (TPM). OEE multiplies three severe penalities against your machine: how often it breaks down (Availability), how often it stutters or slows down (Performance), and how much garbage it produces (Quality).",
+                    formula: "Availability x Performance x Quality",
+                    jargon: "OEE = Overall Equipment Effectiveness",
+                    analogy: "Buying a highly expensive, premium streaming subscription. Availability is whether the app connects to the internet without crashing. Performance is whether the movie plays smoothly in 4K or buffers constantly. Quality is whether the movie is actually the one you clicked on. You strictly need all three to be satisfied with your investment.",
+                    example: "<strong>Given:</strong><br>A=90%, P=80%, Q=98%<br><br><strong>Calculation:</strong><br>0.90 x 0.80 x 0.98 = 70.5%",
+                    benchmark: [
+                        { range: "100%", meaning: "Perfect Production (Only good parts, as fast as possible, no stops)" },
+                        { range: "85%", meaning: "World-Class Manufacturing Benchmark" },
+                        { range: "60% - 85%", meaning: "Typical manufacturing capability" },
+                        { range: "< 40%", meaning: "Poor utilization (Significant intervention needed)" }
+                    ],
+                    inputs: [
+                        { id: "a", label: "Availability % (Uptime)", value: 90 },
+                        { id: "p", label: "Performance % (Speed)", value: 80 },
+                        { id: "q", label: "Quality % (Good Parts)", value: 98 }
+                    ],
+                    calculate: (vals) => {
+                        const oee = (vals.a/100)*(vals.p/100)*(vals.q/100)*100;
+                        let minVal = Math.min(vals.a, vals.p, vals.q);
+                        let focus = minVal === vals.a ? "Availability (Downtime)" : (minVal === vals.p ? "Performance (Micro-stops)" : "Quality (Defects)");
+                        let msg = oee >= 85 ? "World Class execution." : `WHAT-IF: To improve OEE fastest, target your weakest link: ${focus}.`;
+                        return { result: `${oee.toFixed(1)}% OEE`, interpretation: `Overall Equipment Effectiveness (OEE) represents comprehensive machine health at ${oee.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["TPM driver"],
+                    cons: ["Can be manipulated"],
+                    capa: ["SMED for Availability losses."]
+                },
+                "8.5 CASH-TO-CASH (C2C) CYCLE": {
+                    definition: "The ultimate survival metric for a business's treasury. It measures the excruciating time gap between the day you pay your raw material suppliers and the day your final customer actually pays you for the finished goods.",
+                    formula: "Days Inv + Days Sales Outstanding - Days Payable",
+                    jargon: "C2C = Cash-to-Cash | DIO = Days Inventory Outstanding | DSO = Days Sales Outstanding | DPO = Days Payable Outstanding",
+                    analogy: "A local restaurant owner's cash flow reality. You must buy fresh vegetables from the market on Monday morning (cash out), but the corporate customer won't pay the catering invoice until Friday afternoon (cash in). You must financially survive those 4 days without money. A negative C2C means customers prepay, essentially funding your business for you.",
+                    example: "<strong>Given:</strong><br>DIO=30, DSO=45, DPO=30<br><br><strong>Calculation:</strong><br>30 + 45 - 30 = 45 Days",
+                    inputs: [
+                        { id: "dio", label: "Days Inventory Outstanding", value: 30 },
+                        { id: "dso", label: "Days Sales Outstanding", value: 45 },
+                        { id: "dpo", label: "Days Payable Outstanding", value: 30 }
+                    ],
+                    calculate: (vals) => {
+                        const c2c = vals.dio + vals.dso - vals.dpo;
+                        let msg = c2c > 30 ? `WHAT-IF: By cutting Days Inventory in half (to ${vals.dio/2}), your C2C shrinks to ${c2c - (vals.dio/2)} days, vastly improving cash flow.` : `Excellent negative or low cash cycle.`;
+                        return { result: `${c2c} Days`, interpretation: `Cash-to-Cash (C2C) Cycle dictates you must self-finance ${c2c} days of operations before seeing profit. ${msg}` };
+                    },
+                    pros: ["CFO's favorite metric"],
+                    cons: ["Involves accounting"],
+                    capa: ["Reduce inventory to lower DIO."]
+                },
+                "8.6 DOCK-TO-DOCK TIME": {
+                    definition: "The widest macro-view of material velocity. It measures the absolute duration from the exact minute raw material hits your receiving dock until the moment the finished goods are loaded onto a truck leaving your shipping dock.",
+                    formula: "Wait + Process + FG Store Time",
+                    jargon: "D2D = Dock-to-Dock | FG = Finished Goods",
+                    analogy: "A patient's total hospital stay experience. It begins the exact second they walk through the emergency room doors (Dock 1) and doesn't end until they are fully discharged and walking to their car (Dock 2). It powerfully highlights how much of that time they spent just lying in beds waiting for doctors.",
+                    example: "<strong>Given:</strong><br>Raw Wait=10d, Mfg=2d, FG Wait=5d<br><br><strong>Calculation:</strong><br>Total = 17 Days",
+                    inputs: [
+                        { id: "rw", label: "Raw Material Wait (Days)", value: 10 },
+                        { id: "mfg", label: "Mfg Lead Time (Days)", value: 2 },
+                        { id: "fg", label: "FG Storage Wait (Days)", value: 5 }
+                    ],
+                    calculate: (vals) => {
+                        const d2d = vals.rw + vals.mfg + vals.fg;
+                        let ratio = (vals.mfg / d2d) * 100;
+                        let msg = ratio < 20 ? `WHAT-IF: Manufacturing takes only ${vals.mfg} days. The other ${vals.rw + vals.fg} days are pure waste. Target the warehouse first.` : `Solid flow velocity.`;
+                        return { result: `${d2d} Days Velocity`, interpretation: `Dock-to-Dock (D2D) Time is the total time material is on your books. ${msg}` };
+                    },
+                    pros: ["Holistic view"],
+                    cons: ["Hard to trace exactly"],
+                    capa: ["Just in Time raw deliveries."]
+                },
+                "9.1 STANDARD TIME": {
+                    definition: "The ethical and realistic baseline for human work. It takes the raw, sprint-speed Cycle Time and mathematically adds required allowances for operator fatigue, bathroom breaks, and minor ergonomic delays over a full 8-hour shift.",
+                    formula: "Cycle Time x (1 + Allowance %)",
+                    jargon: "ST = Standard Time | CT = Cycle Time",
+                    analogy: "Planning a family road trip. Google Maps might say driving at 100km/h non-stop takes exactly 5 hours (Cycle Time). But Standard Time realistically includes bathroom breaks, stopping for chai, and stretching your legs, meaning the trip actually takes 6.5 hours. You must plan your arrival based on 6.5, not 5.",
+                    example: "<strong>Given:</strong><br>CT = 10m<br>Allowance = 15%<br><br><strong>Calculation:</strong><br>10 x 1.15 = 11.5 mins",
+                    inputs: [
+                        { id: "ct", label: "Observed CT (mins)", value: 10 },
+                        { id: "al", label: "Allowance (%)", value: 15 }
+                    ],
+                    calculate: (vals) => {
+                        const st = vals.ct * (1 + (vals.al/100));
+                        return { result: `${st.toFixed(1)} Mins`, interpretation: `Standard Time (ST) is a fair pacing target for operators over an 8hr shift. Never plan manpower on raw CT.` };
+                    },
+                    pros: ["Fair to workers"],
+                    cons: ["Allowance can be debated"],
+                    capa: ["Ergonomic improvements to lower allowance needed."]
+                },
+                "9.2 OPERATOR UTILIZATION %": {
+                    definition: "A ratio comparing the amount of active, value-adding work assigned to a human being versus the amount of time they are being paid to simply stand at their station. High utilization means engagement; low utilization means you are paying for idle hands.",
+                    formula: "(Standard Time Required / Paid Time) x 100",
+                    jargon: "OU = Operator Utilization",
+                    analogy: "Signing up for an expensive premium gym membership. You pay a heavy fee for 24-hour access, but if you only go to the gym to work out for 20 minutes a week, your utilization of that expensive asset is terrible. Factories cannot afford to pay for skilled labor that is forced to stand idle.",
+                    example: "<strong>Given:</strong><br>Std = 400m<br>Paid = 480m<br><br><strong>Calculation:</strong><br>400/480 = 83.3%",
+                    inputs: [
+                        { id: "st", label: "Standard Work Done (mins)", value: 400 },
+                        { id: "paid", label: "Paid Shift Time (mins)", value: 480 }
+                    ],
+                    calculate: (vals) => {
+                        const u = (vals.st/vals.paid)*100;
+                        let msg = u < 75 ? `High idle time detected.` : (u > 95 ? "Overworked. Burnout risk." : "Good engagement zone.");
+                        return { result: `${u.toFixed(1)}%`, interpretation: `Operator Utilization (OU) reflects the engagement level of staff. ${msg}` };
+                    },
+                    pros: ["Highlights idle waste"],
+                    cons: ["Can encourage rushing"],
+                    capa: ["Balance lines."]
+                },
+                "9.3 HANDOFF TIME": {
+                    definition: "The administrative and physical delays that occur exclusively at the borders between different departments. These are the black holes of a Value Stream Map where accountability vanishes and products sit waiting for a new supervisor to take charge.",
+                    formula: "Time finished - Time started at next dept",
+                    jargon: "",
+                    analogy: "Passing a highly sensitive file from one government bureaucracy department to another. The file sits in a 'Pending' tray for 3 solid days before a clerk finally stamps it and walks it over to the next department's 'Inbox'. That handoff destroys operational speed.",
+                    example: "<strong>Given:</strong><br>Delay = 4 hours<br><br><strong>Calculation:</strong><br>Total = 4 Hours Waste",
+                    inputs: [
+                        { id: "ht", label: "Delay between stations (hrs)", value: 4 }
+                    ],
+                    calculate: (vals) => {
+                        let msg = vals.ht > 2 ? `WHAT-IF: By creating a continuous cross-departmental cell, you recover ${vals.ht} hours of dead time.` : `Handoffs are reasonably smooth.`;
+                        return { result: `${vals.ht} Hours Delay`, interpretation: `Handoff Time between siloed departments causes massive VSM peaks. ${msg}` };
+                    },
+                    pros: ["Breaks down silos"],
+                    cons: ["Often unmeasured"],
+                    capa: ["Continuous flow cells across boundaries."]
+                },
+                "10.1 MANUAL TIME": {
+                    definition: "The strict portion of the cycle time where human intervention is absolutely mandatory. During this time, the operator cannot leave the station to perform other tasks because their physical hands are required to move the process forward.",
+                    formula: "Time operator physically touches part",
+                    jargon: "",
+                    analogy: "Hand-whisking cream in a bowl for a cake. You absolutely cannot step away, answer a phone call, or prep another ingredient. Your physical hands, eyes, and focus are 100% anchored to the bowl until the task is completely finished.",
+                    example: "<strong>Given:</strong><br>Load/Unload = 2m<br><br><strong>Calculation:</strong><br>Manual = 2 mins",
+                    inputs: [
+                        { id: "mt", label: "Manual touches (mins)", value: 2 },
+                        { id: "ct", label: "Total Station CT (mins)", value: 10 }
+                    ],
+                    calculate: (vals) => {
+                        let auto = vals.ct - vals.mt;
+                        let msg = auto > 0 ? `Operator is free for ${auto} mins while machine runs. They can man another station.` : `Operator is tied to the station 100% of the time.`;
+                        return { result: `${vals.mt} Mins Human`, interpretation: `Manual Time means the operator is tied to the station for ${vals.mt} mins. ${msg}` };
+                    },
+                    pros: ["Shows multi-machine potential"],
+                    cons: ["Ergonomic risk"],
+                    capa: ["Auto-eject mechanisms."]
+                },
+                "10.2 MACHINE TIME": {
+                    definition: "The highly valuable portion of the cycle time where equipment runs automatically. This represents the 'walk-away' time where a savvy factory manager can assign the operator to load a second machine in parallel, instantly doubling productivity.",
+                    formula: "Time machine runs independent of human",
+                    jargon: "",
+                    analogy: "Putting dirty clothes into an automatic washing machine. Once you press the 'Start' button, the machine takes over the labor completely. You are completely liberated to walk away, cook dinner, or read a book (run a second process) while the cycle finishes automatically.",
+                    example: "<strong>Given:</strong><br>Auto cycle = 8m<br><br><strong>Calculation:</strong><br>Machine = 8 mins",
+                    inputs: [
+                        { id: "mct", label: "Auto cycle (mins)", value: 8 }
+                    ],
+                    calculate: (vals) => {
+                        return { result: `${vals.mct} Mins Auto`, interpretation: `Machine Time means the operator is completely free for ${vals.mct} mins. Optimize this 'walk away' time.` };
+                    },
+                    pros: ["Allows parallel work"],
+                    cons: ["Fixed constraint"],
+                    capa: ["Operator runs 2nd machine during this time."]
+                },
+                "10.3 REWORK RATE %": {
+                    definition: "The ultimate hidden factory metric. Rework tracks the products that failed initial quality checks but were deemed 'salvageable'. It masks severe process failures because the final output looks fine, but it cost you double the labor to achieve it.",
+                    formula: "(Reworked Units / Total) x 100",
+                    jargon: "",
+                    analogy: "Carefully ironing a formal shirt, but realizing you created massive new wrinkles on the sleeves, forcing you to iron the exact same shirt all over again. You expended twice the energy, heat, and time to achieve the result you should have easily gotten the first time.",
+                    example: "<strong>Given:</strong><br>Rework = 85<br>Total = 1000<br><br><strong>Calculation:</strong><br>85/1000 = 8.5%",
+                    benchmark: [
+                        { range: "< 1%", meaning: "World Class Quality" },
+                        { range: "1% - 5%", meaning: "Acceptable but costly" },
+                        { range: "> 5%", meaning: "High Waste (Hidden Factory operating)" }
+                    ],
+                    inputs: [
+                        { id: "rw", label: "Rework Units", value: 85 },
+                        { id: "tot", label: "Total Units", value: 1000 }
+                    ],
+                    calculate: (vals) => {
+                        const rate = (vals.rw/vals.tot)*100;
+                        let msg = rate > 5 ? `WHAT-IF: By fixing the root cause, you gain back ${vals.rw} units of pure manufacturing capacity.` : `Rework is contained.`;
+                        return { result: `${rate.toFixed(1)}% Rework`, interpretation: `Rework Rate represents a hidden capacity drain calculating to ${rate.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Identifies hidden factory"],
+                    cons: ["Operators hide it"],
+                    capa: ["Stop line on defect."]
+                },
+                "10.4 BATCH SIZE": {
+                    definition: "The fundamental enemy of One-Piece Flow. A batch size dictates how many units are grouped together and forced to wait for each other before moving to the next workstation. Massive batches artificially inflate your Lead Time to disastrous levels.",
+                    formula: "Units processed together before moving.",
+                    jargon: "",
+                    analogy: "Waiting for a city bus to depart. The bus driver refuses to leave the stop until all 50 seats are filled. Even if you arrived first, you must sit and wait 45 minutes for the other 49 passengers to arrive. One-Piece Flow is taking an auto-rickshaw that leaves the exact second you sit down.",
+                    example: "<strong>Given:</strong><br>Batch = 100<br>CT = 1m<br><br><strong>Calculation:</strong><br>First part waits 99m to move.",
+                    inputs: [
+                        { id: "b", label: "Batch Size", value: 100 },
+                        { id: "ct", label: "Cycle Time (mins)", value: 1 }
+                    ],
+                    calculate: (vals) => {
+                        const wait = (vals.b - 1) * vals.ct;
+                        let whatIf = vals.b > 1 ? `WHAT-IF: Reducing the batch size to exactly 1 (One-Piece Flow) eliminates ${wait} mins of delay per cycle.` : `Perfect One-Piece Flow.`;
+                        return { result: `${wait} Mins Delay`, interpretation: `Batch Size delays Part 1 by waiting ${wait}m for the rest of the batch to finish. ${whatIf}` };
+                    },
+                    pros: ["Spreads setup cost"],
+                    cons: ["Massively inflates lead time"],
+                    capa: ["SMED to enable batch size of 1."]
+                },
+                "10.5 SUPPLIER LEAD TIME (LT)": {
+                    definition: "The boundary of your internal control. This measures the external agility of your supply chain, spanning the moment purchasing places a PO to the moment the physical material clears your inbound quality inspection.",
+                    formula: "Order + Mfg + Transit + Inspect",
+                    jargon: "LT = Lead Time | Mfg = Manufacturing",
+                    analogy: "Ordering a custom-stitched wedding outfit from a tailor in another distant city. The time delay isn't just the few hours of actual stitching; it's the slow courier service traversing highways, navigating borders, and clearing checkpoints before the box finally reaches your doorstep.",
+                    example: "<strong>Given:</strong><br>Order=1, Mfg=14, Trans=5, Insp=2<br><br><strong>Calculation:</strong><br>Total = 22 Days",
+                    inputs: [
+                        { id: "o", label: "Order/Mfg (Days)", value: 15 },
+                        { id: "t", label: "Transit/Insp (Days)", value: 7 }
+                    ],
+                    calculate: (vals) => {
+                        let tot = vals.o + vals.t;
+                        let msg = tot > 14 ? `WHAT-IF: If you can develop a local supplier to cut Transit time, you can massively drop your required safety stock.` : `Agile supply chain.`;
+                        return { result: `${tot} Days`, interpretation: `Supplier Lead Time (LT) forces you to hold at least ${tot} days of raw material inventory. ${msg}` };
+                    },
+                    pros: ["Shows external risk"],
+                    cons: ["Hard to control globally"],
+                    capa: ["Localize supply chain."]
+                },
+                "10.6 CUSTOMER SERVICE LEVEL": {
+                    definition: "The ultimate moment of truth. This metric asks a ruthless binary question: Did the customer receive exactly what they ordered (In-Full), on the exact date you promised them (On-Time)? Any deviation is considered a complete failure.",
+                    formula: "(Orders OTIF / Total Orders) x 100",
+                    jargon: "CSL = Customer Service Level | OTIF = On-Time and In-Full",
+                    analogy: "A courier delivering a birthday gift to a friend. Sending the absolute perfect, highly expensive gift (In-Full) is completely useless if it arrives three days after the person's birthday party is over (Not On-Time). Both conditions must be met flawlessly for it to count as a success.",
+                    example: "<strong>Given:</strong><br>OTIF = 495<br>Total = 500<br><br><strong>Calculation:</strong><br>495 / 500 = 99%",
+                    benchmark: [
+                        { range: "> 98%", meaning: "World Class Customer Trust" },
+                        { range: "95% - 98%", meaning: "Excellent, Industry Standard" },
+                        { range: "< 90%", meaning: "Poor, High Risk of Losing Customers" }
+                    ],
+                    inputs: [
+                        { id: "ot", label: "OTIF Orders", value: 495 },
+                        { id: "totOrders", label: "Total Orders", value: 500 }
+                    ],
+                    calculate: (vals) => {
+                        const csl = (vals.ot/vals.totOrders)*100;
+                        let msg = csl < 95 ? `CRITICAL: You failed ${vals.totOrders - vals.ot} customers. Find root cause immediately.` : `Strong customer reliability.`;
+                        return { result: `${csl.toFixed(1)}% CSL`, interpretation: `Customer Service Level (CSL) is the final grade of your entire VSM effort scoring ${csl.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Ultimate alignment metric"],
+                    cons: ["Lagging indicator"],
+                    capa: ["Root cause analysis on missed deliveries."]
+                },
+                "VSM Mapping Methodology": {
+                    definition: "The strategic, step-by-step diagnostic process used by Lean leaders. You must always draw the chaotic 'Current State' exactly as it operates today, aggressively analyze the waste, and only then design an idealized 'Future State' flow.",
+                    formula: "Current State -> Analysis -> Future State",
+                    jargon: "VSM = Value Stream Mapping | PCE = Process Cycle Efficiency | VA = Value Added | LT = Lead Time",
+                    analogy: "High-level medical diagnostics. A good doctor doesn't just hand you random pills immediately. They map your 'Current State' with an X-ray, carefully analyze the root cause of the pain, and then strictly prescribe a 'Future State' treatment plan. VSM is the X-ray for your factory.",
+                    example: "<strong>Given:</strong><br>Current LT = 24d<br>Target PCE = 25%<br>VA = 1d<br><br><strong>Calculation:</strong><br>Target LT = 1 / 0.25 = 4 Days",
+                    inputs: [
+                        { id: "lt", label: "Current LT (Days)", value: 24 },
+                        { id: "va", label: "VA Time (Days)", value: 1 },
+                        { id: "pce", label: "Target PCE %", value: 25 }
+                    ],
+                    calculate: (vals) => {
+                        const target = vals.va / (vals.pce/100);
+                        let save = vals.lt - target;
+                        return { result: `Target LT: ${target.toFixed(1)} Days`, interpretation: `Value Stream Mapping (VSM) Methodology helps eliminate waste. WHAT-IF: Hitting your Target PCE means you will eliminate ${save.toFixed(1)} days of waste from your Current State Lead Time.` };
+                    },
+                    pros: ["Systemic vision"],
+                    cons: ["Requires discipline"],
+                    capa: ["Walk the Gemba."]
+                },
+                "VSM Symbols & Notation Architecture": {
+                    definition: "The universally standardized visual language of Lean. It utilizes specific icons to represent information flow at the top, physical material flow in the middle, and the vital timeline at the bottom, creating a map anyone can instantly read.",
+                    formula: "Info + Process + Flow = VSM",
+                    jargon: "VSM = Value Stream Mapping | MRP = Material Requirements Planning",
+                    analogy: "A symphony musician reading complex sheet music. Without standard symbols, an orchestra would just play chaotic noise. With standard notes (like Push arrows and Kanban posts), every single team member knows exactly when to play fast, when to slow down, and when to pause.",
+                    example: "<strong>Given:</strong><br>Push = 5<br>Pull = 1<br><br><strong>Calculation:</strong><br>Ratio = 1/6 = 16.6% Lean",
+                    inputs: [
+                        { id: "push", label: "Push Arrows", value: 5 },
+                        { id: "pull", label: "Pull Symbols", value: 1 }
+                    ],
+                    calculate: (vals) => {
+                        const ratio = vals.pull / (vals.push+vals.pull) * 100;
+                        let msg = vals.push > 0 ? `WHAT-IF: Every Push arrow converted to a Pull Symbol cuts out an inventory triangle.` : `Perfect Lean map.`;
+                        return { result: `${ratio.toFixed(0)}% Pull Base`, interpretation: `Value Stream Mapping (VSM) Symbols architecture shows your system relies on Pull ${ratio.toFixed(0)}% of the time. ${msg}` };
+                    },
+                    pros: ["Universal language"],
+                    cons: ["Complex for beginners"],
+                    capa: ["Replace straight arrows with supermarkets."]
+                },
+                "Push vs. Pull Systems (Kanban)": {
+                    definition: "The massive cultural shift from pushing parts forward based on a wildly inaccurate sales forecast (Push), to only manufacturing exactly what the downstream station has actually consumed (Pull) using visual Kanban signals.",
+                    formula: "WIP Reduction via Supermarkets",
+                    jargon: "WIP = Work In Progress | MRP = Material Requirements Planning",
+                    analogy: "A cafeteria buffet (Push) versus a luxury fine-dining restaurant (Pull). The buffet blindly cooks 100 kilos of rice hoping people eat it, risking massive food waste. Fine dining only fires up the stove the exact second the waiter hands them your specific, paid ticket.",
+                    example: "<strong>Given:</strong><br>Push WIP = 1500<br>Pull Target = 300<br>Cost = ₹500<br><br><strong>Calculation:</strong><br>Saved = 1200 x 500 = ₹6,00,000",
+                    inputs: [
+                        { id: "pwip", label: "Current Push WIP", value: 1500 },
+                        { id: "twip", label: "Target Pull WIP", value: 300 },
+                        { id: "unitCost", label: "Unit Cost (₹)", value: 500 }
+                    ],
+                    calculate: (vals) => {
+                        const sav = (vals.pwip - vals.twip) * vals.unitCost;
+                        return { result: `₹${sav.toLocaleString('en-IN')} Freed`, interpretation: `Pull Systems (Kanban) transition instantly liberates ₹${sav.toLocaleString('en-IN')} in working capital by switching from pushing ${vals.pwip} units to pulling ${vals.twip} units.` };
+                    },
+                    pros: ["Reduces capital trapped"],
+                    cons: ["Vulnerable to supply shocks"],
+                    capa: ["Implement 2-bin system."]
+                },
+                "Future State: Heijunka (Load Leveling)": {
+                    definition: "The advanced technique of smoothing out volatile customer orders. Instead of forcing the factory to build 500 units of A today and 0 tomorrow, Heijunka mixes the schedule into a predictable, leveled pattern that totally absorbs demand spikes.",
+                    formula: "Pitch = Takt Time x Pack Size",
+                    jargon: "Heijunka = Load Leveling | SMED = Single-Minute Exchange of Die",
+                    analogy: "Consider a highway toll booth. If 500 cars arrive at the exact same minute (spiky demand), the entire system jams for hours. If those exact same 500 cars arrive steadily, one every few seconds (Load Leveling), traffic flows completely smoothly without a single traffic jam.",
+                    example: "<strong>Given:</strong><br>Takt = 10m<br>Pack = 5<br><br><strong>Calculation:</strong><br>Pitch = 10 x 5 = 50 mins",
+                    inputs: [
+                        { id: "takt", label: "Takt (mins)", value: 10 },
+                        { id: "pack", label: "Pack Size", value: 5 }
+                    ],
+                    calculate: (vals) => {
+                        const pitch = vals.takt * vals.pack;
+                        let whatIf = pitch > 60 ? `WHAT-IF: To create a tighter management rhythm (<60m), reduce the pack size from ${vals.pack} down to ${Math.floor(60/vals.takt)}.` : `Rhythm is tight and lean.`;
+                        return { result: `${pitch} Mins Rhythm`, interpretation: `Heijunka (Load Leveling) Pitch is your smooth factory pacemaker set to ${pitch} minutes. ${whatIf}` };
+                    },
+                    pros: ["Kills bullwhip effect"],
+                    cons: ["Requires fast SMED"],
+                    capa: ["Use Heijunka box."]
+                },
+                "Process Cycle Efficiency (PCE) Analysis": {
+                    definition: "The ultimate mathematical grade for your Value Stream Map. It definitively compares the tiny fraction of time your product was actually being transformed (Value Add) against the massive duration it spent suffering in queues and storage.",
+                    formula: "(VA Time / Lead Time) x 100",
+                    jargon: "PCE = Process Cycle Efficiency | VA = Value Added | LT = Lead Time | VSM = Value Stream Mapping",
+                    analogy: "Extracting pure juice from a massive sugarcane stalk. The tiny glass of sweet juice you get is your Value Added Time. The massive pile of crushed, useless fiber left behind is your waiting and Lead Time waste. PCE shows exactly how much real juice you are actually getting from the process.",
+                    example: "<strong>Given:</strong><br>VA = 180m<br>LT = 7200m<br><br><strong>Calculation:</strong><br>180 / 7200 = 2.5%",
+                    benchmark: [
+                        { range: "< 10%", meaning: "Traditional batch-and-queue factory" },
+                        { range: "10% - 25%", meaning: "Moderate flow (Improving)" },
+                        { range: "25% - 40%", meaning: "Advanced Lean system" },
+                        { range: "> 40%", meaning: "World-Class Flow" }
+                    ],
+                    inputs: [
+                        { id: "va", label: "VA (mins)", value: 180 },
+                        { id: "lt", label: "Lead Time (days)", value: 15 },
+                        { id: "shift", label: "Shift mins/day", value: 480 }
+                    ],
+                    calculate: (vals) => {
+                        const pce = (vals.va / (vals.lt*vals.shift)) * 100;
+                        let msg = pce < 10 ? `CRITICAL: You are trapped in Batch-and-Queue.` : `Strong VSM flow ratio.`;
+                        return { result: `${pce.toFixed(1)}% PCE`, interpretation: `Process Cycle Efficiency (PCE) is the true measure of flow efficiency in the entire stream resulting in ${pce.toFixed(1)}%. ${msg}` };
+                    },
+                    pros: ["Baseline for transformation"],
+                    cons: ["Depressing early numbers"],
+                    capa: ["Link disconnected cells."]
+                }
+            }
+        };
+ 
+        // DOM Elements
+        const levelSelect = document.getElementById('levelSelect');
+        const topicSelect = document.getElementById('topicSelect');
+        const contentArea = document.getElementById('contentArea');
+        const placeholderArea = document.getElementById('placeholderArea');
+        
+        // Content Elements
+        const topicTitle = document.getElementById('topicTitle');
+        const levelBadge = document.getElementById('levelBadge');
+        const topicDef = document.getElementById('topicDef');
+        const topicFormula = document.getElementById('topicFormula');
+        const topicAnalogy = document.getElementById('topicAnalogy');
+        const topicExample = document.getElementById('topicExample');
+        
+        // Jargon Elements
+        const jargonContainer = document.getElementById('jargonContainer');
+        const topicJargon = document.getElementById('topicJargon');
+        
+        // Calculator Elements
+        const calculatorInputs = document.getElementById('calculatorInputs');
+        const calcBtn = document.getElementById('calcBtn');
+        const calcResult = document.getElementById('calcResult');
+        const calcInterpretation = document.getElementById('calcInterpretation');
+        
+        // CAPA Elements
+        const listPros = document.getElementById('listPros');
+        const listCons = document.getElementById('listCons');
+        const listCapa = document.getElementById('listCapa');
+ 
+        // Benchmarking Elements
+        const benchmarkBtn = document.getElementById('benchmarkBtn');
+        const benchmarkModal = document.getElementById('benchmarkModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const closeModalBtnBottom = document.getElementById('closeModalBtnBottom');
+        const benchmarkTableBody = document.getElementById('benchmarkTableBody');
+ 
+        let currentTopicData = null;
+ 
+        // Event Listeners
+        levelSelect.addEventListener('change', function() {
+            const level = this.value;
+            topicSelect.innerHTML = '<option value="">-- Select Topic --</option>';
+            
+            if (level && vsmData[level]) {
+                const topics = Object.keys(vsmData[level]);
+                topics.forEach(topic => {
+                    const opt = document.createElement('option');
+                    opt.value = topic;
+                    opt.textContent = topic;
+                    topicSelect.appendChild(opt);
+                });
+                topicSelect.disabled = false;
+                topicSelect.classList.remove('bg-slate-200');
+                topicSelect.classList.add('bg-slate-50');
+            } else {
+                topicSelect.disabled = true;
+                topicSelect.classList.add('bg-slate-200');
+            }
+            
+            contentArea.classList.add('hidden');
+            placeholderArea.classList.remove('hidden');
+            benchmarkBtn.classList.add('hidden');
+        });
+ 
+        topicSelect.addEventListener('change', function() {
+            const level = levelSelect.value;
+            const topic = this.value;
+            
+            if (level && topic && vsmData[level][topic]) {
+                currentTopicData = vsmData[level][topic];
+                renderContent(topic, level, currentTopicData);
+                placeholderArea.classList.add('hidden');
+                
+                contentArea.classList.remove('fade-in');
+                void contentArea.offsetWidth;
+                contentArea.classList.add('fade-in');
+                contentArea.classList.remove('hidden');
+            } else {
+                contentArea.classList.add('hidden');
+                placeholderArea.classList.remove('hidden');
+                benchmarkBtn.classList.add('hidden');
+            }
+        });
+ 
+        calcBtn.addEventListener('click', function() {
+            if(!currentTopicData) return;
+            
+            const inputVals = {};
+            let allValid = true;
+            
+            currentTopicData.inputs.forEach(inp => {
+                const el = document.getElementById(inp.id);
+                const val = parseFloat(el.value);
+                if(isNaN(val)) {
+                    allValid = false;
+                    el.classList.add('border-red-500');
+                } else {
+                    el.classList.remove('border-red-500');
+                    inputVals[inp.id] = val;
+                    // SAVE TO GLOBAL STATE
+                    sharedState[inp.id] = val; 
+                }
+            });
+ 
+            if(!allValid) {
+                alert("Please enter valid numbers in all fields.");
+                return;
+            }
+ 
+            const resultObj = currentTopicData.calculate(inputVals);
+            
+            calcResult.textContent = resultObj.result;
+            calcInterpretation.textContent = resultObj.interpretation;
+            
+            calcResult.classList.remove('fade-in');
+            void calcResult.offsetWidth;
+            calcResult.classList.add('fade-in');
+        });
+ 
+        // Benchmarking Modal Logic
+        const closeBenchmarkModal = () => {
+            benchmarkModal.classList.add('hidden');
+        };
+ 
+        benchmarkBtn.addEventListener('click', () => {
+            benchmarkModal.classList.remove('hidden');
+        });
+        
+        closeModalBtn.addEventListener('click', closeBenchmarkModal);
+        closeModalBtnBottom.addEventListener('click', closeBenchmarkModal);
+ 
+        // Close modal when clicking outside the box
+        benchmarkModal.addEventListener('click', (e) => {
+            if (e.target === benchmarkModal) closeBenchmarkModal();
+        });
+ 
+        function renderContent(title, level, data) {
+            topicTitle.textContent = title;
+            levelBadge.textContent = level;
+            
+            levelBadge.className = 'font-bold px-3 py-1 rounded text-black border-2 uppercase text-xs tracking-wider';
+            if(level === 'Basics') levelBadge.classList.add('bg-blue-100', 'border-blue-500');
+            else if(level === 'Intermediate') levelBadge.classList.add('bg-purple-100', 'border-purple-500');
+            else levelBadge.classList.add('bg-red-100', 'border-red-500');
+ 
+            topicDef.textContent = data.definition;
+            topicFormula.textContent = data.formula;
+            topicAnalogy.innerHTML = `"${data.analogy}"`;
+            topicExample.innerHTML = data.example;
+ 
+            // Handle Jargon Expansion
+            if (data.jargon && data.jargon.trim() !== "") {
+                jargonContainer.classList.remove('hidden');
+                topicJargon.innerHTML = data.jargon;
+            } else {
+                jargonContainer.classList.add('hidden');
+            }
+ 
+            // Handle Benchmarking Button and Table
+            if (data.benchmark && data.benchmark.length > 0) {
+                benchmarkBtn.classList.remove('hidden');
+                benchmarkTableBody.innerHTML = '';
+                data.benchmark.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 border-b border-slate-200 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-3 border-r border-slate-300 font-bold whitespace-nowrap">${row.range}</td>
+                        <td class="p-3 text-slate-700 font-medium">${row.meaning}</td>
+                    `;
+                    benchmarkTableBody.appendChild(tr);
+                });
+            } else {
+                benchmarkBtn.classList.add('hidden');
+            }
+ 
+            calculatorInputs.innerHTML = '';
+
+            data.inputs.forEach(inp => {
+                // Check if we have a saved value in the Global State, otherwise use default
+                const prefilledValue = sharedState[inp.id] !== undefined ? sharedState[inp.id] : inp.value;
+                
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label class="block font-bold text-black mb-1 uppercase text-xs tracking-wide">${inp.label}</label>
+                    <input type="number" id="${inp.id}" value="${prefilledValue}" step="any" class="w-full p-2 border-2 border-slate-400 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-medium text-black bg-slate-50">
+                `;
+                calculatorInputs.appendChild(div);
+            });
+            
+            // Add listeners to immediately save typing into shared state so it persists even without clicking Calculate
+            data.inputs.forEach(inp => {
+                document.getElementById(inp.id).addEventListener('input', (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                        sharedState[inp.id] = val;
+                    }
+                });
+            });
+ 
+            calcResult.textContent = '--';
+            calcInterpretation.textContent = 'Enter values and calculate to see the analysis based on lean manufacturing principles.';
+ 
+            const populateList = (el, arr) => {
+                el.innerHTML = '';
+                arr.forEach(item => {
+                    const li = document.createElement('li');
+                    li.textContent = item;
+                    el.appendChild(li);
+                });
+            };
+ 
+            populateList(listPros, data.pros);
+            populateList(listCons, data.cons);
+            populateList(listCapa, data.capa);
+        }
+    </script>
+</body>
+</html>

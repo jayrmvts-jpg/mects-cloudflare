@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise ANOVA Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.6/jstat.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* EXCEL TABLE STYLING */
+        .excel-table { border-collapse: collapse; width: 100%; white-space: nowrap; }
+        .excel-table th, .excel-table td { border: 1px solid #d1d5db; padding: 0.4rem 0.75rem; text-align: left; font-size: 0.8125rem; }
+        .excel-table th { background-color: #f3f4f6; font-weight: 600; color: #374151; position: sticky; top: 0; }
+        .excel-table tr:nth-child(even) { background-color: #fdfdfd; }
+        .excel-table tr:hover { background-color: #eef2ff; transition: background 0.2s; }
+        
+        /* TRAFFIC LIGHTS */
+        .tl-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 4px rgba(0,0,0,0.2); }
+        .tl-red { background-color: #ef4444; box-shadow: 0 0 6px #ef4444; }
+        .tl-yellow { background-color: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+        .tl-green { background-color: #10b981; box-shadow: 0 0 6px #10b981; }
+
+        /* TOOLTIP HOVER - FIXED TO POP UP OVER EVERYTHING */
+        .has-tooltip { position: relative; cursor: help; border-bottom: 1px dotted #94a3b8; display: inline-block; }
+        .has-tooltip .tooltip { visibility: hidden; width: max-content; max-width: 250px; background-color: #1e293b; color: #fff; text-align: left; border-radius: 6px; padding: 8px 12px; position: absolute; z-index: 99999; bottom: 100%; margin-bottom: 8px; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.75rem; font-weight: normal; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.5); white-space: normal;}
+        .has-tooltip .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #1e293b transparent transparent transparent; }
+        .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; }
+
+        /* SCROLLBARS */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* CUSTOM INPUTS */
+        .data-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.75rem; font-size: 0.8125rem; font-family: 'Courier New', Courier, monospace; white-space: pre; overflow-wrap: normal; overflow-x: scroll; resize: vertical; min-height: 180px; tab-size: 4; line-height: 1.5; }
+        .data-input:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        /* NOTIFICATION TOAST */
+        #error-toast { transform: translateY(-150%); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #error-toast.show { transform: translateY(0); }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-900 pb-20">
+
+    <!-- Error Toast -->
+    <div id="error-toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 font-semibold text-sm max-w-lg w-full justify-between">
+        <div class="flex items-center gap-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span id="error-message">Error message here</span>
+        </div>
+        <button onclick="closeError()" class="text-white hover:text-red-200">&times;</button>
+    </div>
+
+    <!-- Header Section -->
+    <header class="bg-[#107c41] text-white py-4 px-6 sticky top-0 z-20 shadow-md">
+        <div class="max-w-screen-2xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex flex-col items-center sm:items-start gap-1">
+                <div class="text-3xl font-extrabold tracking-widest text-white drop-shadow-sm">
+                    MECTS SET GO
+                </div>
+                <h1 class="text-sm font-bold flex items-center gap-2 text-green-100 uppercase tracking-wider">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    ENTERPRISE ANOVA PLATFORM
+                </h1>
+            </div>
+            <div class="text-sm font-bold bg-green-800/50 px-4 py-2 rounded-md border border-green-700 hover:bg-green-700/50 transition-colors">
+                <a href="https://www.mects.in" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                    www.mects.in
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-screen-2xl mx-auto p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        <!-- Left Panel: Data & Setup -->
+        <aside class="xl:col-span-4 space-y-4">
+            
+            <!-- Industry Selector -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-bold text-slate-800 mb-2 uppercase tracking-wide flex items-center gap-2">
+                    1. Select Industry Dataset
+                </h2>
+                <select id="industry-select" onchange="loadDataset()" class="w-full border border-slate-300 rounded-md py-1.5 px-2 text-xs bg-slate-50 focus:ring-2 focus:ring-blue-500 font-medium">
+                    <option value="" disabled selected>-- Choose from 20 Live Scenarios --</option>
+                    <optgroup label="One-Way ANOVA Compare 3 or More Groups">
+                        <option value="tech_sal">Tech: Salaries by Dept in Thousands</option>
+                        <option value="retail_wages">Retail: Wages by Role Hourly</option>
+                        <option value="health_rec">Healthcare: Surgery Recovery in Days</option>
+                        <option value="crop_yield">Agriculture: Crop Yield by Fertilizer</option>
+                        <option value="mktg_roi">Marketing: ROI by Ad Channel Percentage</option>
+                        <option value="edu_scores">Education: Test Scores by Method</option>
+                        <option value="ecom_sales">E-Commerce: Sales by Region in Thousands</option>
+                        <option value="retail_csat">Retail: CSAT Score by Store Location</option>
+                        <option value="battery_life">Consumer Tech: Battery Life by Brand</option>
+                        <option value="house_price">Real Estate: Housing Prices by Area</option>
+                        <option value="bpo_aht">BPO: Average Handle Time by Agent</option>
+                        <option value="digital_ads">Digital: Click Rates by Platform Percentage</option>
+                    </optgroup>
+                    <optgroup label="Two-Way ANOVA Without Replication">
+                        <option value="pharma_eff">Pharma: Drug Efficacy by Age and Dose</option>
+                        <option value="web_traffic">Web: Traffic by Source and Day of Week</option>
+                        <option value="health_bp">Health: Blood Pressure by Diet and Exercise</option>
+                        <option value="hr_attr">HR: Attrition Rate by Dept and Tenure</option>
+                    </optgroup>
+                    <optgroup label="Two-Way ANOVA With Replication">
+                        <option value="mfg_defects">Mfg: Defects by Shift and Machine with 3 Replications</option>
+                        <option value="it_servers">IT: Server Latency by Load and Region with 4 Replications</option>
+                        <option value="aero_stress">Aerospace: Metal Stress by Temp and Press with 2 Replications</option>
+                        <option value="botany_growth">Botany: Plant Growth by Light and Water with 5 Replications</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Configuration Form -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wide">2. Data & Parameters</h2>
+                    <button onclick="clearData()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold underline">Clear Form</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Configuration Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-black mb-1 uppercase tracking-wider">ANALYSIS TYPE</label>
+                            <select id="anova-type" onchange="toggleRepInput()" class="w-full border border-slate-400 rounded-md py-1.5 px-2 text-xs font-bold text-black bg-white shadow-sm focus:ring-2 focus:ring-blue-500">
+                                <option value="1way" class="font-bold text-black">Single Factor (One-Way)</option>
+                                <option value="2way-norep" class="font-bold text-black">Two-Factor Without Replication</option>
+                                <option value="2way-rep" class="font-bold text-black">Two-Factor With Replication</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-black mb-1 uppercase tracking-wider">Confidence Level / Alpha</label>
+                            <select id="alpha-level" onchange="if(!document.getElementById('results-area').classList.contains('hidden')) runAnalysis()" class="w-full border border-slate-400 rounded-md py-1.5 px-2 text-xs font-bold text-black bg-white shadow-sm focus:ring-2 focus:ring-blue-500">
+                                <option value="0.01">99% Confidence (α = 0.01)</option>
+                                <option value="0.05" selected>95% Confidence (α = 0.05)</option>
+                                <option value="0.10">90% Confidence (α = 0.10)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="rep-container" class="hidden">
+                        <label class="block text-[10px] font-bold text-black mb-1 uppercase tracking-wider has-tooltip">
+                            Rows per sample (n)
+                            <span class="tooltip">For Two-Way With Replication, specify how many data rows exist for each Row Factor group.</span>
+                        </label>
+                        <input type="number" id="replications" min="2" value="2" class="w-full border border-slate-400 rounded-md py-1.5 px-2 text-xs font-bold text-black bg-white shadow-sm">
+                    </div>
+
+                    <div class="flex gap-4 mb-2">
+                        <label class="flex items-center text-xs text-slate-700 font-medium">
+                            <input type="checkbox" id="has-col-headers" checked class="mr-2"> Labels in first row
+                        </label>
+                        <label class="flex items-center text-xs text-slate-700 font-medium" id="row-header-label">
+                            <input type="checkbox" id="has-row-headers" checked class="mr-2"> Labels in first column
+                        </label>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="block text-[10px] font-bold text-black uppercase tracking-wider">
+                                Paste Excel/CSV Data here <span class="text-slate-500 font-normal normal-case">(Tab/Comma separated)</span>
+                            </label>
+                            <button type="button" onclick="alignData()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold uppercase tracking-wider flex items-center gap-1 bg-blue-50 px-2 py-1 rounded border border-blue-200 transition-colors shadow-sm">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                Auto-Align Grid
+                            </button>
+                        </div>
+                        <textarea id="raw-data" onpaste="setTimeout(alignData, 50)" class="data-input bg-slate-50" placeholder="Col1&#9;Col2&#9;Col3&#10;12&#9;15&#9;18&#10;14&#9;16&#9;19"></textarea>
+                    </div>
+                </div>
+
+                <button onclick="runAnalysis()" class="mt-5 w-full bg-[#107c41] hover:bg-[#185c37] text-white font-bold py-2.5 px-4 rounded-lg transition-colors shadow flex justify-center items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Calculate Output
+                </button>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Results. Hybrid overflow handles tooltips on desktop, scrolling on mobile -->
+        <section class="xl:col-span-8 bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col relative">
+            <h2 class="text-xl font-bold text-slate-800 border-b border-slate-200 pb-3 mb-4 flex items-center justify-between">
+                <div>Anova Output Report</div>
+                <div class="flex items-center gap-3">
+                    <button id="export-btn" onclick="exportToCSV()" class="hidden text-xs bg-slate-800 text-white px-3 py-1.5 rounded-md hover:bg-slate-700 transition flex items-center gap-1 shadow-sm font-semibold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export CSV
+                    </button>
+                    <span id="badge-status" class="text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-mono border border-slate-200 uppercase">Standby</span>
+                </div>
+            </h2>
+
+            <div id="results-area" class="hidden flex-1 space-y-6">
+                
+                <!-- SUMMARY TABLE -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide" id="summary-title">SUMMARY</h3>
+                    <div class="w-full overflow-x-auto lg:overflow-visible rounded border border-slate-300 shadow-sm">
+                        <table class="excel-table" id="summary-table">
+                            <thead id="summary-head"></thead>
+                            <tbody id="summary-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VISUALIZATION CHART WITH DYNAMIC TRAFFIC LIGHT BORDER -->
+                <div id="chart-container" class="bg-white p-4 rounded border-2 border-slate-300 shadow-sm transition-colors duration-300">
+                    <h3 id="chart-title" class="text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide flex items-center gap-2">Means Comparison Chart</h3>
+                    <div class="relative h-72 w-full">
+                        <canvas id="anovaChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ANOVA TABLE -->
+                <div>
+                    <h3 class="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">ANOVA</h3>
+                    <div class="w-full overflow-x-auto lg:overflow-visible rounded border border-slate-300 shadow-sm">
+                        <table class="excel-table" id="anova-table">
+                            <thead>
+                                <tr>
+                                    <th class="w-1/4">Source of Variation</th>
+                                    <th>SS</th>
+                                    <th>df</th>
+                                    <th>MS</th>
+                                    <th>
+                                        <span class="has-tooltip text-black font-bold cursor-help">F 
+                                            <span class="tooltip font-normal text-white">Derived from raw data.<br>Remains constant.</span>
+                                        </span>
+                                    </th>
+                                    <th>
+                                        <span class="has-tooltip text-black font-bold cursor-help">P-value 
+                                            <span class="tooltip font-normal text-white">Derived from raw data.<br>Remains constant.</span>
+                                        </span>
+                                    </th>
+                                    <th>
+                                        <span class="has-tooltip text-black font-bold cursor-help">F crit 
+                                            <span class="tooltip font-normal text-white">Dynamic boundary.<br>Shifts when Confidence Level is changed.</span>
+                                        </span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="anova-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- DYNAMIC INTERPRETATION -->
+                <div id="interpretation-box" class="bg-slate-50 p-4 border border-slate-200 rounded-lg text-sm mt-4">
+                    <!-- Filled by JS -->
+                </div>
+
+                <!-- Traffic Light Legend -->
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 text-xs mt-6">
+                    <h3 class="font-bold text-slate-700 mb-2 uppercase border-b pb-1">Traffic Light Calibration</h3>
+                    <ul class="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0 text-slate-600 pt-2 mb-4 border-b pb-4">
+                        <li class="flex items-center"><span class="tl-dot tl-red"></span> <strong>P <= 0.01:</strong> Critical. Highly significant difference.</li>
+                        <li class="flex items-center"><span class="tl-dot tl-yellow"></span> <strong>P <= Alpha:</strong> Significant difference detected.</li>
+                        <li class="flex items-center"><span class="tl-dot tl-green"></span> <strong>P > Alpha:</strong> Safe. No significant difference.</li>
+                    </ul>
+                    <h3 class="font-bold text-slate-700 mb-1 uppercase">Statistical Assumptions</h3>
+                    <p class="text-slate-500 text-[11px] leading-relaxed">
+                        This analysis assumes that the data is normally distributed, groups have equal variances (homoscedasticity), and observations are independent. Extreme outliers may skew the reliability of the P-value.
+                    </p>
+                </div>
+
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center py-20">
+                <svg class="w-16 h-16 text-slate-200 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <h3 class="text-lg font-semibold text-slate-500">Awaiting Data</h3>
+                <p class="text-sm text-slate-400 mt-2 max-w-md">Configure parameters on the left and run the calculation to generate Excel-formatted ANOVA reports.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- 20 REALISTIC INDUSTRY DATASETS ---
+        const datasets = {
+            // ONE-WAY
+            'tech_sal': { type: '1way', rep: 0, col: true, row: true, data: "Dept\tEngineering\tMarketing\tSupport\nEntry\t102\t98\t95\nMid\t108\t105\t100\nSenior\t115\t110\t105\nLead\t118\t115\t110\nDir\t122\t118\t112\nVP\t128\t122\t118" },
+            'retail_wages': { type: '1way', rep: 0, col: true, row: true, data: "Store\tStore Mgmt\tSales Floor\tCashier\nNY\t25\t23\t22\nLA\t26\t24\t23\nCHI\t24\t22\t21\nHOU\t23\t22\t20\nPHX\t24\t23\t21\nPHI\t25\t24\t22" },
+            'health_rec': { type: '1way', rep: 0, col: true, row: true, data: "Patient\tKnee Repl\tHip Repl\tArthroscopic\nP1\t40\t42\t38\nP2\t45\t46\t40\nP3\t42\t45\t41\nP4\t38\t40\t35\nP5\t41\t44\t39\nP6\t44\t47\t42" },
+            'crop_yield': { type: '1way', rep: 0, col: true, row: true, data: "Plot\tFertilizer A\tFertilizer B\tFertilizer C\n1\t48\t50\t49\n2\t52\t54\t51\n3\t49\t51\t48\n4\t47\t49\t46\n5\t51\t53\t50" },
+            'mktg_roi': { type: '1way', rep: 0, col: true, row: true, data: "Qtr\tSocial Media\tEmail\tPPC\nQ1\t12.5\t12.0\t12.8\nQ2\t13.0\t12.4\t13.2\nQ3\t11.8\t11.5\t12.0\nQ4\t14.2\t13.8\t14.5" },
+            'edu_scores': { type: '1way', rep: 0, col: true, row: true, data: "Student\tTraditional\tFlipped\tOnline\n1\t78\t82\t80\n2\t82\t85\t83\n3\t75\t80\t78\n4\t85\t88\t86\n5\t80\t84\t82" },
+            'ecom_sales': { type: '1way', rep: 0, col: true, row: true, data: "Month\tNorth\tSouth\tEast\tWest\nJan\t280\t275\t285\t290\nFeb\t290\t285\t295\t300\nMar\t275\t270\t280\t285\nApr\t285\t280\t290\t295" },
+            'retail_csat': { type: '1way', rep: 0, col: true, row: true, data: "Day\tDowntown\tMall\tSuburb\nMon\t8.5\t8.2\t8.8\nTue\t8.7\t8.4\t8.9\nWed\t8.4\t8.1\t8.6\nThu\t8.8\t8.5\t9.0\nFri\t8.6\t8.3\t8.7" },
+            'battery_life': { type: '1way', rep: 0, col: true, row: true, data: "Test\tBrandX\tBrandY\tBrandZ\n1\t12.5\t12.2\t12.8\n2\t12.8\t12.5\t13.0\n3\t12.2\t11.9\t12.5\n4\t12.6\t12.3\t12.9\n5\t12.9\t12.6\t13.2" },
+            'house_price': { type: '1way', rep: 0, col: true, row: true, data: "House\tUrban\tSuburban\tRural\n1\t350\t340\t330\n2\t380\t360\t350\n3\t360\t350\t340\n4\t370\t355\t345\n5\t390\t370\t360" },
+            'bpo_aht': { type: '1way', rep: 0, col: true, row: true, data: "Call\tAgent A\tAgent B\tAgent C\n1\t320\t310\t325\n2\t330\t325\t335\n3\t310\t305\t315\n4\t325\t320\t330\n5\t315\t310\t320\n6\t340\t335\t345" },
+            'digital_ads': { type: '1way', rep: 0, col: true, row: true, data: "Week\tGoogle\tMeta\tLinkedIn\n1\t2.0\t1.8\t1.9\n2\t2.2\t1.9\t2.0\n3\t1.9\t1.7\t1.8\n4\t2.1\t2.0\t2.1\n5\t2.3\t2.1\t2.2" },
+
+            // TWO-WAY WITHOUT REPLICATION
+            'pharma_eff': { type: '2way-norep', rep: 0, col: true, row: true, data: "AgeGroup\tDose_10mg\tDose_20mg\tDose_30mg\n20-30\t60\t65\t68\n31-40\t58\t62\t65\n41-50\t55\t58\t61\n51-60\t52\t55\t58" },
+            'web_traffic': { type: '2way-norep', rep: 0, col: true, row: true, data: "Day\tOrganic\tDirect\tReferral\nMon\t1000\t950\t900\nTue\t1050\t1000\t920\nWed\t1020\t980\t910\nThu\t1100\t1050\t950\nFri\t950\t900\t850" },
+            'health_bp': { type: '2way-norep', rep: 0, col: true, row: true, data: "Diet\tNo_Exercise\tLight_Ex\tHeavy_Ex\nStandard\t130\t128\t125\nVegan\t128\t125\t122\nKeto\t129\t126\t124" },
+            'hr_attr': { type: '2way-norep', rep: 0, col: true, row: true, data: "Tenure\tSales\tEngineering\tSupport\n<1yr\t12\t10\t11\n1-3yrs\t10\t8\t9\n3-5yrs\t8\t7\t8\n>5yrs\t6\t5\t6" },
+
+            // TWO-WAY WITH REPLICATION
+            'mfg_defects': { type: '2way-rep', rep: 3, col: true, row: true, data: "Shift\tMachine A\tMachine B\tMachine C\nMorning\t4\t5\t4\nMorning\t5\t6\t5\nMorning\t4\t5\t4\nNight\t6\t7\t6\nNight\t7\t8\t7\nNight\t6\t7\t6" },
+            'it_servers': { type: '2way-rep', rep: 4, col: true, row: true, data: "Load\tUS-East\tEU-West\tAP-South\nNormal\t60\t65\t62\nNormal\t58\t62\t60\nNormal\t62\t68\t65\nNormal\t61\t64\t63\nHeavy\t80\t85\t82\nHeavy\t78\t82\t80\nHeavy\t82\t88\t85\nHeavy\t81\t84\t83" },
+            'aero_stress': { type: '2way-rep', rep: 2, col: true, row: true, data: "Temp\tLow_Press\tMed_Press\tHigh_Press\nCold\t120\t125\t130\nCold\t122\t128\t132\nHot\t140\t145\t150\nHot\t142\t148\t152" },
+            'botany_growth': { type: '2way-rep', rep: 5, col: true, row: true, data: "Light\tWater_10ml\tWater_20ml\tWater_30ml\nLow\t8\t9\t8\nLow\t9\t10\t9\nLow\t7\t8\t7\nLow\t8\t9\t8\nLow\t8\t8\t8\nHigh\t12\t14\t13\nHigh\t13\t15\t14\nHigh\t11\t13\t12\nHigh\t12\t14\t13\nHigh\t12\t13\t13" }
+        };
+
+        // --- EXPORT TO CSV LOGIC ---
+        function exportToCSV() {
+            let csv = [];
+            const summaryTable = document.getElementById("summary-table");
+            const anovaTable = document.getElementById("anova-table");
+            
+            csv.push(["Enterprise ANOVA Report"]);
+            csv.push([]);
+            
+            csv.push(["--- SUMMARY ---"]);
+            let sRows = summaryTable.querySelectorAll("tr");
+            for (let i = 0; i < sRows.length; i++) {
+                let row = [], cols = sRows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/(\s\s)/gm, " ");
+                    data = data.replace(/"/g, '""');
+                    row.push('"' + data + '"');
+                }
+                csv.push(row.join(","));
+            }
+            
+            csv.push([]);
+            
+            csv.push(["--- ANOVA ---"]);
+            let aRows = anovaTable.querySelectorAll("tr");
+            for (let i = 0; i < aRows.length; i++) {
+                let row = [], cols = aRows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/(\s\s)/gm, " ");
+                    data = data.replace(/"/g, '""');
+                    row.push('"' + data + '"');
+                }
+                csv.push(row.join(","));
+            }
+
+            const csvFile = new Blob([csv.join("\n")], {type: "text/csv"});
+            const downloadLink = document.createElement("a");
+            downloadLink.download = "ANOVA_Master_Report.csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // --- CHART.JS VISUALIZATION LOGIC WITH TRAFFIC LIGHT DYNAMICS ---
+        let anovaChartInstance = null;
+        const brandColors = ['#107c41', '#2563eb', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+
+        function drawChart(labels, datasets, title, pColorClass) {
+            const ctx = document.getElementById('anovaChart').getContext('2d');
+            if(anovaChartInstance) anovaChartInstance.destroy();
+            
+            anovaChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: false },
+                        legend: { position: 'top', labels: { font: { family: "'Inter', sans-serif", size: 11 } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Mean Value', font: { size: 11 } } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const container = document.getElementById('chart-container');
+            const titleEl = document.getElementById('chart-title');
+
+            container.className = "bg-white p-4 rounded border-2 shadow-sm transition-colors duration-300";
+            
+            let borderClass = "border-slate-300";
+            let titleBgClass = "bg-slate-100 text-slate-700";
+            let dot = "";
+
+            if (pColorClass === 'tl-red') {
+                borderClass = "border-red-400";
+                titleBgClass = "bg-red-100 text-red-900";
+                dot = `<span class="tl-dot tl-red mb-0 border border-red-500"></span>`;
+            } else if (pColorClass === 'tl-yellow') {
+                borderClass = "border-yellow-400";
+                titleBgClass = "bg-yellow-100 text-yellow-900";
+                dot = `<span class="tl-dot tl-yellow mb-0 border border-yellow-500"></span>`;
+            } else if (pColorClass === 'tl-green') {
+                borderClass = "border-green-400";
+                titleBgClass = "bg-green-100 text-green-900";
+                dot = `<span class="tl-dot tl-green mb-0 border border-green-500"></span>`;
+            }
+
+            container.classList.add(borderClass);
+            titleEl.className = `${titleBgClass} text-xs font-bold mb-3 uppercase tracking-wide flex items-center px-3 py-1.5 rounded w-max`;
+            titleEl.innerHTML = `${dot} ${title}`;
+        }
+
+        // --- UI LOGIC ---
+        function toggleRepInput() {
+            const type = document.getElementById('anova-type').value;
+            const repCont = document.getElementById('rep-container');
+            const rowHeadLabel = document.getElementById('row-header-label');
+            
+            if (type === '2way-rep') {
+                repCont.classList.remove('hidden');
+                document.getElementById('has-row-headers').checked = true;
+                rowHeadLabel.style.display = 'flex';
+            } else if (type === '1way') {
+                repCont.classList.add('hidden');
+                rowHeadLabel.style.display = 'flex'; 
+            } else {
+                repCont.classList.add('hidden');
+                document.getElementById('has-row-headers').checked = true;
+                rowHeadLabel.style.display = 'flex';
+            }
+        }
+
+        function loadDataset() {
+            const key = document.getElementById('industry-select').value;
+            if (!key || !datasets[key]) return;
+            
+            const ds = datasets[key];
+            document.getElementById('anova-type').value = ds.type;
+            document.getElementById('has-col-headers').checked = ds.col;
+            
+            toggleRepInput();
+            document.getElementById('has-row-headers').checked = ds.row;
+
+            if (ds.type === '2way-rep') {
+                document.getElementById('replications').value = ds.rep;
+            }
+            
+            document.getElementById('raw-data').value = ds.data;
+            alignData();
+        }
+
+        function clearData() {
+            document.getElementById('raw-data').value = '';
+            document.getElementById('industry-select').value = '';
+            document.getElementById('results-area').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('badge-status').textContent = 'Standby';
+            document.getElementById('badge-status').className = 'text-xs bg-slate-100 text-slate-500 px-3 py-1 rounded-full font-mono border border-slate-200 uppercase';
+            document.getElementById('export-btn').classList.add('hidden');
+            
+            if(anovaChartInstance) anovaChartInstance.destroy();
+            
+            const container = document.getElementById('chart-container');
+            const titleEl = document.getElementById('chart-title');
+            if (container && titleEl) {
+                container.className = "bg-white p-4 rounded border-2 border-slate-300 shadow-sm transition-colors duration-300";
+                titleEl.className = "text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide flex items-center gap-2";
+                titleEl.innerHTML = "Means Comparison Chart";
+            }
+        }
+
+        function showError(msg) {
+            const toast = document.getElementById('error-toast');
+            document.getElementById('error-message').textContent = msg;
+            toast.classList.add('show');
+            setTimeout(closeError, 5000);
+        }
+
+        function closeError() {
+            document.getElementById('error-toast').classList.remove('show');
+        }
+
+        // --- RUTHLESS DATA CLEANING & PADDING ---
+        function parseAndCleanDataMatrix(rawText) {
+            let lines = rawText.split(/\r?\n/);
+            let matrix = lines.map(line => line.split(/[\t,]/).map(c => c.trim()));
+
+            // 1. Strip completely empty rows from bottom (common in Excel copy/paste)
+            while(matrix.length > 0 && matrix[matrix.length - 1].every(c => c === '')) {
+                matrix.pop();
+            }
+            // 2. Strip completely empty rows from top
+            while(matrix.length > 0 && matrix[0].every(c => c === '')) {
+                matrix.shift();
+            }
+
+            if (matrix.length === 0) return null;
+
+            // 3. Find completely empty columns on the right and establish max width
+            let maxCols = Math.max(...matrix.map(r => r.length));
+            let colIsEmpty = Array(maxCols).fill(true);
+            for(let r=0; r<matrix.length; r++) {
+                for(let c=0; c<maxCols; c++) {
+                    if(matrix[r][c] && matrix[r][c] !== '') {
+                        colIsEmpty[c] = false;
+                    }
+                }
+            }
+            
+            let lastValidCol = maxCols - 1;
+            while(lastValidCol >= 0 && colIsEmpty[lastValidCol]) {
+                lastValidCol--;
+            }
+
+            if (lastValidCol < 0) return null;
+
+            // 4. Force perfect rectangular structure by padding blanks up to lastValidCol
+            return matrix.map(row => {
+                let newRow = row.slice(0, lastValidCol + 1);
+                while(newRow.length <= lastValidCol) newRow.push("");
+                return newRow;
+            });
+        }
+
+        function alignData() {
+            const textarea = document.getElementById('raw-data');
+            const rawText = textarea.value;
+            if (!rawText.trim()) return;
+
+            const matrix = parseAndCleanDataMatrix(rawText);
+            if (!matrix) return;
+
+            let colLengths = [];
+            matrix.forEach(row => {
+                row.forEach((cell, c) => {
+                    const len = cell ? cell.length : 0;
+                    colLengths[c] = Math.max(colLengths[c] || 0, len);
+                });
+            });
+
+            const formattedText = matrix.map(row => {
+                return row.map((cell, c) => (cell || '').padEnd(colLengths[c], ' ')).join('\t');
+            }).join('\n');
+
+            if (textarea.value !== formattedText) {
+                textarea.value = formattedText;
+            }
+        }
+
+        // --- MATH FORMATTING ENGINE ---
+        function formatVal(v) { 
+            if (v === Infinity) return "Infinity";
+            if (typeof v !== 'number' || isNaN(v)) return "N/A";
+            return Number.isInteger(v) ? v.toString() : v.toFixed(4); 
+        }
+
+        function formatPVal(p) {
+            if (isNaN(p) || p == null) return "N/A";
+            if (p < 0) return "0.0000";
+            if (p > 1) return "1.0000";
+            if (p < 0.0001) return "< 0.0001"; 
+            return p.toFixed(4);
+        }
+
+        function getPvalColorClass(p, alpha) {
+            if (isNaN(p)) return 'tl-green';
+            if (p <= 0.01) return 'tl-red';
+            if (p <= alpha) return 'tl-yellow';
+            return 'tl-green';
+        }
+
+        // --- INTERPRETATION HELPERS ---
+        function getPValComparison(pVal, alpha) {
+            if (pVal <= alpha) return "less than or equal to";
+            return "greater than";
+        }
+
+        function getFStatExplanation(f, fCrit) {
+            if (f == null || fCrit == null || isNaN(f) || isNaN(fCrit)) return "";
+            const isGreater = f >= fCrit;
+            return `<span class="text-[11.5px] opacity-90 font-normal mt-2 block leading-snug">
+                Because the calculated F-statistic (${formatVal(f)}) is <strong>${isGreater ? 'greater than or equal to' : 'less than'}</strong> the F-critical threshold (${formatVal(fCrit)}), the P-value is mathematically inherently <strong>${isGreater ? 'less than or equal to' : 'greater than'}</strong> the Alpha threshold.
+            </span>`;
+        }
+
+        function getInterpBoxClass(pVal, alpha, isLast = false) {
+            let classes = "px-4 py-3 text-sm font-medium leading-relaxed ";
+            classes += isLast ? "" : "mb-1 border-b border-white ";
+            
+            if (isNaN(pVal)) {
+                classes += "bg-slate-100 text-slate-800"; 
+            } else if (pVal <= 0.01) {
+                classes += "bg-red-100 text-red-900"; 
+            } else if (pVal <= alpha) {
+                classes += "bg-yellow-100 text-yellow-900"; 
+            } else {
+                classes += "bg-green-100 text-green-900"; 
+            }
+            return classes;
+        }
+
+        function runAnalysis() {
+            if (typeof jStat === 'undefined') {
+                showError("Statistical library is loading. Please wait 1 second and click again.");
+                return;
+            }
+
+            const rawText = document.getElementById('raw-data').value.trim();
+            if (!rawText) return showError("Please paste data to analyze.");
+
+            const type = document.getElementById('anova-type').value;
+            const alpha = parseFloat(document.getElementById('alpha-level').value);
+            const hasColHead = document.getElementById('has-col-headers').checked;
+            const hasRowHead = document.getElementById('has-row-headers').checked; 
+
+            const matrix = parseAndCleanDataMatrix(rawText);
+            if (!matrix) return showError("Data could not be parsed. Please check formatting.");
+
+            try {
+                // Show Results UI early for chart to find dimensions
+                document.getElementById('empty-state').classList.add('hidden');
+                document.getElementById('results-area').classList.remove('hidden');
+                document.getElementById('export-btn').classList.remove('hidden');
+
+                if (type === '1way') {
+                    calcOneWay(matrix, hasColHead, hasRowHead, alpha);
+                } else if (type === '2way-norep') {
+                    calcTwoWayNoRep(matrix, hasColHead, hasRowHead, alpha);
+                } else if (type === '2way-rep') {
+                    const reps = parseInt(document.getElementById('replications').value);
+                    if(isNaN(reps) || reps < 2) return showError("Replications must be a valid number (minimum 2).");
+                    calcTwoWayRep(matrix, hasColHead, hasRowHead, reps, alpha);
+                }
+                
+                document.getElementById('badge-status').textContent = 'Calculated';
+                document.getElementById('badge-status').className = 'text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold uppercase border border-green-200 shadow-sm';
+            } catch (e) {
+                document.getElementById('results-area').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('export-btn').classList.add('hidden');
+                showError(e.message);
+                console.error(e);
+            }
+        }
+
+        // --- 1. ONE-WAY ANOVA ---
+        function calcOneWay(matrix, colH, rowH, alpha) {
+            let colLabels = [];
+            let dataStartRow = colH ? 1 : 0;
+            let dataStartCol = rowH ? 1 : 0; 
+            
+            const numDataCols = matrix[0].length - dataStartCol;
+            if(numDataCols < 2) throw new Error("Need at least 2 groups (columns) for One-Way ANOVA.");
+            
+            for(let c=dataStartCol; c<matrix[0].length; c++) {
+                colLabels.push(colH ? matrix[0][c] || `Group ${c}` : `Group ${c+1-dataStartCol}`);
+            }
+
+            let groups = Array.from({length: numDataCols}, () => []);
+            let n = 0, sumTotal = 0;
+
+            for(let r=dataStartRow; r<matrix.length; r++) {
+                for(let c=dataStartCol; c<matrix[r].length; c++) {
+                    const valText = matrix[r][c];
+                    // Skip completely empty cells (allows Unbalanced Design)
+                    if(valText === '') continue; 
+                    
+                    const val = parseFloat(valText);
+                    if(!isNaN(val)) {
+                        groups[c-dataStartCol].push(val);
+                        n++;
+                        sumTotal += val;
+                    } else {
+                        throw new Error(`Non-numeric data ("${valText}") found. All entered cells must be numbers or left entirely blank.`);
+                    }
+                }
+            }
+
+            const grandMean = sumTotal / n;
+            const k = groups.length;
+            
+            let ssb = 0, ssw = 0;
+            let summaries = [];
+            let chartMeans = [];
+
+            groups.forEach((g, idx) => {
+                const count = g.length;
+                if(count === 0) throw new Error(`Group '${colLabels[idx]}' has no valid numbers.`);
+                const sum = g.reduce((a,b)=>a+b,0);
+                const mean = sum/count;
+                const variance = count > 1 ? g.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(count-1) : 0;
+                
+                const se = Math.sqrt(variance / count);
+                const tCrit = count > 1 ? jStat.studentt.inv(1 - alpha/2, count - 1) : 0;
+                const margin = tCrit * se;
+                const lcl = count > 1 ? mean - margin : NaN;
+                const ucl = count > 1 ? mean + margin : NaN;
+                
+                summaries.push({ label: colLabels[idx], count, sum, mean, variance, lcl, ucl });
+                chartMeans.push(mean);
+                
+                ssb += count * Math.pow(mean - grandMean, 2);
+                ssw += g.reduce((a,b)=>a+Math.pow(b-mean,2),0);
+            });
+
+            const sst = ssb + ssw;
+            const dfB = k - 1, dfW = n - k, dfT = n - 1;
+            
+            if (dfW <= 0) throw new Error("Degrees of freedom within groups is 0 or less. You need more total data points than the number of groups to calculate variance.");
+
+            const msb = ssb / dfB, msw = ssw / dfW;
+            const fStat = msw === 0 ? (msb > 0 ? Infinity : NaN) : msb / msw;
+            const pVal = isNaN(fStat) ? NaN : (fStat === Infinity ? 0 : 1 - jStat.centralF.cdf(fStat, dfB, dfW));
+            const fCrit = jStat.centralF.inv(1 - alpha, dfB, dfW);
+
+            const pColor = getPvalColorClass(pVal, alpha);
+            drawChart(colLabels, [{
+                label: 'Group Mean',
+                data: chartMeans,
+                backgroundColor: brandColors[0]
+            }], "Group Means Comparison", pColor);
+
+            renderOneWayOutput(summaries, ssb, ssw, sst, dfB, dfW, dfT, msb, msw, fStat, pVal, fCrit, alpha, colLabels);
+        }
+
+        function renderOneWayOutput(summs, ssb, ssw, sst, dfB, dfW, dfT, msb, msw, fStat, pVal, fCrit, alpha, colLabels) {
+            const confLvl = Math.round((1 - alpha) * 100);
+            const sHead = `<tr><th>Groups</th><th>Count</th><th>Sum</th><th>Average</th><th>Variance</th><th>Lower CI (${confLvl}%)</th><th>Upper CI (${confLvl}%)</th></tr>`;
+            const sBody = summs.map(s => `<tr><td>${s.label}</td><td>${s.count}</td><td>${formatVal(s.sum)}</td><td>${formatVal(s.mean)}</td><td>${formatVal(s.variance)}</td><td>${formatVal(s.lcl)}</td><td>${formatVal(s.ucl)}</td></tr>`).join('');
+            document.getElementById('summary-head').innerHTML = sHead;
+            document.getElementById('summary-body').innerHTML = sBody;
+
+            const pColor = getPvalColorClass(pVal, alpha);
+            const aBody = `
+                <tr>
+                    <td class="font-medium">Between Groups</td><td>${formatVal(ssb)}</td><td>${dfB}</td><td>${formatVal(msb)}</td>
+                    <td class="font-semibold">${formatVal(fStat)}</td>
+                    <td class="font-bold"><span class="tl-dot ${pColor}"></span>${formatPVal(pVal)}</td>
+                    <td>${formatVal(fCrit)}</td>
+                </tr>
+                <tr><td class="font-medium">Within Groups</td><td>${formatVal(ssw)}</td><td>${dfW}</td><td>${formatVal(msw)}</td><td></td><td></td><td></td></tr>
+                <tr class="font-semibold bg-slate-50"><td class="border-t-2 border-slate-300">Total</td><td class="border-t-2 border-slate-300">${formatVal(sst)}</td><td class="border-t-2 border-slate-300">${dfT}</td><td></td><td></td><td></td><td></td></tr>
+            `;
+            document.getElementById('anova-body').innerHTML = aBody;
+
+            const interBox = document.getElementById('interpretation-box');
+            const groupNames = colLabels.join(', ');
+            const isSig = !isNaN(pVal) && pVal <= alpha;
+
+            const summaryText = isSig 
+                ? `Thus, the evaluated factor (${groupNames}) significantly affects the outcomes in this sample.` 
+                : `Thus, the evaluated factor (${groupNames}) does not significantly affect the outcomes in this sample.<br>Any differences observed are likely due to random variation, not true effects.`;
+
+            interBox.innerHTML = `
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (GROUPS): The mean scores for all groups (${groupNames}) are equal.
+                </div>
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm text-black">
+                    Alternative Hypothesis (GROUPS): At least one group has a different mean score.
+                </div>
+                
+                <div class="mt-4 mb-1">
+                    <span class="bg-black text-white font-bold px-4 py-1.5 text-sm uppercase inline-block rounded-sm tracking-wide">CONCLUSION</span>
+                </div>
+                
+                <div class="${getInterpBoxClass(pVal, alpha)}">
+                    The p-value for Groups is ${formatPVal(pVal)}, which is <strong>${isNaN(pVal) ? 'undefined (variance is zero)' : getPValComparison(pVal, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSig ? 'is a statistically significant difference' : 'is no statistically significant difference'}</strong> in average scores among ${groupNames}.
+                    ${getFStatExplanation(fStat, fCrit)}
+                </div>
+                
+                <div class="${getInterpBoxClass(pVal, alpha, true)}">
+                    ${summaryText}
+                </div>
+            `;
+            interBox.className = "mt-6 flex flex-col";
+        }
+
+        // --- 2. TWO-WAY WITHOUT REPLICATION ---
+        function calcTwoWayNoRep(matrix, colH, rowH, alpha) {
+            let dataStartRow = colH ? 1 : 0;
+            let dataStartCol = rowH ? 1 : 0;
+            
+            const rCount = matrix.length - dataStartRow;
+            const cCount = matrix[0].length - dataStartCol;
+            if(rCount < 2 || cCount < 2) throw new Error("Need at least 2 data rows and 2 data columns.");
+
+            let rowLabels = [], colLabels = [];
+            for(let i=dataStartRow; i<matrix.length; i++) rowLabels.push(rowH ? matrix[i][0] : `Row ${i + 1 - dataStartRow}`);
+            for(let j=dataStartCol; j<matrix[0].length; j++) colLabels.push(colH ? matrix[0][j] : `Col ${j + 1 - dataStartCol}`);
+
+            let data = [];
+            let n = rCount * cCount;
+            let grandSum = 0;
+            
+            let rowSums = Array(rCount).fill(0);
+            let colSums = Array(cCount).fill(0);
+
+            for(let i=0; i<rCount; i++){
+                data[i] = [];
+                for(let j=0; j<cCount; j++){
+                    let valText = matrix[i + dataStartRow][j + dataStartCol];
+                    if (valText === '') throw new Error(`Missing data detected at Row '${rowLabels[i]}', Col '${colLabels[j]}'. Two-Way ANOVA requires a perfectly complete numerical grid without blanks.`);
+                    
+                    let val = parseFloat(valText);
+                    if(isNaN(val)) throw new Error(`Non-numeric data ("${valText}") found at Row '${rowLabels[i]}', Col '${colLabels[j]}'.`);
+                    
+                    data[i][j] = val;
+                    rowSums[i] += val;
+                    colSums[j] += val;
+                    grandSum += val;
+                }
+            }
+
+            const gm = grandSum / n;
+            let sst = 0, ssr = 0, ssc = 0;
+
+            for(let i=0; i<rCount; i++){
+                for(let j=0; j<cCount; j++){
+                    sst += Math.pow(data[i][j] - gm, 2);
+                }
+                ssr += cCount * Math.pow((rowSums[i]/cCount) - gm, 2);
+            }
+            for(let j=0; j<cCount; j++){
+                ssc += rCount * Math.pow((colSums[j]/rCount) - gm, 2);
+            }
+            
+            const sse = Math.max(0, sst - ssr - ssc);
+
+            const dfR = rCount - 1;
+            const dfC = cCount - 1;
+            const dfE = dfR * dfC;
+            const dfT = n - 1;
+
+            if (dfE === 0) throw new Error("Error degrees of freedom is 0. Unable to calculate statistics. Please check data layout.");
+
+            const msr = ssr / dfR;
+            const msc = ssc / dfC;
+            const mse = sse / dfE;
+
+            const fR = mse === 0 ? (msr > 0 ? Infinity : NaN) : msr / mse;
+            const fC = mse === 0 ? (msc > 0 ? Infinity : NaN) : msc / mse;
+
+            const pR = isNaN(fR) ? NaN : (fR === Infinity ? 0 : 1 - jStat.centralF.cdf(fR, dfR, dfE));
+            const pC = isNaN(fC) ? NaN : (fC === Infinity ? 0 : 1 - jStat.centralF.cdf(fC, dfC, dfE));
+
+            const fCritR = jStat.centralF.inv(1 - alpha, dfR, dfE);
+            const fCritC = jStat.centralF.inv(1 - alpha, dfC, dfE);
+
+            let summs = [];
+            for(let i=0; i<rCount; i++) {
+                let rData = data[i];
+                let mean = rowSums[i]/cCount;
+                let v = rData.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(cCount-1);
+                let se = Math.sqrt(v / cCount);
+                let tCrit = cCount > 1 ? jStat.studentt.inv(1 - alpha/2, cCount - 1) : 0;
+                summs.push({label: rowLabels[i], count: cCount, sum: rowSums[i], mean: mean, var: v, lcl: mean - tCrit*se, ucl: mean + tCrit*se});
+            }
+            for(let j=0; j<cCount; j++) {
+                let cData = data.map(r => r[j]);
+                let mean = colSums[j]/rCount;
+                let v = cData.reduce((a,b)=>a+Math.pow(b-mean,2),0)/(rCount-1);
+                let se = Math.sqrt(v / rCount);
+                let tCrit = rCount > 1 ? jStat.studentt.inv(1 - alpha/2, rCount - 1) : 0;
+                summs.push({label: colLabels[j], count: rCount, sum: colSums[j], mean: mean, var: v, lcl: mean - tCrit*se, ucl: mean + tCrit*se});
+            }
+
+            const datasetsForChart = colLabels.map((colName, cIndex) => {
+                return {
+                    label: colName,
+                    data: rowLabels.map((_, rIndex) => data[rIndex][cIndex]),
+                    backgroundColor: brandColors[cIndex % brandColors.length]
+                };
+            });
+            const overallPColor = getPvalColorClass(Math.min(isNaN(pR) ? 1 : pR, isNaN(pC) ? 1 : pC), alpha);
+            drawChart(rowLabels, datasetsForChart, "Cell Values by Factor", overallPColor);
+
+            renderTwoWayNoRepOutput(summs, ssr, ssc, sse, sst, dfR, dfC, dfE, dfT, msr, msc, mse, fR, fC, pR, pC, fCritR, fCritC, alpha, rowLabels, colLabels);
+        }
+
+        function renderTwoWayNoRepOutput(summs, ssr, ssc, sse, sst, dfR, dfC, dfE, dfT, msr, msc, mse, fR, fC, pR, pC, fCritR, fCritC, alpha, rowLabels, colLabels) {
+            const confLvl = Math.round((1 - alpha) * 100);
+            const sHead = `<tr><th>Summary</th><th>Count</th><th>Sum</th><th>Average</th><th>Variance</th><th>Lower CI (${confLvl}%)</th><th>Upper CI (${confLvl}%)</th></tr>`;
+            const sBody = summs.map(s => `<tr><td>${s.label}</td><td>${s.count}</td><td>${formatVal(s.sum)}</td><td>${formatVal(s.mean)}</td><td>${formatVal(s.var)}</td><td>${formatVal(s.lcl)}</td><td>${formatVal(s.ucl)}</td></tr>`).join('');
+            document.getElementById('summary-head').innerHTML = sHead;
+            document.getElementById('summary-body').innerHTML = sBody;
+
+            const aBody = `
+                <tr><td class="font-medium">Rows</td><td>${formatVal(ssr)}</td><td>${dfR}</td><td>${formatVal(msr)}</td><td class="font-semibold">${formatVal(fR)}</td>
+                <td class="font-bold"><span class="tl-dot ${getPvalColorClass(pR, alpha)}"></span>${formatPVal(pR)}</td><td>${formatVal(fCritR)}</td></tr>
+                
+                <tr><td class="font-medium">Columns</td><td>${formatVal(ssc)}</td><td>${dfC}</td><td>${formatVal(msc)}</td><td class="font-semibold">${formatVal(fC)}</td>
+                <td class="font-bold"><span class="tl-dot ${getPvalColorClass(pC, alpha)}"></span>${formatPVal(pC)}</td><td>${formatVal(fCritC)}</td></tr>
+                
+                <tr><td class="font-medium">Error</td><td>${formatVal(sse)}</td><td>${dfE}</td><td>${formatVal(mse)}</td><td></td><td></td><td></td></tr>
+                <tr class="font-semibold bg-slate-50"><td class="border-t-2 border-slate-300">Total</td><td class="border-t-2 border-slate-300">${formatVal(sst)}</td><td class="border-t-2 border-slate-300">${dfT}</td><td></td><td></td><td></td><td></td></tr>
+            `;
+            document.getElementById('anova-body').innerHTML = aBody;
+
+            const interBox = document.getElementById('interpretation-box');
+            const rNames = rowLabels.join(', ');
+            const cNames = colLabels.join(', ');
+            const isSigR = !isNaN(pR) && pR <= alpha;
+            const isSigC = !isNaN(pC) && pC <= alpha;
+            
+            let summaryText = "";
+            if (isSigR && isSigC) {
+                summaryText = `Thus, both the Row factor (${rNames}) and Column factor (${cNames}) significantly and independently affect the outcomes in this sample.`;
+            } else if (isSigR) {
+                summaryText = `Thus, only the Row factor (${rNames}) significantly affects the outcomes. The Column factor does not.`;
+            } else if (isSigC) {
+                summaryText = `Thus, only the Column factor (${cNames}) significantly affects the outcomes. The Row factor does not.`;
+            } else {
+                summaryText = `Thus, neither the Row nor Column factors significantly affect the outcomes in this sample.<br>Any differences observed are likely due to random variation, not true effects.`;
+            }
+
+            interBox.innerHTML = `
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (ROWS): The mean scores for all row groups (${rNames}) are equal.
+                </div>
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm border-b-2 border-white text-black">
+                    Alternative Hypothesis (ROWS): At least one row group has a different mean score.
+                </div>
+                
+                <div class="bg-[#e5e7eb] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (COLUMNS): The mean scores for all column groups (${cNames}) are equal.
+                </div>
+                <div class="bg-[#e5e7eb] px-4 py-2 font-semibold text-sm text-black">
+                    Alternative Hypothesis (COLUMNS): At least one column group has a different mean score.
+                </div>
+
+                <div class="mt-4 mb-1">
+                    <span class="bg-black text-white font-bold px-4 py-1.5 text-sm uppercase inline-block rounded-sm tracking-wide">CONCLUSION</span>
+                </div>
+
+                <div class="${getInterpBoxClass(pR, alpha)}">
+                    The p-value for Rows is ${formatPVal(pR)}, which is <strong>${isNaN(pR) ? 'undefined' : getPValComparison(pR, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSigR ? 'is a statistically significant difference' : 'is no statistically significant difference'}</strong> in average scores among ${rNames}.
+                    ${getFStatExplanation(fR, fCritR)}
+                </div>
+                
+                <div class="${getInterpBoxClass(pC, alpha)}">
+                    The p-value for Columns is ${formatPVal(pC)}, which is <strong>${isNaN(pC) ? 'undefined' : getPValComparison(pC, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSigC ? 'is a statistically significant difference' : 'is no statistically significant difference'}</strong> in average scores between ${cNames}.
+                    ${getFStatExplanation(fC, fCritC)}
+                </div>
+                
+                <div class="${getInterpBoxClass(Math.min(isNaN(pR) ? 1 : pR, isNaN(pC) ? 1 : pC), alpha, true)}">
+                    ${summaryText}
+                </div>
+            `;
+            interBox.className = "mt-6 flex flex-col";
+        }
+
+        // --- 3. TWO-WAY WITH REPLICATION ---
+        function calcTwoWayRep(matrix, colH, rowH, nRep, alpha) {
+            let dataStartRow = colH ? 1 : 0;
+            let dataStartCol = rowH ? 1 : 0;
+            
+            const totalDataRows = matrix.length - dataStartRow;
+            if(totalDataRows % nRep !== 0) throw new Error(`Data rows (${totalDataRows}) is not a multiple of replications (${nRep}). Please ensure your data rows are perfectly divisible by the 'Rows per sample' setting.`);
+            
+            const rLevels = totalDataRows / nRep;
+            const cLevels = matrix[0].length - dataStartCol;
+            
+            let rowLabels = [], colLabels = [];
+            for(let j=dataStartCol; j<matrix[0].length; j++) colLabels.push(colH ? matrix[0][j] : `Col ${j + 1 - dataStartCol}`);
+            for(let i=0; i<rLevels; i++) rowLabels.push(rowH ? matrix[dataStartRow + i*nRep][0] : `Row Grp ${i + 1}`);
+
+            let data = []; 
+            let grandSum = 0;
+            let N = rLevels * cLevels * nRep;
+
+            for(let r=0; r<rLevels; r++){
+                data[r] = [];
+                for(let c=0; c<cLevels; c++){
+                    data[r][c] = [];
+                    for(let n=0; n<nRep; n++){
+                        let valText = matrix[dataStartRow + r*nRep + n][dataStartCol + c];
+                        if (valText === '') throw new Error(`Missing data detected at Row ${dataStartRow + r*nRep + n + 1}, Col ${dataStartCol + c + 1}. This ANOVA type requires a complete grid.`);
+                        
+                        let val = parseFloat(valText);
+                        if(isNaN(val)) throw new Error(`Non-numeric data ("${valText}") at Row ${dataStartRow + r*nRep + n + 1}, Col ${dataStartCol + c + 1}.`);
+                        
+                        data[r][c].push(val);
+                        grandSum += val;
+                    }
+                }
+            }
+
+            const GM = grandSum / N;
+
+            let ssr = 0, ssc = 0, sst = 0, ssub = 0; 
+            let rMeans = [], cMeans = [];
+            let cellMeans = Array.from({length: rLevels}, () => Array(cLevels).fill(0));
+
+            for(let r=0; r<rLevels; r++){
+                let rSum = 0;
+                let flatRow = [];
+                for(let c=0; c<cLevels; c++){
+                    flatRow.push(...data[r][c]);
+                    let cellSum = data[r][c].reduce((a,b)=>a+b,0);
+                    let cellMean = cellSum / nRep;
+                    cellMeans[r][c] = cellMean;
+                    rSum += cellSum;
+                    
+                    ssub += nRep * Math.pow(cellMean - GM, 2);
+                    data[r][c].forEach(v => { sst += Math.pow(v - GM, 2); });
+                }
+                rMeans.push({
+                    sum: rSum,
+                    mean: rSum / flatRow.length,
+                    data: flatRow
+                });
+                ssr += (cLevels * nRep) * Math.pow(rMeans[r].mean - GM, 2);
+            }
+
+            for(let c=0; c<cLevels; c++){
+                let cSum = 0;
+                let flatCol = [];
+                for(let r=0; r<rLevels; r++){
+                    flatCol.push(...data[r][c]);
+                    cSum += data[r][c].reduce((a,b)=>a+b,0);
+                }
+                cMeans.push({
+                    sum: cSum,
+                    mean: cSum / flatCol.length,
+                    data: flatCol
+                });
+                ssc += (rLevels * nRep) * Math.pow(cMeans[c].mean - GM, 2);
+            }
+
+            const ssInt = Math.max(0, ssub - ssr - ssc);
+            const ssw = Math.max(0, sst - ssub); 
+
+            const dfR = rLevels - 1, dfC = cLevels - 1, dfInt = dfR * dfC;
+            const dfW = rLevels * cLevels * (nRep - 1), dfT = N - 1;
+
+            if (dfW <= 0) throw new Error("Error degrees of freedom is 0 or less. Unable to calculate variance.");
+
+            const msr = ssr/dfR, msc = ssc/dfC, msInt = ssInt/dfInt, msw = ssw/dfW;
+            
+            const fR = msw === 0 ? (msr > 0 ? Infinity : NaN) : msr/msw;
+            const fC = msw === 0 ? (msc > 0 ? Infinity : NaN) : msc/msw;
+            const fInt = msw === 0 ? (msInt > 0 ? Infinity : NaN) : msInt/msw;
+
+            const pR = isNaN(fR) ? NaN : (fR === Infinity ? 0 : 1 - jStat.centralF.cdf(fR, dfR, dfW));
+            const pC = isNaN(fC) ? NaN : (fC === Infinity ? 0 : 1 - jStat.centralF.cdf(fC, dfC, dfW));
+            const pInt = isNaN(fInt) ? NaN : (fInt === Infinity ? 0 : 1 - jStat.centralF.cdf(fInt, dfInt, dfW));
+
+            const fcR = jStat.centralF.inv(1-alpha, dfR, dfW);
+            const fcC = jStat.centralF.inv(1-alpha, dfC, dfW);
+            const fcInt = jStat.centralF.inv(1-alpha, dfInt, dfW);
+
+            let summs = [];
+            summs.push({label: "=== SAMPLE ROWS ===", count:'', sum:'', mean:'', var:'', lcl:'', ucl:''});
+            rMeans.forEach((m, i) => {
+                let v = m.data.reduce((a,b)=>a+Math.pow(b-m.mean,2),0) / (m.data.length - 1);
+                let se = Math.sqrt(v / m.data.length);
+                let tCrit = m.data.length > 1 ? jStat.studentt.inv(1 - alpha/2, m.data.length - 1) : 0;
+                summs.push({label: rowLabels[i], count: m.data.length, sum: m.sum, mean: m.mean, var: v, lcl: m.mean - tCrit*se, ucl: m.mean + tCrit*se});
+            });
+            
+            summs.push({label: "=== COLUMNS ===", count:'', sum:'', mean:'', var:'', lcl:'', ucl:''});
+            cMeans.forEach((m, i) => {
+                let v = m.data.reduce((a,b)=>a+Math.pow(b-m.mean,2),0) / (m.data.length - 1);
+                let se = Math.sqrt(v / m.data.length);
+                let tCrit = m.data.length > 1 ? jStat.studentt.inv(1 - alpha/2, m.data.length - 1) : 0;
+                summs.push({label: colLabels[i], count: m.data.length, sum: m.sum, mean: m.mean, var: v, lcl: m.mean - tCrit*se, ucl: m.mean + tCrit*se});
+            });
+
+            const datasetsForChart = colLabels.map((colName, cIndex) => {
+                return {
+                    label: colName,
+                    data: rowLabels.map((_, rIndex) => cellMeans[rIndex][cIndex]),
+                    backgroundColor: brandColors[cIndex % brandColors.length]
+                };
+            });
+            const overallPColor = getPvalColorClass(Math.min(isNaN(pR) ? 1 : pR, isNaN(pC) ? 1 : pC, isNaN(pInt) ? 1 : pInt), alpha);
+            drawChart(rowLabels, datasetsForChart, "Interaction Cell Means", overallPColor);
+
+            renderTwoWayRepOutput(summs, ssr, ssc, ssInt, ssw, sst, dfR, dfC, dfInt, dfW, dfT, msr, msc, msInt, msw, fR, fC, fInt, pR, pC, pInt, fcR, fcC, fcInt, alpha, rowLabels, colLabels);
+        }
+
+        function renderTwoWayRepOutput(summs, ssr, ssc, ssInt, ssw, sst, dfR, dfC, dfInt, dfW, dfT, msr, msc, msInt, msw, fR, fC, fInt, pR, pC, pInt, fcR, fcC, fcInt, alpha, rowLabels, colLabels) {
+            const confLvl = Math.round((1 - alpha) * 100);
+            const sHead = `<tr><th>Summary (Marginal)</th><th>Count</th><th>Sum</th><th>Average</th><th>Variance</th><th>Lower CI (${confLvl}%)</th><th>Upper CI (${confLvl}%)</th></tr>`;
+            const sBody = summs.map(s => {
+                if(s.count === '') return `<tr class="bg-slate-100 font-bold text-xs"><td colspan="7" class="text-center text-slate-500">${s.label}</td></tr>`;
+                return `<tr><td>${s.label}</td><td>${s.count}</td><td>${formatVal(s.sum)}</td><td>${formatVal(s.mean)}</td><td>${formatVal(s.var)}</td><td>${formatVal(s.lcl)}</td><td>${formatVal(s.ucl)}</td></tr>`;
+            }).join('');
+            document.getElementById('summary-head').innerHTML = sHead;
+            document.getElementById('summary-body').innerHTML = sBody;
+
+            const aBody = `
+                <tr><td class="font-medium">Sample (Rows)</td><td>${formatVal(ssr)}</td><td>${dfR}</td><td>${formatVal(msr)}</td><td class="font-semibold">${formatVal(fR)}</td>
+                <td class="font-bold"><span class="tl-dot ${getPvalColorClass(pR, alpha)}"></span>${formatPVal(pR)}</td><td>${formatVal(fcR)}</td></tr>
+                
+                <tr><td class="font-medium">Columns</td><td>${formatVal(ssc)}</td><td>${dfC}</td><td>${formatVal(msc)}</td><td class="font-semibold">${formatVal(fC)}</td>
+                <td class="font-bold"><span class="tl-dot ${getPvalColorClass(pC, alpha)}"></span>${formatPVal(pC)}</td><td>${formatVal(fcC)}</td></tr>
+                
+                <tr><td class="font-medium">Interaction</td><td>${formatVal(ssInt)}</td><td>${dfInt}</td><td>${formatVal(msInt)}</td><td class="font-semibold">${formatVal(fInt)}</td>
+                <td class="font-bold"><span class="tl-dot ${getPvalColorClass(pInt, alpha)}"></span>${formatPVal(pInt)}</td><td>${formatVal(fcInt)}</td></tr>
+                
+                <tr><td class="font-medium">Within (Error)</td><td>${formatVal(ssw)}</td><td>${dfW}</td><td>${formatVal(msw)}</td><td></td><td></td><td></td></tr>
+                <tr class="font-semibold bg-slate-50"><td class="border-t-2 border-slate-300">Total</td><td class="border-t-2 border-slate-300">${formatVal(sst)}</td><td class="border-t-2 border-slate-300">${dfT}</td><td></td><td></td><td></td><td></td></tr>
+            `;
+            document.getElementById('anova-body').innerHTML = aBody;
+
+            const interBox = document.getElementById('interpretation-box');
+            const rNames = rowLabels.join(', ');
+            const cNames = colLabels.join(', ');
+            const isSigR = !isNaN(pR) && pR <= alpha;
+            const isSigC = !isNaN(pC) && pC <= alpha;
+            const isSigInt = !isNaN(pInt) && pInt <= alpha;
+
+            let summaryText = "";
+            const sigFactors = [];
+            if (isSigR) sigFactors.push(`Row factor`);
+            if (isSigC) sigFactors.push(`Column factor`);
+
+            if (sigFactors.length > 0 && isSigInt) {
+                summaryText = `Thus, there are significant main effects for the ${sigFactors.join(" and ")}, AND a significant interaction between them.<br>This means the effect of one factor heavily depends on the specific level of the other factor.`;
+            } else if (sigFactors.length > 0 && !isSigInt) {
+                summaryText = `Thus, there are significant main effects for the ${sigFactors.join(" and ")}, but NO significant interaction.<br>They affect the outcome independently of one another.`;
+            } else if (sigFactors.length === 0 && isSigInt) {
+                summaryText = `Thus, while neither factor has a significant main effect alone, there is a significant interaction between Rows and Columns that affects the outcome.`;
+            } else {
+                summaryText = `Thus, neither the main factors nor their interaction significantly affect the outcomes.<br>Any differences observed are likely due to random variation, not true effects.`;
+            }
+
+            interBox.innerHTML = `
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (ROWS): The mean scores for all row groups (${rNames}) are equal.
+                </div>
+                <div class="bg-[#ffff00] px-4 py-2 font-semibold text-sm border-b-2 border-white text-black">
+                    Alternative Hypothesis (ROWS): At least one row group has a different mean score.
+                </div>
+                
+                <div class="bg-[#e5e7eb] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (COLUMNS): The mean scores for all column groups (${cNames}) are equal.
+                </div>
+                <div class="bg-[#e5e7eb] px-4 py-2 font-semibold text-sm border-b-2 border-white text-black">
+                    Alternative Hypothesis (COLUMNS): At least one column group has a different mean score.
+                </div>
+
+                <div class="bg-[#d1fae5] px-4 py-2 font-semibold text-sm border-b border-white text-black">
+                    Null Hypothesis (INTERACTION): There is no interaction effect between Rows and Columns.
+                </div>
+                <div class="bg-[#d1fae5] px-4 py-2 font-semibold text-sm text-black">
+                    Alternative Hypothesis (INTERACTION): There is a significant interaction effect between Rows and Columns.
+                </div>
+
+                <div class="mt-4 mb-1">
+                    <span class="bg-black text-white font-bold px-4 py-1.5 text-sm uppercase inline-block rounded-sm tracking-wide">CONCLUSION</span>
+                </div>
+
+                <div class="${getInterpBoxClass(pR, alpha)}">
+                    The p-value for Rows is ${formatPVal(pR)}, which is <strong>${isNaN(pR) ? 'undefined' : getPValComparison(pR, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSigR ? 'is a statistically significant main effect' : 'is no statistically significant main effect'}</strong> for ${rNames}.
+                    ${getFStatExplanation(fR, fcR)}
+                </div>
+                
+                <div class="${getInterpBoxClass(pC, alpha)}">
+                    The p-value for Columns is ${formatPVal(pC)}, which is <strong>${isNaN(pC) ? 'undefined' : getPValComparison(pC, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSigC ? 'is a statistically significant main effect' : 'is no statistically significant main effect'}</strong> for ${cNames}.
+                    ${getFStatExplanation(fC, fcC)}
+                </div>
+
+                <div class="${getInterpBoxClass(pInt, alpha)}">
+                    The p-value for Interaction is ${formatPVal(pInt)}, which is <strong>${isNaN(pInt) ? 'undefined' : getPValComparison(pInt, alpha) + ' ' + alpha}</strong>.<br>
+                    This means there <strong>${isSigInt ? 'is a statistically significant interaction effect' : 'is no statistically significant interaction effect'}</strong> between the row and column factors.
+                    ${getFStatExplanation(fInt, fcInt)}
+                </div>
+                
+                <div class="${getInterpBoxClass(Math.min(isNaN(pR) ? 1 : pR, isNaN(pC) ? 1 : pC, isNaN(pInt) ? 1 : pInt), alpha, true)}">
+                    ${summaryText}
+                </div>
+            `;
+            interBox.className = "mt-6 flex flex-col";
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensitivity Analysis Simulator Ver 21.0</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Recharts -->
+    <script src="https://unpkg.com/react-is/umd/react-is.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.js"></script>
+    
+    <!-- Icons & Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Export Engines -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* Corporate Reset */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        
+        .traffic-input { 
+            transition: all 0.2s ease; 
+            font-size: 1.2rem !important; 
+            font-weight: 900 !important;
+            padding: 0.6rem !important;
+            text-align: center;
+            border: 2px solid #cbd5e1 !important;
+            color: #000000 !important;
+            background-color: #ffffff !important;
+        }
+
+        /* PINK VISIBILITY PROTOCOL - PERMANENT BLACK FONTS */
+        .pink-target {
+            background-color: #fce7f3 !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+        }
+        .pink-target * { color: #000000 !important; }
+
+        /* PDF MIRROR IMAGE PROTOCOL - EXECUTIVE STANDARDS */
+        .pdf-capture-mode .no-pdf { display: none !important; }
+        .pdf-capture-mode .pdf-only { display: block !important; }
+        .pdf-capture-mode { background: #ffffff !important; color: #000000 !important; font-family: 'Helvetica', sans-serif !important; }
+        
+        .pdf-capture-mode .pdf-target {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 1.5px solid #000000 !important;
+            border-radius: 0px !important; 
+            box-shadow: none !important;
+            margin-bottom: 20px !important;
+            break-inside: avoid !important;
+        }
+
+        /* High Visibility PDF Header (Pink with Black Text) */
+        .pdf-capture-mode .pdf-header-pink {
+            background-color: #fce7f3 !important;
+            padding: 12px 15px !important;
+            border: 2.5px solid #000000 !important;
+            margin-bottom: 12px !important;
+        }
+        .pdf-capture-mode .pdf-header-pink h2,
+        .pdf-capture-mode .pdf-header-pink h3 { color: #000000 !important; font-weight: 900 !important; font-size: 14pt !important; }
+
+        .pdf-capture-mode .kpi-val {
+            font-size: 32pt !important;
+            color: #000000 !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+        }
+
+        /* TRAFFIC LIGHT COLORS - INDUSTRIAL SHADES */
+        .txt-gain { color: #065f46 !important; font-weight: 900 !important; }
+        .txt-loss { color: #991b1b !important; font-weight: 900 !important; }
+        .txt-critical { color: #c2410c !important; font-weight: 900 !important; }
+
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        .animate-modal { animation: zoomIn 0.2s ease-out forwards; }
+
+        .setup-select { 
+            font-weight: 900 !important; 
+            border: 2px solid #cbd5e1;
+            background: #ffffff !important;
+            color: #0f172a;
+            font-size: 1rem;
+            padding: 0.6rem !important;
+        }
+
+        /* Scaled Audit Matrix Typography */
+        .audit-cell { padding: 0.6rem 1rem; border-bottom: 1px solid #e2e8f0; font-size: 1.1rem; color: #000 !important; }
+        .audit-val { min-width: 80px; display: inline-block; font-family: monospace; font-weight: 900; font-size: 1.2rem; color: #000 !important; }
+        
+        .editable-cell {
+            background-color: transparent;
+            border: 1px solid transparent;
+            width: 100%;
+            text-align: center;
+            font-family: monospace;
+            font-weight: 900;
+            font-size: 0.9rem;
+            padding: 4px;
+            color: #000000;
+        }
+        .editable-cell:hover { border-color: #cbd5e1; background-color: #fce7f3; }
+        .editable-cell:focus { border-color: #000; background-color: #ffffff; outline: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased text-[14px]">
+    
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        const { ComposedChart, Scatter, Line, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer } = window.Recharts;
+
+        // --- GLOBAL STAT UTILS ---
+        const mathUtils = {
+          mean: (arr) => arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length,
+          stdDev: (arr, mean) => Math.sqrt(arr.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / (arr.length - 1 || 1)),
+          prng: (seed) => { let x = Math.sin(seed + 1.1) * 10000; return x - Math.floor(x); },
+          linest: (xArr, yArr) => {
+            const n = xArr.length;
+            if (n === 0) return { slope: 0, intercept: 0 };
+            const xM = mathUtils.mean(xArr); const yM = mathUtils.mean(yArr);
+            let num = 0, den = 0;
+            for (let i = 0; i < n; i++) { num += (xArr[i] - xM) * (yArr[i] - yM); den += Math.pow(xArr[i] - xM, 2); }
+            const slope = den === 0 ? 0 : num / den;
+            return { slope, intercept: yM - (slope * xM) };
+          },
+          getR2Components: (xArr, yArr, slope, intercept) => {
+            if (xArr.length === 0) return { r2: 0, ssRes: 0, ssTot: 0 };
+            const yM = mathUtils.mean(yArr); let ssT = 0, ssR = 0;
+            for (let i = 0; i < xArr.length; i++) {
+              const yP = slope * xArr[i] + intercept;
+              ssT += Math.pow(yArr[i] - yM, 2); ssR += Math.pow(yArr[i] - yP, 2);
+            }
+            return { r2: ssT === 0 ? 0 : 1 - (ssR / ssT), ssRes: ssR, ssTot: ssT };
+          },
+          quartiles: (arr) => {
+            if (arr.length === 0) return { min: 0, q1: 0, median: 0, q3: 0, max: 0 };
+            const sorted = [...arr].sort((a, b) => a - b);
+            const n = sorted.length - 1;
+            return { min: sorted[0], q1: sorted[Math.floor(n*0.25)], median: sorted[Math.floor(n*0.5)], q3: sorted[Math.floor(n*0.75)], max: sorted[n] };
+          },
+          parseOverride: (v, f) => { if (v === undefined || v === "" || v === null) return f; const p = parseFloat(v); return isNaN(p) ? f : p; }
+        };
+
+        const INDUSTRIAL_SEGMENTS = [
+          { id: 20, name: "Manual Process Strategy", arrRate: 100, procTime: 10.0, errRate: 2.0, errCost: 8000 },
+          { id: 1, name: "Data Center Operations", arrRate: 50, procTime: 10, errRate: 2.5, errCost: 2000 },
+          { id: 2, name: "Automotive Assembly line", arrRate: 120, procTime: 4.5, errRate: 1.2, errCost: 40000 },
+          { id: 3, name: "Pharmaceutical Packaging", arrRate: 300, procTime: 1.2, errRate: 0.5, errCost: 120000 },
+          { id: 4, name: "E-Commerce Fulfillment", arrRate: 800, procTime: 2.5, errRate: 3.0, errCost: 1200 },
+          { id: 5, name: "Logistics Hub Node", arrRate: 2000, procTime: 0.2, errRate: 1.1, errCost: 3200 },
+          { id: 6, name: "Aero Component QA Unit", arrRate: 10, procTime: 120.0, errRate: 0.1, errCost: 450000 },
+          { id: 7, name: "Financial Asset Clearing", arrRate: 5000, procTime: 0.05, errRate: 0.01, errCost: 25000 },
+          { id: 8, name: "Textile Mill Spindles", arrRate: 250, procTime: 5.0, errRate: 3.5, errCost: 2400 },
+          { id: 9, name: "CNC Machining Center", arrRate: 40, procTime: 30.0, errRate: 1.2, errCost: 55000 }
+        ];
+
+        // --- RENDER COMPONENT ---
+        const RenderScatterPlot = ({ data, title, stats, color }) => {
+          if (!data || data.length === 0) return null;
+          const sorted = [...data].sort((a,b)=>a.x-b.x);
+          return (
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full text-left pdf-target">
+                  <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">{title}</h4>
+                  <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={sorted}>
+                              <CartesianGrid strokeDasharray="2 2" vertical={false} stroke="#f1f5f9"/>
+                              <XAxis dataKey="x" type="number" tick={{fontSize: 7}} domain={['auto', 'auto']} stroke="#94a3b8" />
+                              <YAxis width={20} tick={{fontSize: 7}} domain={['auto', 'auto']} stroke="#94a3b8" />
+                              <Scatter dataKey="scatter" fill={color} opacity={0.4} />
+                              <Line dataKey="line" stroke="#000" strokeWidth={1.5} dot={false} activeDot={false} />
+                          </ComposedChart>
+                      </ResponsiveContainer>
+                  </div>
+              </div>
+          );
+        };
+
+        function App() {
+          const [activeSegment, setActiveSegment] = useState(INDUSTRIAL_SEGMENTS[0]);
+          const [inputs, setInputs] = useState({ arrRate: "100", procTime: "10", errRate: "2.0", errCost: "8000" });
+          const [simMode, setSimMode] = useState("Baseline");
+          const [simTick, setSimTick] = useState(0); 
+          const [pastedData, setPastedData] = useState("");
+          const [isExporting, setIsExporting] = useState(false);
+          const [matrixOverrides, setMatrixOverrides] = useState({});
+          const [selectedConcept, setSelectedConcept] = useState("");
+
+          const thresholds = {
+            arrRate: { min: 1, max: 20000, label: "Arrival Rate" },
+            procTime: { min: 0.01, max: 500, label: "Processing Speed" },
+            errRate: { min: 0.001, max: 100, label: "Error Rate" },
+            errCost: { min: 0, max: 10000000, label: "Failure Cost" }
+          };
+
+          // FOOL PROOF VALIDATION - CATCHES EMPTY, NaN, AND BOUNDARY BREACH
+          const validationError = useMemo(() => {
+            const arrS = inputs.arrRate.toString().trim();
+            const procS = inputs.procTime.toString().trim();
+            const errS = inputs.errRate.toString().trim();
+
+            if (arrS === "" || procS === "" || errS === "") return "Input Required. Blank fields are prohibited.";
+
+            const arr = parseFloat(inputs.arrRate), proc = parseFloat(inputs.procTime), err = parseFloat(inputs.errRate);
+            
+            if (isNaN(arr) || isNaN(proc) || isNaN(err)) return "Numeric data required. Symbols prohibited.";
+            if (arr < thresholds.arrRate.min || arr > thresholds.arrRate.max) return `${thresholds.arrRate.label} Limit [${thresholds.arrRate.min}-${thresholds.arrRate.max}] Breached.`;
+            if (proc < thresholds.procTime.min || proc > thresholds.procTime.max) return `${thresholds.procTime.label} Limit [${thresholds.procTime.min}-${thresholds.procTime.max}] Breached.`;
+            if (err < thresholds.errRate.min || err > thresholds.errRate.max) return `${thresholds.errRate.label} Limit [${thresholds.errRate.min}%-${thresholds.errRate.max}%] Breached.`;
+            
+            return null;
+          }, [inputs]);
+
+          // --- ENGINE HANDLERS ---
+          function handleSegmentChange(e) {
+            const seg = INDUSTRIAL_SEGMENTS.find(s => s.id === parseInt(e.target.value));
+            if (!seg) return;
+            setActiveSegment(seg);
+            setInputs({ arrRate: seg.arrRate.toString(), procTime: seg.procTime.toString(), errRate: seg.errRate.toString(), errCost: seg.errCost.toString() });
+            setMatrixOverrides({}); setPastedData("");
+            setSimTick(seg.id === 20 ? 0 : Date.now());
+          }
+
+          // FOOL PROOF INPUT SHIELD (Keystroke Filter)
+          function handleInputChange(f, v) { 
+            const sanitized = v.replace(/[^0-9.]/g, ''); 
+            setInputs(p => ({ ...p, [f]: sanitized })); 
+            if(simTick !== 0 && !validationError) setSimTick(Date.now()); 
+          }
+
+          function handleMatrixEdit(idx, field, value) {
+            const sanitized = value.replace(/[^0-9.]/g, '');
+            setMatrixOverrides(prev => ({ ...prev, [idx]: { ...prev[idx], [field]: sanitized } }));
+          }
+
+          function handleDataPaste() {
+            try {
+              const rows = pastedData.trim().split(/\r?\n/);
+              let aS = 0, pS = 0, eS = 0, count = 0;
+              rows.forEach(r => {
+                const c = r.split(/[\t,]/).map(x => x.trim()).filter(x => x !== '');
+                if (c.length >= 3) {
+                  const v1 = parseFloat(c[0]); const v2 = parseFloat(c[1]); const v3 = parseFloat(c[2]);
+                  if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) { aS += v1; pS += v2; eS += v3; count++; }
+                }
+              });
+              if (count > 0) {
+                setActiveSegment(INDUSTRIAL_SEGMENTS[0]); 
+                setInputs({ arrRate: (aS / count).toFixed(2), procTime: (pS / count).toFixed(2), errRate: (eS / count).toFixed(2), errCost: inputs.errCost });
+                setSimTick(Date.now()); 
+              }
+            } catch (e) {}
+          }
+
+          async function handleExportPDF() {
+            setIsExporting(true);
+            try {
+                const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                const addHeader = () => {
+                    pdf.setFillColor(0, 0, 0); pdf.rect(0, 0, 210, 18, 'F');
+                    pdf.setTextColor(255, 255, 0); pdf.setFontSize(16); pdf.setFont('helvetica', 'bold'); pdf.text("MECTS SET GO", 15, 11);
+                    pdf.setTextColor(255, 255, 255); pdf.setFontSize(7); pdf.text("WWW.MECTS.IN - EXECUTIVE SUMMARY VER 21.0", 195, 11, { align: 'right' });
+                };
+                addHeader(); document.body.classList.add('pdf-capture-mode');
+                const blocks = ['pdf-block-assessment', 'pdf-block-matrix-row', 'pdf-block-kpi-row', 'pdf-block-charts', 'pdf-block-audit-grid'];
+                let currY = 24;
+                for (const bid of blocks) {
+                    const el = document.getElementById(bid); if (!el) continue;
+                    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }); 
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9); 
+                    const h = (canvas.height * 180) / canvas.width;
+                    if (currY + h > 280) { pdf.addPage(); addHeader(); currY = 24; }
+                    pdf.addImage(imgData, 'JPEG', 15, parseFloat(currY.toFixed(2)), 180, parseFloat(h.toFixed(2))); currY += h + 8;
+                }
+                pdf.save('Final_Industrial_Assessment.pdf');
+            } finally { document.body.classList.remove('pdf-capture-mode'); setIsExporting(false); }
+          }
+
+          const simulationStats = useMemo(() => {
+            if (simTick === 0 || validationError) return { currentY:0, baselineY:0, deltaY:0, currentCOPQ:0, deltaCOPQ:0, meanY:0, stdDevY:0, UCL:0, regArr:{slope:0,r2:0}, regProc:{slope:0,r2:0}, regErr:{slope:0,r2:0}, yQuartiles:{min:0,q1:0,median:0,q3:0,max:0}, mockData:{dX1:[], dX2:[], dX3:[], dY:[]}, chartData1:[], chartData2:[], chartData3:[] };
+            
+            const sI = {
+              arr: parseFloat(inputs.arrRate), proc: parseFloat(inputs.procTime),
+              err: parseFloat(inputs.errRate), cost: parseFloat(inputs.errCost)
+            };
+
+            let vM = (simMode === "Perfect" ? 0.000001 : simMode === "Chaotic" ? 1.5 : 0.4);
+            const dX1 = [], dX2 = [], dX3 = [], dY = [];
+            
+            for (let i = 0; i < 20; i++) {
+              const ovr = matrixOverrides[i] || {};
+              const rowSeed = i * 133 + simTick;
+              const n1 = (mathUtils.prng(rowSeed) * 0.4 - 0.2) * vM;
+              const n2 = (mathUtils.prng(rowSeed + 100) * 0.3 - 0.15) * vM;
+              const n3 = (mathUtils.prng(rowSeed + 200) * 1.0 - 0.5) * vM;
+
+              const x1_v = Math.max(1, mathUtils.parseOverride(ovr.x1, sI.arr * (1 + n1)));
+              const x2_v = Math.max(0.01, mathUtils.parseOverride(ovr.x2, sI.proc * (1 + n2)));
+              const x3_v = Math.max(0.001, mathUtils.parseOverride(ovr.x3, sI.err * (1 + n3)));
+              
+              const genY = x1_v * ((x3_v * Math.pow(activeSegment.procTime / x2_v, 0.75)) / 100);
+              const y_v = Math.max(0.001, mathUtils.parseOverride(ovr.y, genY));
+              
+              dX1.push(x1_v); dX2.push(x2_v); dX3.push(x3_v); dY.push(y_v);
+            }
+
+            const cY = sI.arr * ((sI.err * Math.pow(activeSegment.procTime / Math.max(0.01, sI.proc), 0.75)) / 100);
+            const bY = activeSegment.arrRate * (activeSegment.errRate / 100);
+            const rA = mathUtils.linest(dX1, dY);
+            const rP = mathUtils.linest(dX2, dY);
+            const rE = mathUtils.linest(dX3, dY);
+
+            return {
+              currentY: cY, baselineY: bY, deltaY: cY - bY,
+              currentCOPQ: Math.round(cY * sI.cost), deltaCOPQ: Math.round((cY - bY) * sI.cost),
+              meanY: mathUtils.mean(dY), stdDevY: mathUtils.stdDev(dY, mathUtils.mean(dY)),
+              UCL: mathUtils.mean(dY) + (3 * mathUtils.stdDev(dY, mathUtils.mean(dY))),
+              regArr: { ...rA, ...mathUtils.getR2Components(dX1, dY, rA.slope, rA.intercept) },
+              regProc: { ...rP, ...mathUtils.getR2Components(dX2, dY, rP.slope, rP.intercept) },
+              regErr: { ...rE, ...mathUtils.getR2Components(dX3, dY, rE.slope, rE.intercept) },
+              yQuartiles: mathUtils.quartiles(dY), mockData: { dX1, dX2, dX3, dY },
+              trackingStatusBg: (cY - bY) > 0.01 ? 'bg-[#991b1b] border-[#7f1d1d] text-white shadow-red-200' : (cY - bY) < -0.01 ? 'bg-[#065f46] border-[#064e3b] text-white shadow-emerald-200' : 'bg-slate-800 border-slate-700 text-white',
+              chartData1: dX1.map((x, i) => ({ x, scatter: dY[i], line: rA.slope * x + rA.intercept })),
+              chartData2: dX2.map((x, i) => ({ x, scatter: dY[i], line: rP.slope * x + rP.intercept })),
+              chartData3: dX3.map((x, i) => ({ x, scatter: dY[i], line: rE.slope * x + rE.intercept }))
+            };
+          }, [inputs, activeSegment, simMode, simTick, matrixOverrides, validationError]);
+
+          function getStatusLabel(dY) {
+            if (dY > 0.01) return "OPERATIONAL LOSS DETECTED";
+            if (dY < -0.01) return "OPERATIONAL GAIN ACHIEVED";
+            return "TRACKING BASELINE STATUS";
+          }
+
+          return (
+            <div className="bg-slate-50 min-h-screen text-[14px] relative">
+              <div className="max-w-full mx-auto p-4 md:p-8 relative">
+                
+                {/* BRAND HEADER */}
+                <header className="mb-8 bg-slate-950 p-6 md:p-8 rounded-[0.5rem] shadow flex flex-col md:flex-row justify-between items-center border-b-4 border-yellow-500">
+                    <div className="text-left font-black">
+                        <h3 className="text-yellow-400 font-bold text-3xl uppercase tracking-tighter leading-none">MECTS SET GO</h3>
+                        <div className="mt-1.5 h-0.5 w-12 bg-white/20"></div>
+                        <h1 className="text-white font-black text-sm uppercase mt-1 tracking-widest opacity-90">Sensitivity Analysis</h1>
+                    </div>
+                    <div className="text-right"><span className="text-white/30 font-black tracking-widest uppercase text-[9px]">WWW.MECTS.IN</span></div>
+                </header>
+
+                <div className="flex gap-3 mb-6 no-pdf">
+                   <button onClick={handleExportPDF} disabled={isExporting || !!validationError} className="bg-red-600 hover:bg-red-700 text-white font-black py-2.5 px-8 rounded shadow transition-all disabled:opacity-50 text-[10px] uppercase tracking-widest no-pdf font-black"><i className="fas fa-file-pdf mr-2 text-[14px]"></i> Export Executive Summary</button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-8 no-pdf text-left font-black">
+                    <div className="bg-white p-3 rounded shadow border border-slate-200">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Industrial Strategy Category</label>
+                        <select className="setup-select w-full outline-none font-black" value={activeSegment.id} onChange={handleSegmentChange}>
+                            {INDUSTRIAL_SEGMENTS.map(seg => <option key={seg.id} value={seg.id}>{seg.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="bg-white p-3 rounded shadow border border-slate-200">
+                        <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 text-left">Simulation Mode Parameters</label>
+                        <div className="flex gap-1">
+                            {['Baseline', 'Perfect', 'Chaotic'].map(mode => (
+                                <button key={mode} onClick={()=>{setSimMode(mode); if(simTick!==0)setSimTick(Date.now());}} className={`flex-grow p-1.5 rounded font-black text-[10px] uppercase tracking-widest border ${simMode === mode ? 'bg-slate-950 text-white border-yellow-500 shadow-md' : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'}`}>
+                                    {mode}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* SAFETY SHIELD ERROR BAR - FOOL PROOF BLOCK */}
+                {validationError && (
+                  <div className="mb-6 p-5 bg-red-50 border-4 border-red-600 text-red-900 rounded-xl flex items-center justify-center animate-pulse no-pdf">
+                    <i className="fas fa-shield-alt mr-4 text-3xl text-red-600"></i>
+                    <span className="font-black uppercase tracking-[0.1em] text-lg">SAFETY HALTED: {validationError} Check thresholds.</span>
+                  </div>
+                )}
+
+                {/* PDF CONTENT HEADER */}
+                <div id="pdf-block-assessment" className="hidden pdf-only mb-6 text-left pdf-target pdf-header-pink">
+                    <h2 className="text-black font-black uppercase font-black">OPERATIONAL IMPACT & STRATEGIC ASSESSMENT</h2>
+                    <div className="mt-4 grid grid-cols-2 gap-4 font-black">
+                        <div className="p-4 rounded pink-target text-center"><span className="block text-[11px] uppercase font-black mb-1 text-black font-black">Process Mean (μ)</span><span className="text-3xl font-black text-black font-black">{(simulationStats.meanY || 0).toFixed(2)}</span></div>
+                        <div className="p-4 rounded pink-target text-center"><span className="block text-[11px] uppercase font-black mb-1 text-black font-black">Sigma Limit (UCL)</span><span className="text-3xl font-black text-black font-black">{(simulationStats.UCL || 0).toFixed(2)}</span></div>
+                    </div>
+                </div>
+
+                <div id="pdf-block-matrix-row" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mb-6">
+                  {/* COL 1: DATA LOGISTICS */}
+                  <div className="lg:col-span-3 space-y-4 no-pdf text-left font-black">
+                    <div className="bg-slate-950 p-6 rounded-[1.5rem] border-l-8 border-[#991b1b] shadow-lg text-left no-pdf font-black">
+                        <h4 className="text-[#991b1b] font-black text-[11px] uppercase tracking-widest mb-3"><i className="fas fa-lock mr-2 text-[14px]"></i> Safety Protocol Matrix</h4>
+                        <ul className="text-[11px] text-slate-400 font-bold space-y-1.5 uppercase text-left font-black">
+                            <li className="flex justify-between border-b border-white/5 pb-1"><span>X1 Limit (Arrival Rate - Max Sustained Volume):</span> <span className="text-white">20,000</span></li>
+                            <li className="flex justify-between border-b border-white/5 pb-1"><span>X2 Limit (Proc Speed - Min task Velocity):</span> <span className="text-white">500 min</span></li>
+                            <li className="flex justify-between"><span>X3 Limit (Error Rate - Max Process Drift):</span> <span className="text-white">100%</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-white p-4 rounded shadow border border-slate-200">
+                        <h2 className="text-[10px] font-black mb-3 uppercase border-b pb-1 text-black font-black">Data Portrayal Matrix</h2>
+                        <div className="max-h-[300px] overflow-y-auto border bg-slate-50 p-1">
+                            <table className="w-full text-[9px] text-left border-collapse font-mono font-black">
+                                <thead className="bg-slate-200 text-slate-700 uppercase sticky top-0 font-black font-black">
+                                    <tr><th className="p-1 border-b font-black">Run</th><th className="p-1 border-b text-blue-700 text-center font-black">X1</th><th className="p-1 border-b text-purple-700 text-center font-black">X2</th><th className="p-1 border-b text-orange-700 text-center font-black">X3</th><th className="p-1 border-b text-indigo-800 text-center font-black">Y</th></tr>
+                                </thead>
+                                <tbody>
+                                    {simulationStats.mockData.dX1.length > 0 ? simulationStats.mockData.dX1.map((v, i) => (
+                                        <tr key={i} className="hover:bg-white border-b border-slate-100 transition-colors font-black">
+                                            <td className="p-1 text-slate-400 font-bold">{i+1}</td>
+                                            <td className="p-1"><input className="editable-cell" type="text" value={matrixOverrides[i]?.x1 ?? (v || 0).toFixed(1)} onChange={(e)=>handleMatrixEdit(i, 'x1', e.target.value)} /></td>
+                                            <td className="p-1"><input className="editable-cell" type="text" value={matrixOverrides[i]?.x2 ?? (simulationStats.mockData.dX2[i] || 0).toFixed(1)} onChange={(e)=>handleMatrixEdit(i, 'x2', e.target.value)} /></td>
+                                            <td className="p-1"><input className="editable-cell text-orange-800" type="text" value={matrixOverrides[i]?.x3 ?? (simulationStats.mockData.dX3[i] || 0).toFixed(2)} onChange={(e)=>handleMatrixEdit(i, 'x3', e.target.value)} /></td>
+                                            <td className="p-1 text-indigo-800 font-black text-center">{(simulationStats.mockData.dY[i] || 0).toFixed(2)}</td>
+                                        </tr>
+                                    )) : <tr><td colSpan="5" className="p-10 text-center text-slate-400 font-black uppercase font-black">Inject Data Below</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                             <textarea className="w-full text-[10px] border rounded p-1.5 h-16 bg-slate-50 font-mono outline-none text-black font-black" placeholder="PASTE: X1 | X2 | X3" value={pastedData} onChange={(e)=>setPastedData(e.target.value)}></textarea>
+                             <button onClick={handleDataPaste} className="w-full bg-indigo-600 text-white font-black py-2 rounded uppercase text-[10px] tracking-widest mt-2 font-black font-black">PRESS TO CONTINUE</button>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-9 space-y-4">
+                    <div className="p-6 rounded shadow border bg-white border-slate-200 pdf-target relative overflow-hidden font-black">
+                      <div className="grid grid-cols-4 gap-4 text-left no-pdf font-black">
+                          {['arrRate', 'procTime', 'errRate', 'errCost'].map(f => (
+                              <div key={f}>
+                                <input type="text" value={inputs[f]} onChange={(e)=>handleInputChange(f, e.target.value)} className={`traffic-input w-full border outline-none font-black`}/>
+                                <label className="block text-[9px] font-black text-slate-400 uppercase mt-1 text-center font-black">{f === 'arrRate' ? 'Arr (X1)' : f === 'procTime' ? 'Speed (X2)' : f === 'errRate' ? 'Err (X3)' : 'Cost'}</label>
+                              </div>
+                          ))}
+                      </div>
+                      {simTick === 0 && !validationError && <button onClick={()=>{setSimTick(Date.now());}} className="w-full bg-indigo-600 text-white font-black py-5 rounded shadow-xl transition-all uppercase text-[11px] mt-3 animate-pulse no-pdf font-black">PRESS TO CONTINUE</button>}
+                    </div>
+
+                    {simTick !== 0 && (
+                      <div className="space-y-4 animate-modal" id="pdf-block-kpi-row">
+                        <div className="pdf-header-pink">
+                            <h3 className="text-black font-black uppercase text-center font-black tracking-widest">Process Analytics</h3>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 text-left font-black">
+                          <div className={`p-6 rounded pink-target pdf-target font-black`}>
+                            <p className="text-[11px] font-black uppercase pb-1 border-b border-black/10 text-black font-black">Predicted (Y)</p>
+                            <h3 className="text-3xl font-black mt-3 kpi-val text-black font-black font-black">{(simulationStats.currentY || 0).toFixed(2)}</h3>
+                            <p className="text-[12px] font-black mt-1 text-black opacity-80 uppercase font-black font-black">₹{(simulationStats.currentCOPQ || 0).toLocaleString('en-IN')}</p>
+                          </div>
+                          <div className="p-6 rounded pink-target pdf-target font-black">
+                            <p className="text-[11px] font-black uppercase pb-1 border-b border-black/10 font-black">Sigma limits</p>
+                            <div className="mt-4 space-y-2 font-mono text-[13px] font-black text-black font-black">
+                                <div className="flex justify-between items-center border-b border-black/5 pb-1 text-black font-black"><span>UCL</span><span className="text-xl font-black">{(simulationStats.UCL || 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between items-center pt-0.5 text-black font-black"><span>Mean</span><span className="text-xl font-black">{(simulationStats.meanY || 0).toFixed(2)}</span></div>
+                            </div>
+                          </div>
+                          <div className={`p-6 rounded pink-target pdf-target font-black`}>
+                            <p className="text-[11px] font-black uppercase text-center border-b border-black/10 font-black">Variance (ΔY)</p>
+                            <div className="flex flex-col items-center mt-3 text-center">
+                                <h3 className={`text-4xl font-black kpi-val ${simulationStats.deltaY > 0.01 ? 'txt-loss' : simulationStats.deltaY < -0.01 ? 'txt-gain' : 'text-black'}`}>
+                                    {(simulationStats.deltaY > 0 ? '+' : '') + (simulationStats.deltaY || 0).toFixed(2)}
+                                </h3>
+                                <p className={`text-[12px] font-black mt-1 uppercase ${simulationStats.deltaY > 0.01 ? 'txt-loss' : simulationStats.deltaY < -0.01 ? 'txt-gain' : 'text-black'}`}>
+                                    ₹{Math.abs(simulationStats.deltaCOPQ || 0).toLocaleString('en-IN')}
+                                </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`p-6 rounded-xl border-4 text-center shadow-xl animate-modal pdf-target ${simulationStats.deltaY > 0.01 ? 'status-bar-loss' : 'status-bar-win'}`}>
+                            <h3 className="text-[16px] font-black uppercase tracking-[0.2em] leading-tight text-center font-black">
+                                <i className={`fas ${simulationStats.deltaY > 0.01 ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-4 text-2xl text-center font-black`}></i>
+                                {getStatusLabel(simulationStats.deltaY)}
+                            </h3>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* STATS MATRIX & CHARTS GRID */}
+                {simTick !== 0 && !validationError && (
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-12">
+                    <div id="pdf-block-audit-grid" className="lg:col-span-1 pink-target p-6 rounded shadow-xl pdf-target font-black">
+                        <h2 className="text-[10px] font-black mb-5 uppercase border-b border-black/20 pb-1 font-black text-black">Audit Statistics Matrix</h2>
+                        <div className="grid grid-cols-5 gap-1 mb-6 text-center text-black font-black">
+                            {['min', 'q1', 'median', 'q3', 'max'].map(k => (
+                                <div key={k} className="font-black text-black"><span className="block text-[7px] uppercase font-black font-black">{k}</span><span className="text-[13px] font-black">{(simulationStats.yQuartiles[k] || 0).toFixed(2)}</span></div>
+                            ))}
+                        </div>
+                        <table className="w-full text-left text-[12px] font-black text-black font-black">
+                          <thead><tr className="pdf-header-pink"><th className="p-1 text-left font-black">Driver</th><th className="p-1 text-right font-black">Slope</th></tr></thead>
+                          <tbody className="divide-y divide-black/10">
+                            {[ ['X1 Arrival', simulationStats.regArr], ['X2 Speed', simulationStats.regProc], ['X3 Drift', simulationStats.regErr] ].map(([label, stats], i) => (
+                              <tr key={i}><td className="audit-cell font-black">{label}</td><td className="p-2 text-right font-mono font-black font-black"><span className="audit-val">{(stats.slope || 0).toFixed(4)}</span></td></tr>
+                            ))}
+                          </tbody>
+                        </table>
+                    </div>
+                    <div id="pdf-block-charts" className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 font-black">
+                        <RenderScatterPlot data={simulationStats.chartData1} title="Arrival Sensitivity (X1)" stats={simulationStats.regArr} color="#3b82f6" />
+                        <RenderScatterPlot data={simulationStats.chartData2} title="Processing Velocity (X2)" stats={simulationStats.regProc} color="#8b5cf6" />
+                        <RenderScatterPlot data={simulationStats.chartData3} title="Drift Prediction (X3)" stats={simulationStats.regErr} color="#c2410c" />
+                    </div>
+                  </div>
+                )}
+
+                {/* MECTOPEDIA logic MATRIX */}
+                {simTick !== 0 && !validationError && (
+                <div id="pdf-block-mecto" className="bg-white p-12 rounded-[3.5rem] shadow-2xl border-4 border-yellow-500 no-pdf text-left mb-20 font-black">
+                   <div className="flex items-center justify-between mb-8 pb-8 border-b border-slate-100">
+                     <div className="flex items-center">
+                        <div className="w-16 h-16 bg-yellow-500 text-slate-900 rounded-3xl flex items-center justify-center mr-6 text-3xl shadow-xl animate-pulse font-black"><i className="fas fa-graduation-cap text-black"></i></div>
+                        <div><h2 className="text-2xl font-black uppercase tracking-tighter text-black font-black">Mectopedia logic Matrix</h2><p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1 font-black">Pedagogical Conclusion Logic</p></div>
+                     </div>
+                     <div className="w-1/2">
+                        <select className="setup-select w-full rounded-[2rem] p-4 shadow-sm text-left font-black" value={selectedConcept} onChange={(e)=>setSelectedConcept(e.target.value)}>
+                            <option value="">-- SELECT LOGIC CONCLUSION --</option>
+                            <option value="Y">1. Output Prediction Logic (Y)</option>
+                            <option value="X1">2. Arrival Sensitivity (X1)</option>
+                            <option value="X2">3. Velocity Penalty (X2)</option>
+                            <option value="X3">4. Drift Prediction (X3)</option>
+                        </select>
+                     </div>
+                   </div>
+
+                   {selectedConcept && (
+                      <div className="bg-slate-900 rounded-xl p-8 text-white animate-modal relative border border-white/10 shadow-2xl font-black">
+                         <button onClick={()=>setSelectedConcept("")} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-all text-3xl font-black"><i className="fas fa-times-circle"></i></button>
+                         <div className="grid grid-cols-2 gap-12 items-center">
+                              {selectedConcept === 'Y' && (
+                                <><div className="space-y-4"><h3 className="text-yellow-400 font-black text-xl uppercase tracking-widest font-black text-white">Conclusion (Y)</h3><p className="text-slate-300 text-sm leading-relaxed font-black">Mathematical Assertion: Predicted Errors result from workload volume ($X_1$), process drift ($X_3$), and speed penalty ratio.</p><div className="bg-black p-4 rounded-lg font-mono text-emerald-400 text-lg shadow-inner font-black text-left font-black">Y = X1 * (X3 * (Base_X2 / X2)^0.75) / 100</div></div>
+                                <div className="bg-white/5 p-8 rounded-xl text-center border border-white/5 shadow-2xl"><code className="text-xl font-mono text-white leading-loose font-black text-white">{inputs.arrRate} * ({inputs.errRate} * ({activeSegment.procTime} / {inputs.procTime})^0.75) / 100</code><p className="text-7xl font-black text-cyan-400 mt-6 text-center font-black font-black">{(simulationStats.currentY || 0).toFixed(2)}</p></div></>
+                              )}
+                              {selectedConcept === 'X1' && (
+                                <><div className="space-y-4"><h3 className="text-yellow-400 font-black text-xl uppercase tracking-widest font-black text-white">Sensitivity (X1)</h3><p className="text-slate-300 text-sm leading-relaxed font-black">X1 serves as the primary volume multiplier. Slope $m$ defines the exact failure rate relative to workload growth.</p><div className="bg-black p-4 rounded-lg font-mono text-emerald-400 text-lg shadow-inner font-black text-left font-black">m = Rise (ΔY) / Run (ΔX1)</div></div>
+                                <div className="bg-white/5 p-8 rounded-xl text-center border border-white/5 shadow-2xl font-black"><p className="text-2xl font-bold text-white mb-6 italic text-center text-white">"1 unit of Arrival growth adds:"</p><p className="text-8xl font-black text-cyan-400 text-center font-black">{(simulationStats.regArr.slope || 0).toFixed(4)}</p></div></>
+                              )}
+                              {selectedConcept === 'X2' && (
+                                <><div className="space-y-4"><h3 className="text-yellow-400 font-black text-xl uppercase tracking-widest font-black text-white">Penalty (X2)</h3><p className="text-slate-300 text-sm leading-relaxed font-black">Accelerating speed spikes failure probability via the $0.75$ power-law ratio penalty.</p><div className="bg-black p-4 rounded-lg font-mono text-emerald-400 text-lg shadow-inner font-black text-left font-black font-black">Ratio = (Base_X2 / User_X2)^0.75</div></div>
+                                <div className="bg-white/5 p-8 rounded-xl text-center border border-white/5 shadow-2xl font-black"><p className="text-xl font-mono text-white mb-6 italic text-center text-white">({activeSegment.procTime} / {inputs.procTime})^0.75</p><p className="text-8xl font-black text-red-400 text-center font-black">{((activeSegment.procTime / Math.max(0.01, parseFloat(inputs.procTime))) ** 0.75).toFixed(2)}x</p></div></>
+                              )}
+                              {selectedConcept === 'X3' && (
+                                <><div className="space-y-4"><h3 className="text-yellow-400 font-black text-xl uppercase tracking-widest font-black text-white">Drift Prediction (X3)</h3><p className="text-slate-300 text-sm leading-relaxed font-black">The linear regression model translates process drift (X3) into a failure volume (Y) based on noise levels.</p><div className="bg-black p-4 rounded-lg font-mono text-emerald-400 text-lg shadow-inner font-black text-left font-black">Y = mX + c</div></div>
+                                <div className="bg-white/5 p-8 rounded-xl text-center border border-white/5 shadow-2xl font-black"><code className="text-lg font-mono text-white leading-relaxed text-center text-white font-black font-black">({(simulationStats.regErr.slope || 0).toFixed(4)} * {inputs.errRate}) + {simulationStats.regErr.intercept.toFixed(4)}</code><p className="text-7xl font-black text-emerald-400 mt-6 text-center font-black">{(simulationStats.currentY || 0).toFixed(2)}</p></div></>
+                              )}
+                         </div>
+                      </div>
+                   )}
+                </div>
+                )}
+
+                {/* PDF DATA GRID */}
+                {simTick !== 0 && !validationError && (
+                <div id="pdf-block-data-grid" className="hidden pdf-only pdf-target p-8 font-black">
+                    <div className="pdf-header-pink mb-6 font-black">
+                        <h2 className="text-black font-black uppercase text-center font-black">Simulation Data Matrix (N=20)</h2>
+                    </div>
+                   <table className="w-full text-left border-collapse border border-black text-[10px] font-mono text-black font-black">
+                      <thead>
+                        <tr className="bg-slate-100 text-black font-black">
+                          <th className="p-2 border border-black text-black font-black">Run</th><th className="p-2 border border-black text-center text-black font-black">X1</th><th className="p-2 border border-black text-center text-black font-black">X2</th><th className="p-2 border border-black text-center text-black font-black">X3</th><th className="p-2 border border-black text-center text-black font-black">Y (FAILURE)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {simulationStats.mockData.dX1.map((v, i) => (
+                          <tr key={i}><td className="p-2 border border-black text-black font-black">{i+1}</td><td className="p-2 border border-black text-center text-black font-black">{(v || 0).toFixed(2)}</td><td className="p-2 border border-black text-center text-black font-black">{(simulationStats.mockData.dX2[i] || 0).toFixed(2)}</td><td className="p-2 border border-black text-center text-black font-black">{(simulationStats.mockData.dX3[i] || 0).toFixed(4)}</td><td className="p-2 border border-black font-black text-center text-black font-black">{(simulationStats.mockData.dY[i] || 0).toFixed(4)}</td></tr>
+                        ))}
+                      </tbody>
+                   </table>
+                </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

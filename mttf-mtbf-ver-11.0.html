@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Factor & FMEA - DMAIC Integration</title>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF Library for Pre-CAPA Reporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f4f7f9; color: #0f172a; }
+        
+        .glass-panel { 
+            background: #ffffff; 
+            border: 1px solid rgba(226, 232, 240, 0.8); 
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05); 
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulseUpdate { 0% { background-color: rgba(99, 102, 241, 0.15); } 100% { background-color: transparent; } }
+        
+        .animate-pulse-update { animation: pulseUpdate 0.6s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS ---
+        const IconActivity = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
+        const IconAlert = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+        const IconShield = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>;
+        const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+        const IconPDF = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+        const IconRefresh = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>;
+        const IconEdit = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+        const IconMath = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>;
+        const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+        const IconCalc = () => <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>;
+
+        const InfoTooltip = ({ text, position = 'top', offset = "-translate-x-1/2 left-1/2", arrowOffset = "left-1/2" }) => {
+            let posClasses = `bottom-full mb-2.5 ${offset}`;
+            let arrowClasses = `top-full ${arrowOffset} -translate-x-1/2 border-t-[6px] border-l-[6px] border-r-[6px] border-b-0 border-t-slate-900 border-l-transparent border-r-transparent`;
+
+            if (position === 'bottom') {
+                posClasses = `top-full mt-2.5 ${offset}`;
+                arrowClasses = `bottom-full ${arrowOffset} -translate-x-1/2 border-b-[6px] border-l-[6px] border-r-[6px] border-t-0 border-b-slate-900 border-l-transparent border-r-transparent`;
+            }
+
+            return (
+                <div className={`absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[100] w-max max-w-[240px] bg-slate-900 text-white text-[11px] leading-relaxed rounded-lg py-2.5 px-3 shadow-xl pointer-events-none text-center border border-slate-700 ${posClasses}`}>
+                    {text}
+                    <div className={`absolute ${arrowClasses}`}></div>
+                </div>
+            );
+        };
+
+        // --- INDUSTRY PRESET SIMULATOR ENGINE ---
+        const genTimes = (count, duration, skew) => {
+            let times = [];
+            for(let i=0; i<count; i++) {
+                if(skew === 'early') times.push(Math.floor(Math.random() * (duration * 0.25)) + 10); 
+                else if(skew === 'late') times.push(Math.floor(Math.random() * (duration * 0.3)) + (duration * 0.7)); 
+                else times.push(Math.floor(Math.random() * (duration * 0.8)) + (duration * 0.1)); 
+            }
+            return times.sort((a,b)=>a-b);
+        };
+
+        const INDUSTRY_PRESETS = {
+            "User Custom Workspace": { u: "", d: "", fCount: 0, skew: 'center', s: 0, o: 0, det: 0 },
+            "Automotive Manufacturing": { u: 1000, d: 5000, fCount: 45, skew: 'late', s: 8, o: 4, det: 3 },
+            "Aerospace & Defense": { u: 50, d: 25000, fCount: 2, skew: 'center', s: 10, o: 2, det: 1 },
+            "Medical Devices": { u: 300, d: 8760, fCount: 6, skew: 'late', s: 10, o: 2, det: 2 },
+            "Consumer Electronics": { u: 5000, d: 2000, fCount: 250, skew: 'early', s: 5, o: 7, det: 6 },
+            "Semiconductor Fabrication": { u: 2500, d: 8000, fCount: 90, skew: 'center', s: 8, o: 3, det: 2 },
+            "Oil & Gas Refining": { u: 80, d: 40000, fCount: 15, skew: 'late', s: 9, o: 4, det: 5 },
+            "Chemical Processing": { u: 150, d: 15000, fCount: 12, skew: 'center', s: 9, o: 3, det: 4 },
+            "Renewable Energy": { u: 400, d: 20000, fCount: 40, skew: 'late', s: 7, o: 5, det: 5 },
+            "Telecommunications Infrastructure": { u: 800, d: 12000, fCount: 50, skew: 'random', s: 7, o: 4, det: 3 },
+            "Data Center Operations": { u: 2000, d: 8760, fCount: 30, skew: 'early', s: 8, o: 3, det: 2 },
+            "Pharmaceutical Packaging": { u: 600, d: 5000, fCount: 25, skew: 'center', s: 8, o: 3, det: 3 },
+            "Heavy Machinery & Mining": { u: 120, d: 15000, fCount: 35, skew: 'late', s: 9, o: 6, det: 4 },
+            "Rail Transport Systems": { u: 200, d: 30000, fCount: 18, skew: 'late', s: 9, o: 3, det: 3 },
+            "Commercial Aviation": { u: 30, d: 60000, fCount: 1, skew: 'center', s: 10, o: 1, det: 1 },
+            "Food & Beverage Production": { u: 1500, d: 4000, fCount: 85, skew: 'early', s: 6, o: 6, det: 5 },
+            "Textile Manufacturing": { u: 800, d: 6000, fCount: 110, skew: 'late', s: 5, o: 6, det: 5 },
+            "Water Treatment Facilities": { u: 100, d: 25000, fCount: 8, skew: 'center', s: 8, o: 3, det: 3 },
+            "Cloud Software Services (SaaS)": { u: 10000, d: 720, fCount: 400, skew: 'random', s: 6, o: 7, det: 2 },
+            "E-commerce Logistics": { u: 500, d: 5000, fCount: 65, skew: 'early', s: 5, o: 5, det: 4 },
+            "Financial Services IT": { u: 3000, d: 8760, fCount: 15, skew: 'center', s: 9, o: 2, det: 1 }
+        };
+
+        const INDUSTRIAL_SEGMENT_KEYS = Object.keys(INDUSTRY_PRESETS);
+
+        // --- MATH ENGINE ---
+        const calculateReliability = (unitsRaw, durationRaw, failureTimes) => {
+            const units = parseInt(unitsRaw) || 0;
+            const duration = parseInt(durationRaw) || 0;
+            const failedCount = failureTimes.length;
+            const survivingUnits = Math.max(0, units - failedCount);
+            const sumFailureTimes = failureTimes.reduce((a, b) => a + b, 0);
+            const totalTestTime = sumFailureTimes + (survivingUnits * duration);
+            const mttf = failedCount > 0 ? (sumFailureTimes / failedCount) : (duration > 0 ? duration : 0);
+            const failureRate = totalTestTime > 0 ? (failedCount / totalTestTime) : 0;
+            const mtbf = failureRate > 0 ? (1 / failureRate) : (totalTestTime > 0 ? totalTestTime : 0);
+            return { totalTestTime, mttf, failureRate, mtbf, failedCount, sumFailureTimes, survivingUnits };
+        };
+
+        const calculateStats = (dataArr) => {
+            if (!dataArr || dataArr.length === 0) return { q1: 0, median: 0, q3: 0, iqr: 0, min: 0, max: 0 };
+            const sorted = [...dataArr].sort((a, b) => a - b);
+            const getMedian = (arr) => {
+                if (arr.length === 0) return 0;
+                const mid = Math.floor(arr.length / 2);
+                return arr.length % 2 !== 0 ? arr[mid] : (arr[mid - 1] + arr[mid]) / 2;
+            };
+            const median = getMedian(sorted);
+            const midIdx = Math.floor(sorted.length / 2);
+            if (sorted.length === 1) return { q1: sorted[0], median: sorted[0], q3: sorted[0], iqr: 0, min: sorted[0], max: sorted[0], sorted };
+            const lowerHalf = sorted.slice(0, midIdx);
+            const upperHalf = sorted.length % 2 === 0 ? sorted.slice(midIdx) : sorted.slice(midIdx + 1);
+            const q1 = getMedian(lowerHalf);
+            const q3 = getMedian(upperHalf);
+            return { q1, median, q3, iqr: q3 - q1, min: sorted[0], max: sorted[sorted.length - 1], sorted };
+        };
+
+        const convert10to25 = (val) => {
+            const num = parseInt(val);
+            if (isNaN(num) || num === 0) return 0;
+            return Math.min(25, Math.max(1, Math.round(((num - 1) / 9) * 24 + 1)));
+        };
+
+        // --- TRAFFIC LIGHT COLOR ENGINE ---
+        const getTrafficColors = (type, value, threshold) => {
+            let state = 'stable';
+            if (type === 'fmea') state = value >= 7 ? 'critical' : (value >= 4 ? 'warning' : 'stable');
+            else if (type === 'norm') state = value >= 16 ? 'critical' : (value >= 8 ? 'warning' : 'stable');
+            else if (type === 'rpn') state = value >= 100 ? 'critical' : (value >= 50 ? 'warning' : 'stable');
+            else if (type === 'mtbf') state = value >= threshold ? 'stable' : 'critical';
+            else if (type === 'iqr') state = value > 15 ? 'critical' : 'stable';
+
+            if (state === 'critical') return { bg: 'bg-red-500', border: 'border-red-400', text: 'text-white', subText: 'text-red-100', placeholder: 'placeholder-red-200' };
+            if (state === 'warning') return { bg: 'bg-amber-400', border: 'border-amber-300', text: 'text-amber-950', subText: 'text-amber-800', placeholder: 'placeholder-amber-700/50' };
+            return { bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-white', subText: 'text-emerald-100', placeholder: 'placeholder-emerald-200' };
+        };
+
+        const BoxPlot = ({ stats }) => {
+            if (!stats || typeof stats.min === 'undefined' || !stats.sorted || stats.sorted.length === 0) {
+                return <div className="w-full mt-4 pt-4 border-t border-slate-100 text-center text-xs text-slate-400 italic">Insufficient failure data to generate Box Plot.</div>;
+            }
+            const absoluteMin = stats.min, absoluteMax = stats.max;
+            let range = Math.max(1, absoluteMax - absoluteMin);
+            const paddedMin = absoluteMin - (range * 0.1), paddedMax = absoluteMax + (range * 0.1), paddedRange = paddedMax - paddedMin;
+            const getP = (val) => Math.max(0, Math.min(100, ((val - paddedMin) / paddedRange) * 100));
+
+            return (
+                <div className="w-full mt-6 pt-4 border-t border-slate-100 relative group cursor-help">
+                    <InfoTooltip text={`Dist. | Min: ${stats.min.toFixed(1)} | Q1: ${stats.q1.toFixed(1)} | Median: ${stats.median.toFixed(1)} | Q3: ${stats.q3.toFixed(1)} | Max: ${stats.max.toFixed(1)}`} position="top" />
+                    <div className="flex justify-between items-center mb-6 px-1">
+                        <div className="text-[10px] font-black text-black uppercase tracking-wider flex items-center gap-1.5">Real-Time Box & Whisker</div>
+                        <div className="text-[9px] text-slate-400 font-medium">VISUAL SPREAD</div>
+                    </div>
+                    <div className="relative h-6 w-full flex items-center px-1">
+                        <div className="absolute left-0 right-0 h-[2px] bg-slate-200 rounded-full"></div>
+                        <div className="absolute h-[2px] bg-slate-400 transition-all duration-500 ease-out rounded-full" style={{ left: `${getP(stats.min)}%`, width: `${getP(stats.q1) - getP(stats.min)}%` }}></div>
+                        <div className="absolute h-[2px] bg-slate-400 transition-all duration-500 ease-out rounded-full" style={{ left: `${getP(stats.q3)}%`, width: `${getP(stats.max) - getP(stats.q3)}%` }}></div>
+                        <div className="absolute h-4 w-1.5 bg-slate-800 z-30 transition-all duration-500 ease-out -translate-x-1/2 rounded-full shadow-sm border border-white" style={{ left: `${getP(stats.median)}%` }}></div>
+                        <div className="absolute h-5 bg-amber-400 border border-amber-500 rounded-md z-10 transition-all duration-500 ease-out shadow-sm" style={{ left: `${getP(stats.q1)}%`, width: `${getP(stats.q3) - getP(stats.q1)}%` }}></div>
+                    </div>
+                    <div className="relative w-full h-4 mt-2 text-[9px] text-slate-400 font-medium font-mono">
+                        <span className="absolute -translate-x-1/2 transition-all duration-500 ease-out" style={{ left: `${getP(stats.min)}%` }}>{stats.min.toFixed(0)}</span>
+                        <span className="absolute -translate-x-1/2 transition-all duration-500 ease-out" style={{ left: `${getP(stats.max)}%` }}>{stats.max.toFixed(0)}</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [segment, setSegment] = useState(INDUSTRIAL_SEGMENT_KEYS[0]); 
+            const [isCapaApplied, setIsCapaApplied] = useState(false);
+            const [isCustomMode, setIsCustomMode] = useState(true); 
+            const [toastMsg, setToastMsg] = useState(null);
+            const toastTimerRef = useRef(null);
+
+            const [baseData, setBaseData] = useState(null);
+            const [data, setData] = useState(null);
+
+            const [customUnits, setCustomUnits] = useState("");
+            const [customDuration, setCustomDuration] = useState("");
+            const [customFailures, setCustomFailures] = useState("");
+            const [customS, setCustomS] = useState("0");
+            const [customO, setCustomO] = useState("0");
+            const [customD, setCustomD] = useState("0");
+
+            const [mectoSelection, setMectoSelection] = useState("MTTF");
+
+            const showToastError = (m) => {
+                setToastMsg(m);
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                toastTimerRef.current = setTimeout(() => setToastMsg(null), 5000);
+            };
+
+            const handleClearAll = () => {
+                const emptyData = { units: "", duration: "", failureTimes: [], fmea: { s: 0, o: 0, d: 0 } };
+                setBaseData(emptyData); setData(emptyData);
+                setCustomUnits(""); setCustomDuration(""); setCustomFailures("");
+                setCustomS("0"); setCustomO("0"); setCustomD("0");
+                setIsCapaApplied(false); setIsCustomMode(true); setSegment("User Custom Workspace");
+            };
+
+            const loadIndustryPreset = (seg) => {
+                const preset = INDUSTRY_PRESETS[seg];
+                if (seg === "User Custom Workspace") {
+                    handleClearAll();
+                    return;
+                }
+                const fTimes = genTimes(preset.fCount, preset.d, preset.skew);
+                const newData = {
+                    units: preset.u, duration: preset.d, failureTimes: fTimes,
+                    fmea: { s: preset.s, o: preset.o, d: preset.det }
+                };
+                setBaseData(JSON.parse(JSON.stringify(newData))); setData(newData);
+                setCustomUnits(preset.u.toString()); setCustomDuration(preset.d.toString()); setCustomFailures(fTimes.join(", "));
+                setCustomS(preset.s.toString()); setCustomO(preset.o.toString()); setCustomD(preset.det.toString());
+                setIsCapaApplied(false); setIsCustomMode(false);
+            };
+
+            const handleSegmentChange = (e) => {
+                const newSeg = e.target.value;
+                setSegment(newSeg);
+                loadIndustryPreset(newSeg);
+            };
+
+            const generateRandomData = (seg) => {
+                if (seg === "User Custom Workspace") return handleClearAll();
+                const units = Math.floor(Math.random() * 80) + 20;
+                const duration = Math.floor(Math.random() * 5000) + 500;
+                const failCount = Math.floor(Math.random() * (units * 0.4)) + 1;
+                const fTimes = Array.from({ length: failCount }, () => Math.floor(Math.random() * (duration - 50)) + 50);
+                const newData = { units, duration, failureTimes: fTimes, fmea: { s: Math.floor(Math.random() * 8) + 2, o: Math.floor(Math.random() * 8) + 2, d: Math.floor(Math.random() * 8) + 2 } };
+                setBaseData(JSON.parse(JSON.stringify(newData))); setData(newData); setIsCapaApplied(false); setIsCustomMode(false);
+            };
+
+            useEffect(() => { loadIndustryPreset(segment); }, []);
+
+            // GOD-MODE CRASH PREVENTION BOUNDARIES
+            const handleInlineChange = (field, value) => {
+                if (!data) return;
+                if (value.toString().includes('-')) {
+                    showToastError("CRITICAL: Negative values violate system mathematics.");
+                    return; 
+                }
+                let newData = { ...data };
+                const num = parseInt(value);
+                
+                if (field === 'units') {
+                    if (num > 1000000) return showToastError("THRESHOLD EXCEEDED: Maximum units capped at 1,000,000.");
+                    newData.units = isNaN(num) ? "" : num;
+                }
+                if (field === 'duration') {
+                    if (num > 10000000) return showToastError("THRESHOLD EXCEEDED: Maximum duration capped at 10,000,000.");
+                    newData.duration = isNaN(num) ? "" : num;
+                    if (!isNaN(num)) newData.failureTimes = newData.failureTimes.map(t => Math.min(t, num));
+                }
+                if (['s','o','d'].includes(field)) {
+                    if (num > 10) return showToastError("FMEA BOUNDARY: Indices must not exceed 10.");
+                    newData.fmea[field] = isNaN(num) ? "" : num;
+                }
+                if (field === 'failedCount') {
+                    const maxFails = parseInt(newData.units) || 0;
+                    if (num > maxFails) return showToastError("LOGIC ERROR: Failures cannot exceed total units.");
+                    
+                    const target = Math.min(Math.max(0, isNaN(num) ? 0 : num), maxFails);
+                    if (target > newData.failureTimes.length) {
+                        const add = target - newData.failureTimes.length;
+                        const def = Math.floor((parseInt(newData.duration) || 1000) * 0.5);
+                        newData.failureTimes = [...newData.failureTimes, ...Array(add).fill(def)];
+                    } else {
+                        newData.failureTimes = newData.failureTimes.slice(0, target);
+                    }
+                }
+                setData(newData);
+            };
+
+            const handleApplyCapa = () => {
+                if (!data || (data.failureTimes.length === 0 && data.fmea.s === 0)) return; 
+                const safe = (v) => parseInt(v) || 0;
+                const newFmea = { s: Math.max(0, safe(data.fmea.s) - 2), o: Math.max(0, safe(data.fmea.o) - 3), d: Math.max(0, safe(data.fmea.d) - 2) };
+                let newFT = [...data.failureTimes].sort((a,b)=>b-a).slice(0, Math.floor(data.failureTimes.length * 0.6));
+                setData({ ...data, failureTimes: newFT, fmea: newFmea });
+                setIsCapaApplied(true);
+            };
+
+            const handleApplyCustomData = () => {
+                const u = parseInt(customUnits), d = parseInt(customDuration);
+                if (isNaN(u) || u <= 0 || isNaN(d) || d <= 0) return showToastError("INVALID INPUT: Units and Duration must be valid positive integers."); 
+                if (u > 1000000) return showToastError("THRESHOLD EXCEEDED: Maximum units capped at 1,000,000.");
+                if (d > 10000000) return showToastError("THRESHOLD EXCEEDED: Maximum duration capped at 10,000,000.");
+
+                const rawFailures = customFailures.split(",").map(s => s.trim()).filter(s => s !== "");
+                const parsedFt = rawFailures.map(s => parseFloat(s));
+                
+                if (parsedFt.some(isNaN)) return showToastError("FORMAT ERROR: Failure times must be numeric values separated by commas.");
+                if (parsedFt.some(n => n < 0 || n > d)) return showToastError(`LOGIC ERROR: Failure times must be between 0 and test duration (${d}).`);
+                if (parsedFt.length > u) return showToastError(`LOGIC ERROR: Number of failures (${parsedFt.length}) exceeds total units (${u}).`); 
+                
+                const s = parseInt(customS), o = parseInt(customO), det = parseInt(customD);
+                if ([s,o,det].some(v => isNaN(v) || v < 0 || v > 10)) return showToastError("FMEA BOUNDARY ERROR: S, O, D must be exactly between 0 and 10."); 
+                
+                const payload = { units: u, duration: d, failureTimes: parsedFt.sort((a,b)=>a-b), fmea: { s, o, d: det } };
+                setBaseData(JSON.parse(JSON.stringify(payload))); setData(payload); setIsCapaApplied(false); setIsCustomMode(false);
+            };
+
+            const handleRevertOriginal = () => {
+                if (!baseData) return;
+                setData(JSON.parse(JSON.stringify(baseData)));
+                setIsCapaApplied(false);
+            };
+
+            const getSkewInterpretation = (statsArr, currentIqr) => {
+                if (!statsArr || statsArr.length === 0) return { type: "Insufficient Data", exp: "Not enough failures to map distribution." };
+                const leftSpread = statsArr.median - statsArr.q1;
+                const rightSpread = statsArr.q3 - statsArr.median;
+                const threshold = currentIqr * 0.15; 
+
+                if (leftSpread < rightSpread - threshold) {
+                    return { type: "Leaning Left (Infant Mortality)", exp: "Early life failures dominate. Process suffers from out-of-box defects or initial weakness." };
+                } else if (leftSpread > rightSpread + threshold) {
+                    return { type: "Leaning Right (Wear-Out)", exp: "Failures cluster late in the cycle. Components degrade heavily towards end-of-life." };
+                }
+                return { type: "Centered (Symmetric)", exp: "Failures are balanced and steady across the operational timeframe." };
+            };
+
+            // STRICT BLACK FONTS FOR PDF
+            const generatePreCapaPDF = () => {
+                if (!data) return;
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const drawPDFBoxPlot = (pdfDoc, plotStats, startX, startY, plotWidth, title) => {
+                    if(!plotStats || typeof plotStats.min === 'undefined' || plotStats.min === plotStats.max) return;
+                    const pMin = plotStats.min - ((plotStats.max - plotStats.min) * 0.1);
+                    const pMax = plotStats.max + ((plotStats.max - plotStats.min) * 0.1);
+                    const pRange = Math.max(1, pMax - pMin);
+                    const getX = (val) => startX + (Math.max(0, Math.min(1, (val - pMin) / pRange)) * plotWidth);
+
+                    if(title){
+                        pdfDoc.setFontSize(10);
+                        pdfDoc.setFont("helvetica", "bold");
+                        pdfDoc.setTextColor(0, 0, 0); 
+                        pdfDoc.text(title, startX, startY - 6);
+                    }
+
+                    pdfDoc.setDrawColor(0, 0, 0); 
+                    pdfDoc.setLineWidth(0.5);
+                    pdfDoc.line(startX, startY + 4, startX + plotWidth, startY + 4);
+
+                    pdfDoc.setDrawColor(0, 0, 0);
+                    pdfDoc.setLineWidth(1);
+                    pdfDoc.line(getX(plotStats.min), startY + 4, getX(plotStats.q1), startY + 4);
+                    pdfDoc.line(getX(plotStats.q3), startY + 4, getX(plotStats.max), startY + 4);
+
+                    pdfDoc.setFillColor(255, 255, 255); 
+                    pdfDoc.setDrawColor(0, 0, 0); 
+                    pdfDoc.rect(getX(plotStats.q1), startY, getX(plotStats.q3) - getX(plotStats.q1), 8, 'D');
+
+                    pdfDoc.setDrawColor(0, 0, 0); 
+                    pdfDoc.setLineWidth(1.5);
+                    pdfDoc.line(getX(plotStats.median), startY - 1, getX(plotStats.median), startY + 9);
+
+                    pdfDoc.setFontSize(8);
+                    pdfDoc.setFont("helvetica", "normal");
+                    pdfDoc.setTextColor(0, 0, 0);
+                    pdfDoc.text(plotStats.min.toFixed(0), getX(plotStats.min), startY + 14, { align: "center" });
+                    pdfDoc.text(plotStats.max.toFixed(0), getX(plotStats.max), startY + 14, { align: "center" });
+                    
+                    pdfDoc.setFont("helvetica", "bold");
+                    pdfDoc.setTextColor(0, 0, 0); 
+                    pdfDoc.text(plotStats.median.toFixed(1), getX(plotStats.median), startY - 2, { align: "center" });
+                };
+
+                let y = 20;
+                const rel = calculateReliability(data.units, data.duration, data.failureTimes);
+                const stats = calculateStats(data.failureTimes);
+                const rpn = (parseInt(data.fmea.s)||0) * (parseInt(data.fmea.o)||0) * (parseInt(data.fmea.d)||0);
+                const safeDuration = parseInt(data.duration) || 0;
+                const dynamicSkew = getSkewInterpretation(stats, stats.iqr);
+
+                doc.setFillColor(15, 23, 42); 
+                doc.rect(0, 0, 210, 32, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text("PRE-CAPA ANALYTICAL REPORT", 105, 16, { align: "center" });
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Risk Factor & FMEA - DMAIC Integration`, 105, 23, { align: "center" });
+
+                y = 45;
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(10);
+                doc.text(`Export Date: ${new Date().toLocaleString()}`, 14, y);
+                doc.text(`Process Segment: ${segment}`, 110, y);
+                y += 12;
+
+                doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("1. BASELINE SYSTEM METRICS", 14, y); doc.setFont("helvetica", "normal"); y += 8;
+                doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                doc.text(`Total Units Tested: ${data.units}  |  Operational Duration: ${data.duration} Hrs  |  Failed Units: ${rel.failedCount}`, 14, y); y += 6;
+                doc.text(`MTBF: ${rel.mtbf.toFixed(1)} Hrs  |  MTTF: ${rel.mttf.toFixed(1)} Hrs  |  Total Test Hrs: ${rel.totalTestTime.toLocaleString()}`, 14, y); y += 12;
+
+                doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("2. FMEA RISK PROFILE", 14, y); doc.setFont("helvetica", "normal"); y += 8;
+                doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                doc.text(`Severity: ${data.fmea.s}  |  Occurrence: ${data.fmea.o}  |  Detection: ${data.fmea.d}`, 14, y); y += 6;
+                doc.text(`Composite RPN: ${rpn}`, 14, y); y += 12;
+
+                doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("3. STATISTICAL VARIANCE & DISTRIBUTION", 14, y); doc.setFont("helvetica", "normal"); y += 8;
+                doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                doc.text(`Q1: ${stats.q1.toFixed(1)}  |  Median: ${stats.median.toFixed(1)}  |  Q3: ${stats.q3.toFixed(1)}  |  IQR: ${stats.iqr.toFixed(1)}`, 14, y);
+                
+                y += 15;
+                drawPDFBoxPlot(doc, stats, 14, y, 180, `Dynamic Box-Whisker Chart: ${dynamicSkew.type}`);
+                y += 25;
+                
+                doc.setFontSize(10); doc.setFont("helvetica", "normal"); doc.setTextColor(0, 0, 0);
+                const splitSkew = doc.splitTextToSize(`Analysis: ${dynamicSkew.exp}`, 180);
+                doc.text(splitSkew, 14, y); y += (splitSkew.length * 5) + 10;
+
+                doc.setFontSize(12); doc.setFont("helvetica", "bold"); doc.text("4. STRATEGIC INTERPRETATION (PRE-CAPA)", 14, y); doc.setFont("helvetica", "normal"); y += 8;
+                doc.setFontSize(10); doc.setTextColor(0, 0, 0);
+                
+                doc.setFont("helvetica", "bold"); doc.text("Reliability Summary:", 14, y); doc.setFont("helvetica", "normal"); y += 5;
+                doc.text(`- Density: ${rel.failedCount === 0 ? "0% (Perfect Survival)" : `${data.units ? ((rel.failedCount/parseInt(data.units))*100).toFixed(0) : 0}% failure rate.`}`, 18, y); y += 5;
+                doc.text(`- Robustness: ${rel.mtbf >= safeDuration ? "Fleet exceeds duration threshold." : "Rate exceeds safety limits."}`, 18, y); y += 8;
+
+                let rL = rpn >= 100 ? "High" : (rpn >= 50 ? "Medium" : "Low");
+                if (rpn === 0 && data.units !== "") rL = "Zero";
+                doc.setFont("helvetica", "bold"); doc.text("FMEA Verdict:", 14, y); doc.setFont("helvetica", "normal"); y += 5;
+                doc.text(`- Criticality: RPN ${rpn} is ${rL} risk.`, 18, y); y += 5;
+                doc.text(`- Action: ${rpn >= 50 ? "Initiate control-plan review." : "Process remains stable."}`, 18, y); y += 8;
+
+                doc.setFont("helvetica", "bold"); doc.text("Statistical Drift:", 14, y); doc.setFont("helvetica", "normal"); y += 5;
+                doc.text(`- Spread: IQR of ${stats.iqr.toFixed(1)} measured.`, 18, y); y += 5;
+                doc.text(`- Stability: ${stats.iqr > 15 ? "Significant drift detected." : "Standard deviation optimized."}`, 18, y);
+
+                doc.addPage();
+                let y2 = 20;
+
+                doc.setFillColor(15, 23, 42); 
+                doc.rect(0, 0, 210, 20, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(12); doc.setFont("helvetica", "bold");
+                doc.text("MANAGEMENT REFERENCE: STATISTICAL VARIANCE SCENARIOS", 105, 12, { align: "center" });
+
+                y2 = 45;
+                doc.setTextColor(0, 0, 0);
+                drawPDFBoxPlot(doc, {min: 0, q1: 15, median: 25, q3: 65, max: 100}, 14, y2, 180, "SCENARIO A: Median Leaning Left (Right-Skewed)");
+                y2 += 22; doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text("Interpretation: Early life failures are densely clustered. Indicates potential infant mortality, poor assembly quality, or immediate out-of-box defects.", 14, y2, { maxWidth: 180 });
+                
+                y2 += 40;
+                drawPDFBoxPlot(doc, {min: 0, q1: 35, median: 50, q3: 65, max: 100}, 14, y2, 180, "SCENARIO B: Median Centered (Symmetric)");
+                y2 += 22; doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text("Interpretation: The failure distribution is balanced. Failures occur steadily over the operational duration. Suggests inherent design limits rather than sudden defects.", 14, y2, { maxWidth: 180 });
+
+                y2 += 40;
+                drawPDFBoxPlot(doc, {min: 0, q1: 35, median: 75, q3: 85, max: 100}, 14, y2, 180, "SCENARIO C: Median Leaning Right (Left-Skewed)");
+                y2 += 22; doc.setFontSize(10); doc.setFont("helvetica", "normal");
+                doc.text("Interpretation: Failures cluster towards the end of the test/life cycle. Indicates wear-out, material fatigue, or end-of-life degradation.", 14, y2, { maxWidth: 180 });
+
+                doc.save(`Pre_CAPA_Report_${new Date().getTime()}.pdf`);
+            };
+
+            const downloadData = () => {
+                if (!data) return;
+                const rel = calculateReliability(data.units, data.duration, data.failureTimes);
+                const stats = calculateStats(data.failureTimes);
+                const rpn = (parseInt(data.fmea.s)||0) * (parseInt(data.fmea.o)||0) * (parseInt(data.fmea.d)||0);
+
+                let csv = "RISK FACTOR & FMEA - DMAIC INTEGRATION ANALYSIS\n";
+                csv += `Export Date,${new Date().toLocaleString()}\n\n`;
+                csv += "--- INPUT PARAMETERS ---\n";
+                csv += `Industry Segment,${segment}\n`;
+                csv += `Total Units tested,${data.units}\n`;
+                csv += `Operational Duration,${data.duration},Hours\n`;
+                csv += `Failure Count,${rel.failedCount}\n`;
+                csv += `Failure Times (Hours),"${data.failureTimes.map(v => v.toFixed(1)).join(", ")}"\n\n`;
+
+                csv += "--- CALCULATED RELIABILITY ---\n";
+                csv += `MTTF (Mean Time to Failure),${rel.mttf.toFixed(2)},Hours\n`;
+                csv += `MTBF (Mean Time Between Failures),${rel.mtbf.toFixed(2)},Hours\n`;
+                csv += `Failure Rate,${rel.failureRate.toFixed(6)},per hr\n\n`;
+
+                csv += "--- FMEA RISK MATRIX ---\n";
+                csv += `Severity (S),${data.fmea.s},1-10 Scale\n`;
+                csv += `Occurrence (O),${data.fmea.o},1-10 Scale\n`;
+                csv += `Detection (D),${data.fmea.d},1-10 Scale\n`;
+                csv += `Composite RPN,${rpn},S*O*D\n`;
+                csv += `Normalized Severity (x25),${convert10to25(data.fmea.s)},1-25 Scale Formula: ((x10-1)/9)*24+1\n`;
+                csv += `Normalized Occurrence (x25),${convert10to25(data.fmea.o)},1-25 Scale Formula: ((x10-1)/9)*24+1\n\n`;
+
+                csv += "--- DMAIC STATISTICAL VARIANCE ---\n";
+                csv += `Q1 (25th Percentile),${stats.q1.toFixed(2)}\n`;
+                csv += `Q2 (Median),${stats.median.toFixed(2)}\n`;
+                csv += `Q3 (75th Percentile),${stats.q3.toFixed(2)}\n`;
+                csv += `IQR (Interquartile Range),${stats.iqr.toFixed(2)},Spread of middle 50%\n`;
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `RiskFactor_DMAIC_Integration_Report.csv`);
+                document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+            };
+
+            if (!data) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 tracking-widest text-sm">SYSTEM INITIALIZING...</div>;
+
+            const rel = calculateReliability(data.units, data.duration, data.failureTimes);
+            const stats = calculateStats(data.failureTimes);
+            const rpn = (parseInt(data.fmea.s)||0) * (parseInt(data.fmea.o)||0) * (parseInt(data.fmea.d)||0);
+            
+            let rL = "Low";
+            if (rpn >= 100) rL = "High";
+            else if (rpn >= 50) rL = "Medium";
+            else if (rpn === 0 && data.units !== "") rL = "Zero";
+            
+            const safeDuration = parseInt(data.duration) || 0;
+            const resolutionStatus = isCapaApplied ? "CAPA" : (rpn >= 100 ? "CRITICAL" : (rpn >= 50 ? "WARNING" : "STABLE"));
+
+            const rpnColors = getTrafficColors('rpn', rpn);
+            const mtbfColors = getTrafficColors('mtbf', rel.mtbf, safeDuration);
+            const iqrColors = getTrafficColors('iqr', stats.iqr);
+
+            const mectoContent = {
+                "MTTF": { title: "Mean Time To Failure", exp: "The average expected lifespan of non-repairable components that actually failed.", analogy: "The average mileage at which a specific set of brake pads wears out completely.", calc: rel.failedCount > 0 ? `${rel.sumFailureTimes} (Sum Fail Hrs) ÷ ${rel.failedCount} (Failures) = ${rel.mttf.toFixed(1)} Hrs` : `0 Failures = ${data.duration||0} Hrs (Perfect Survival)` },
+                "MTBF": { title: "Mean Time Between Failures", exp: "The predicted elapsed time between inherent failures across the entire system.", analogy: "Across a factory of 100 active machines, how many total hours of operation occur before any single machine breaks down?", calc: rel.failedCount > 0 ? `${rel.totalTestTime.toLocaleString()} (Total Test Hrs) ÷ ${rel.failedCount} (Failures) = ${rel.mtbf.toFixed(1)} Hrs` : `0 Failures = ${rel.totalTestTime.toLocaleString()} Hrs (Perfect)` },
+                "Total Test Time": { title: "Cumulative Operational Hours", exp: "The aggregate operational hours accumulated by all units within the test window.", analogy: "The total engine hours accumulated across an entire fleet of vehicles combined.", calc: `${rel.sumFailureTimes} (Fail Hrs) + (${rel.survivingUnits} Units × ${data.duration||0} Hrs) = ${rel.totalTestTime.toLocaleString()} Hrs` },
+                "RPN": { title: "Risk Priority Number", exp: "A composite FMEA risk index used to prioritize process mitigation.", analogy: "A combined threat level asking: How bad? How often? How hard to catch?", calc: `${data.fmea.s || 0} (Sev) × ${data.fmea.o || 0} (Occ) × ${data.fmea.d || 0} (Det) = ${rpn} RPN` },
+                "Scale x25": { title: "Scale Normalization", exp: "Expands a standard 1-10 matrix input into a wider 1-25 resolution matrix.", analogy: "Translating a 10-point pop quiz score proportionally into a 25-point midterm grade.", calc: `Severity: ((${data.fmea.s || 0}-1)÷9)×24+1 = ${convert10to25(data.fmea.s)}` },
+                "IQR": { title: "Interquartile Range", exp: "Measures the statistical dispersion of the middle 50% of failures.", analogy: "The 'core' temperature range of an oven, throwing out the extreme spikes and drops.", calc: `${stats.q3.toFixed(2)} (Q3) - ${stats.q1.toFixed(2)} (Q1) = ${stats.iqr.toFixed(2)} IQR Spread` }
+            };
+
+            return (
+                <div className="min-h-screen pb-16 overflow-x-hidden font-sans">
+                    {/* STICKY ENLARGED HEADER - SINGLE LINE TITLE */}
+                    <div className="bg-slate-900 text-white pt-6 pb-8 px-6 shadow-2xl relative z-50 sticky top-0 border-b border-slate-800">
+                        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4 mb-4">
+                            <div className="text-emerald-400 text-2xl md:text-3xl font-black tracking-[0.3em] uppercase drop-shadow-md">MECTS....SET.... GO</div>
+                            <div className="text-emerald-400/80 text-xs md:text-sm font-bold tracking-widest bg-slate-800 px-4 py-1.5 rounded-lg border border-slate-700">WWW.MECTS.IN</div>
+                        </div>
+                        <div className="max-w-6xl mx-auto">
+                            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                                <div className="w-full overflow-hidden">
+                                    <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-[2.6rem] font-black leading-tight tracking-tight uppercase drop-shadow-lg whitespace-nowrap truncate max-w-full block">Risk Factor & FMEA - DMAIC Integration</h1>
+                                    <h2 className="text-base md:text-xl text-slate-400 font-medium mt-2 uppercase tracking-wider">Platform & Simulator</h2>
+                                </div>
+                                <div className="flex flex-wrap gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+                                    <button onClick={handleClearAll} className="flex-1 lg:flex-none flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium border border-slate-700 transition-all text-slate-300"><IconTrash /> Clear</button>
+                                    
+                                    <div className="relative group inline-block flex-1 lg:flex-none">
+                                        <button className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold tracking-wider transition-all shadow-md cursor-help">
+                                            <IconMath /> MECTOPEDIA
+                                        </button>
+                                        <div className="absolute right-0 top-full pt-3 w-[85vw] md:w-[400px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] origin-top-right pointer-events-none group-hover:pointer-events-auto">
+                                            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden text-left text-slate-800">
+                                                <div className="bg-slate-50 p-4 border-b border-slate-200">
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Select Parameter</label>
+                                                    <select 
+                                                        className="w-full bg-white border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 font-medium outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                                                        value={mectoSelection} onChange={(e) => setMectoSelection(e.target.value)}
+                                                    >
+                                                        {Object.keys(mectoContent).map(k => <option key={k} value={k}>{k}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="p-5">
+                                                    <div className="font-bold text-slate-900 text-base mb-2">{mectoContent[mectoSelection].title}</div>
+                                                    <p className="text-sm text-slate-600 mb-4 leading-relaxed">{mectoContent[mectoSelection].exp}</p>
+                                                    <div className="bg-indigo-50 text-indigo-900 text-xs p-3 rounded-lg border border-indigo-100 mb-4 italic">
+                                                        <span className="font-bold not-italic">Analogy: </span>{mectoContent[mectoSelection].analogy}
+                                                    </div>
+                                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Dynamic Engine Calculation</div>
+                                                    <div className="bg-slate-900 text-emerald-400 p-3 rounded-lg font-mono text-xs tracking-tight">{mectoContent[mectoSelection].calc}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* GLOBAL TOAST - TOP CENTER WITH Z-INDEX OVER HEADER */}
+                    {toastMsg && (
+                        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-rose-600 shadow-[0_15px_40px_rgba(225,29,72,0.4)] border-2 border-white text-white px-6 py-4 rounded-xl flex items-center gap-3 animate-[fadeIn_0.3s] font-black w-[90%] max-w-lg text-sm tracking-wide">
+                            <div className="bg-white text-rose-600 p-1 rounded-full"><IconAlert /></div>
+                            {toastMsg}
+                        </div>
+                    )}
+
+                    <div className="max-w-6xl mx-auto px-4 md:px-6 pt-8 relative z-40">
+                        <div className="glass-panel p-3.5 rounded-2xl mb-8 flex flex-col md:flex-row gap-3 items-center shadow-lg">
+                            <div className="w-full md:w-80">
+                                <select className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl p-3 font-semibold outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer transition-all hover:bg-slate-100" value={segment} onChange={handleSegmentChange}>
+                                    {INDUSTRIAL_SEGMENT_KEYS.map((s, i) => <option key={s} value={s} className={i===0?"font-black text-indigo-600":""}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex-1 flex flex-col md:flex-row gap-3 w-full h-full">
+                                <button onClick={()=>setIsCustomMode(!isCustomMode)} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-sm transition-all border ${isCustomMode ? 'bg-slate-100 text-slate-800 border-slate-300' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}><IconEdit /> {isCustomMode ? "Close Setup" : "Manual Input"}</button>
+                                {isCapaApplied ? 
+                                    <button onClick={handleRevertOriginal} className="flex-1 flex items-center justify-center gap-2 bg-white text-slate-700 border border-slate-300 py-3 rounded-xl font-medium text-sm transition-all hover:bg-slate-50 shadow-sm"><IconRefresh /> Revert System</button> :
+                                    <>
+                                        <button onClick={generatePreCapaPDF} className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-800 py-3 rounded-xl font-bold text-xs md:text-sm border border-slate-300 shadow-sm hover:bg-slate-200 transition-all uppercase tracking-wider"><IconPDF /> Pre-CAPA Report</button>
+                                        <button onClick={handleApplyCapa} className="flex-1 flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-xl font-medium text-sm shadow-md hover:bg-slate-800 transition-all uppercase tracking-wider"><IconShield /> Execute CAPA</button>
+                                    </>
+                                }
+                            </div>
+                        </div>
+
+                        {isCustomMode && (
+                            <div className="bg-white border border-slate-200 p-6 md:p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8 animate-fade-in">
+                                <h3 className="text-base font-bold text-slate-800 mb-6 flex items-center gap-2">Data Configuration</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <div className="flex gap-4">
+                                            <div className="w-1/2">
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Total Units</label>
+                                                <input type="number" value={customUnits} onChange={e=>setCustomUnits(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="-" />
+                                            </div>
+                                            <div className="w-1/2">
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Duration (Hrs)</label>
+                                                <input type="number" value={customDuration} onChange={e=>setCustomDuration(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="-" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Failure Times (Comma Separated)</label>
+                                            <textarea value={customFailures} onChange={e=>setCustomFailures(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 font-mono text-sm text-slate-700 h-24 custom-scrollbar-light outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="e.g. 150, 420, 600" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4 flex flex-col">
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Severity</label>
+                                                <input type="number" value={customS} onChange={e=>setCustomS(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="0-10" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Occurrence</label>
+                                                <input type="number" value={customO} onChange={e=>setCustomO(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="0-10" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Detection</label>
+                                                <input type="number" value={customD} onChange={e=>setCustomD(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-slate-200 focus:bg-white transition-all" placeholder="0-10" />
+                                            </div>
+                                        </div>
+                                        <button onClick={handleApplyCustomData} className="mt-auto w-full bg-slate-800 text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-sm shadow-md transition-all hover:bg-slate-700 active:scale-[0.98]">Update Data Sources</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200 flex flex-col relative overflow-hidden">
+                                <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                    <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center"><IconActivity /></div>
+                                    Reliability Output
+                                </h3>
+                                
+                                <div className="grid grid-cols-2 gap-3 mb-5">
+                                    <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-200 transition-all hover:bg-blue-100 relative group cursor-help shadow-sm">
+                                        <InfoTooltip text="Total Units Tested. Click to edit." position="top" offset="-translate-x-[20%] left-1/2" arrowOffset="left-[20%]" />
+                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1">Units</span>
+                                        <input type="number" value={data.units} onChange={e=>handleInlineChange('units', e.target.value)} className="w-full font-black text-slate-800 bg-transparent outline-none text-xl p-0 border-0 focus:ring-0 placeholder-blue-300" placeholder="-" />
+                                    </div>
+                                    <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-200 transition-all hover:bg-blue-100 relative group cursor-help shadow-sm">
+                                        <InfoTooltip text="Test Duration (Hrs). Click to edit." position="top" />
+                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-1">Duration</span>
+                                        <input type="number" value={data.duration} onChange={e=>handleInlineChange('duration', e.target.value)} className="w-full font-black text-slate-800 bg-transparent outline-none text-xl p-0 border-0 focus:ring-0 placeholder-blue-300" placeholder="-" />
+                                    </div>
+                                    <div className="bg-rose-50/50 p-3 rounded-xl border border-rose-200 transition-all hover:bg-rose-100 relative group cursor-help shadow-sm">
+                                        <InfoTooltip text="Count of Failed Units. Click to edit." position="top" />
+                                        <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block mb-1">Failed</span>
+                                        <input type="number" value={data.failureTimes.length} onChange={e=>handleInlineChange('failedCount', e.target.value)} className="w-full font-black text-rose-700 bg-transparent outline-none text-xl p-0 border-0 focus:ring-0 placeholder-rose-300" placeholder="0" />
+                                    </div>
+                                    <div className="bg-indigo-50/60 p-3 rounded-xl border border-indigo-200 flex flex-col justify-center relative group cursor-help shadow-sm">
+                                        <InfoTooltip text="Cumulative operational hours of all units combined." position="top" offset="-translate-x-[80%] left-1/2" arrowOffset="left-[80%]" />
+                                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1 mb-1">Test Hrs <IconCalc /></span>
+                                        <div key={rel.totalTestTime} className="font-black text-indigo-900 truncate text-xl animate-pulse-update rounded">{rel.totalTestTime.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-3 mt-auto border-t border-slate-100 pt-5">
+                                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center relative group cursor-help shadow-sm">
+                                        <InfoTooltip text={`Calculation: ${rel.failedCount > 0 ? `${rel.sumFailureTimes} (Fail Hrs) ÷ ${rel.failedCount} (Fails)` : `Perfect Survival`} = ${rel.mttf.toFixed(1)} Hrs`} position="top" offset="-translate-x-[25%] left-1/2" arrowOffset="left-[25%]" />
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">MTTF</div>
+                                        <div key={`mttf-${rel.mttf}`} className="font-black text-slate-800 text-lg animate-[fadeIn_0.4s]">{rel.mttf.toFixed(1)} <span className="text-[10px] text-slate-400 font-medium">hr</span></div>
+                                    </div>
+                                    <div className={`${mtbfColors.bg} p-2.5 rounded-xl border ${mtbfColors.border} text-center relative group cursor-help shadow-inner`}>
+                                        <InfoTooltip text={`Calculation: ${rel.failedCount > 0 ? `${rel.totalTestTime.toLocaleString()} (Test Hrs) ÷ ${rel.failedCount} (Fails)` : `Perfect Survival`} = ${rel.mtbf.toFixed(1)} Hrs`} position="top" offset="-translate-x-[75%] left-1/2" arrowOffset="left-[75%]" />
+                                        <div className={`text-[10px] font-bold ${mtbfColors.subText} uppercase tracking-wider mb-0.5`}>MTBF</div>
+                                        <div key={`mtbf-${rel.mtbf}`} className={`font-black ${mtbfColors.text} text-lg animate-[fadeIn_0.4s]`}>{rel.mtbf.toFixed(1)} <span className={`text-[10px] ${mtbfColors.subText} font-medium`}>hr</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200 flex flex-col relative overflow-hidden">
+                                <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                    <div className="w-6 h-6 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center"><IconAlert /></div>
+                                    FMEA Matrix
+                                </h3>
+                                
+                                <div className="grid grid-cols-3 gap-2 mb-5">
+                                    {['s','o','d'].map(f => {
+                                        const fVal = parseInt(data.fmea[f]) || 0;
+                                        const colors = getTrafficColors('fmea', fVal);
+                                        return (
+                                            <div key={f} className={`${colors.bg} p-2.5 rounded-xl text-center border ${colors.border} transition-all shadow-inner relative group cursor-help`}>
+                                                <InfoTooltip text={f==='s' ? 'Severity (0-10): Significance of failure.' : f==='o' ? 'Occurrence (0-10): Likelihood of failure.' : 'Detection (0-10): Probability controls detect failure.'} position="top" offset={f==='s' ? "-translate-x-[20%] left-1/2" : f==='d' ? "-translate-x-[80%] left-1/2" : "-translate-x-1/2 left-1/2"} arrowOffset={f==='s' ? "left-[20%]" : f==='d' ? "left-[80%]" : "left-1/2"} />
+                                                <div className={`text-[10px] font-bold ${colors.subText} uppercase tracking-widest mb-1`}>{f==='s'?'Sev':f==='o'?'Occ':'Det'}</div>
+                                                <input type="number" value={data.fmea[f]} onChange={e=>handleInlineChange(f, e.target.value)} className={`w-full text-center font-black ${colors.text} bg-transparent outline-none text-xl p-0 border-0 focus:ring-0 ${colors.placeholder}`} placeholder="0" />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className={`${rpnColors.bg} p-4 rounded-2xl text-center border ${rpnColors.border} flex flex-col items-center justify-center mb-5 transition-all shadow-md relative group cursor-help`}>
+                                    <InfoTooltip text="Composite Risk Priority Number (Severity × Occurrence × Detection)" position="top" />
+                                    <div key={`rpn-${rpn}`} className={`font-black text-4xl animate-[fadeIn_0.4s] ${rpnColors.text}`}>{rpn}</div>
+                                    <div className={`text-[10px] font-bold uppercase ${rpnColors.subText} tracking-widest mt-1`}>COMPOSITE RPN</div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-2 mt-auto">
+                                    {['s', 'o'].map(f => {
+                                        const normVal = convert10to25(data.fmea[f]);
+                                        const normCol = getTrafficColors('norm', normVal);
+                                        return (
+                                            <div key={`norm-${f}`} className={`${normCol.bg} p-2.5 rounded-xl border ${normCol.border} text-center relative group cursor-help shadow-inner`}>
+                                                <InfoTooltip text={`Scale Calculation: ((${data.fmea[f] || 0}-1)÷9)×24+1 = ${normVal}`} position="top" offset={f==='s' ? "-translate-x-[25%] left-1/2" : "-translate-x-[75%] left-1/2"} arrowOffset={f==='s' ? "left-[25%]" : "left-[75%]"} />
+                                                <div className={`text-[9px] font-bold ${normCol.subText} uppercase tracking-wider mb-0.5`}>{f==='s'?'Norm Sev':'Norm Occ'}</div>
+                                                <div key={`n-${data.fmea[f]}`} className={`text-sm font-black ${normCol.text} animate-[fadeIn_0.4s]`}>{normVal}</div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200 flex flex-col relative overflow-hidden">
+                                <h3 className="font-bold text-slate-800 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                    <div className="w-6 h-6 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center"><IconActivity /></div>
+                                    Statistical Variance
+                                </h3>
+                                
+                                <div className="grid grid-cols-4 gap-2 mb-3">
+                                    <div className="bg-slate-800 p-2.5 rounded-xl text-center border border-slate-700 shadow-inner relative group cursor-help">
+                                        <InfoTooltip text="First Quartile (25th Percentile)" position="top" offset="-translate-x-[15%] left-1/2" arrowOffset="left-[15%]" />
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Q1</div>
+                                        <div className="font-black text-white text-sm">{stats.q1.toFixed(1)}</div>
+                                    </div>
+                                    <div className="bg-slate-800 p-2.5 rounded-xl text-center border border-slate-700 shadow-inner relative group cursor-help">
+                                        <InfoTooltip text="Median (50th Percentile)" position="top" />
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Med</div>
+                                        <div className="font-black text-white text-sm">{stats.median.toFixed(1)}</div>
+                                    </div>
+                                    <div className="bg-slate-800 p-2.5 rounded-xl text-center border border-slate-700 shadow-inner relative group cursor-help">
+                                        <InfoTooltip text="Third Quartile (75th Percentile)" position="top" />
+                                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Q3</div>
+                                        <div className="font-black text-white text-sm">{stats.q3.toFixed(1)}</div>
+                                    </div>
+                                    <div className={`${iqrColors.bg} border ${iqrColors.border} p-2.5 rounded-xl text-center shadow-inner relative group cursor-help`}>
+                                        <InfoTooltip text={`Calculation: ${stats.q3.toFixed(1)} (Q3) - ${stats.q1.toFixed(1)} (Q1) = ${stats.iqr.toFixed(1)}`} position="bottom" offset="-translate-x-[85%] left-1/2" arrowOffset="left-[85%]" />
+                                        <div className={`text-[9px] font-bold ${iqrColors.subText} uppercase tracking-wider mb-1`}>IQR</div>
+                                        <div key={`iqr-${stats.iqr}`} className={`font-black ${iqrColors.text} text-sm animate-[fadeIn_0.4s]`}>{stats.iqr.toFixed(1)}</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-auto">
+                                    <BoxPlot stats={stats} />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mb-10 animate-fade-in">
+                            <div className={`p-6 md:p-8 rounded-3xl shadow-[0_15px_40px_rgb(0,0,0,0.1)] mb-8 flex flex-col items-center justify-center text-center border transition-all duration-500
+                                ${resolutionStatus === 'CAPA' ? 'bg-emerald-600 border-emerald-500' : 
+                                  resolutionStatus === 'CRITICAL' ? 'bg-red-600 border-red-500' : 
+                                  resolutionStatus === 'WARNING' ? 'bg-amber-500 border-amber-400' : 
+                                  'bg-blue-600 border-blue-500'}`}>
+                                
+                                <div className={`text-xs font-black uppercase tracking-[0.3em] mb-5 border-b pb-2 ${resolutionStatus === 'WARNING' ? 'text-amber-900 border-amber-900/20' : 'text-white border-white/20'}`}>
+                                    {resolutionStatus === "CAPA" ? "CAPA Resolution Active" : "Confirmed Real-Time Status"}
+                                </div>
+                                
+                                <div className="flex flex-wrap justify-center gap-4 mb-6">
+                                    <div className={`${mtbfColors.bg} border ${mtbfColors.border} px-5 py-3 rounded-2xl flex items-center gap-3 shadow-lg`}>
+                                        <span className={`text-[10px] font-black ${mtbfColors.subText} uppercase tracking-widest`}>MTBF</span>
+                                        <span className={`text-lg font-black ${mtbfColors.text}`}>{rel.mtbf.toLocaleString(undefined, {maximumFractionDigits:0})} Hrs</span>
+                                    </div>
+                                    <div className={`${rpnColors.bg} border ${rpnColors.border} px-5 py-3 rounded-2xl flex items-center gap-3 shadow-lg`}>
+                                        <span className={`text-[10px] font-black ${rpnColors.subText} uppercase tracking-widest`}>RPN</span>
+                                        <span className={`text-lg font-black ${rpnColors.text}`}>{rpn}</span>
+                                    </div>
+                                    <div className={`${iqrColors.bg} border ${iqrColors.border} px-5 py-3 rounded-2xl flex items-center gap-3 shadow-lg`}>
+                                        <span className={`text-[10px] font-black ${iqrColors.subText} uppercase tracking-widest`}>IQR</span>
+                                        <span className={`text-lg font-black ${iqrColors.text}`}>{stats.iqr.toFixed(1)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className={`text-sm font-black uppercase tracking-widest bg-white/90 px-6 py-2 rounded-full shadow-inner ${resolutionStatus === 'WARNING' ? 'text-amber-900' : 'text-slate-900'}`}>
+                                    {isCapaApplied ? "Optimization Cycle Running" : `${rpn >= 100 ? "Critical Intervention Required" : rpn >= 50 ? "System Threshold Warning" : "Normal Operational Parameters"}`}
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className={`${mtbfColors.bg} p-6 md:p-8 rounded-3xl border ${mtbfColors.border} shadow-lg space-y-4 text-left transition-all`}>
+                                    <h4 className={`font-black text-xs uppercase tracking-widest ${mtbfColors.text} flex items-center gap-2 border-b ${mtbfColors.border === 'border-amber-300' ? 'border-amber-900/10' : 'border-white/20'} pb-3`}>
+                                        Reliability Summary
+                                    </h4>
+                                    <div className={`text-sm ${mtbfColors.subText} space-y-2.5 font-medium leading-relaxed`}>
+                                        <p><span className={`font-black ${mtbfColors.text}`}>Density:</span> {rel.failedCount === 0 ? "0% (Perfect Survival)" : `${data.units ? ((rel.failedCount/parseInt(data.units))*100).toFixed(0) : 0}% failure rate.`}</p>
+                                        <p><span className={`font-black ${mtbfColors.text}`}>Robustness:</span> {rel.mtbf >= safeDuration ? "Fleet exceeds duration threshold." : "Rate exceeds safety limits."}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className={`${rpnColors.bg} p-6 md:p-8 rounded-3xl border ${rpnColors.border} shadow-lg space-y-4 text-left transition-all`}>
+                                    <h4 className={`font-black text-xs uppercase tracking-widest ${rpnColors.text} flex items-center gap-2 border-b ${rpnColors.border === 'border-amber-300' ? 'border-amber-900/10' : 'border-white/20'} pb-3`}>
+                                        FMEA Verdict
+                                    </h4>
+                                    <div className={`text-sm ${rpnColors.subText} space-y-2.5 font-medium leading-relaxed`}>
+                                        <p><span className={`font-black ${rpnColors.text}`}>Criticality:</span> RPN {rpn} is {rL} risk.</p>
+                                        <p><span className={`font-black ${rpnColors.text}`}>Action:</span> {rpn >= 50 ? "Initiate control-plan review." : "Process remains stable."}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className={`${iqrColors.bg} p-6 md:p-8 rounded-3xl border ${iqrColors.border} shadow-lg space-y-4 text-left transition-all`}>
+                                    <h4 className={`font-black text-xs uppercase tracking-widest ${iqrColors.text} flex items-center gap-2 border-b ${iqrColors.border === 'border-amber-300' ? 'border-amber-900/10' : 'border-white/20'} pb-3`}>
+                                        Statistical Drift
+                                    </h4>
+                                    <div className={`text-sm ${iqrColors.subText} space-y-2.5 font-medium leading-relaxed`}>
+                                        <p><span className={`font-black ${iqrColors.text}`}>Spread:</span> IQR of {stats.iqr.toFixed(1)} measured.</p>
+                                        <p><span className={`font-black ${iqrColors.text}`}>Stability:</span> {stats.iqr > 15 ? "Significant drift detected." : "Standard deviation optimized."}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

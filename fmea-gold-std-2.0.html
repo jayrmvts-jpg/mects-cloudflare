@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Enterprise FMEA & DMAIC Platform</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; color: #1e293b; overflow-x: hidden; }
+        
+        /* Enterprise Clean Panels */
+        .glass-panel { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-bottom: 2px solid #e2e8f0; }
+        
+        /* Spreadsheet-style Input Cells */
+        .input-cell { 
+            width: 100%; border: 2px solid transparent; background: transparent; padding: 6px 6px; 
+            outline: none; border-radius: 6px; transition: all 0.2s; color: #0f172a; font-size: 0.8rem; font-weight: 600;
+        }
+        .input-cell:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
+        .input-cell:focus:not(:disabled) { border-color: #2563eb; background: #ffffff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); }
+        .num-input { width: 50px; text-align: center; font-weight: 800; font-family: 'Inter', monospace; font-size: 0.85rem; }
+        
+        /* Highlight Missing Data */
+        .input-error { border-color: #ef4444 !important; background-color: #fef2f2 !important; box-shadow: inset 0 0 5px rgba(239,68,68,0.2); }
+
+        /* Traffic Light Indicators */
+        .glow-red { box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+        .glow-yellow { box-shadow: 0 0 12px rgba(234, 179, 8, 0.8); }
+        .glow-green { box-shadow: 0 0 12px rgba(34, 197, 94, 0.8); }
+
+        /* Matrix Heatmap Cells */
+        .heatmap-high { background-color: #dc2626; color: #ffffff; border-color: #991b1b; }
+        .heatmap-med { background-color: #f59e0b; color: #ffffff; border-color: #b45309; }
+        .heatmap-low { background-color: #16a34a; color: #ffffff; border-color: #14532d; }
+        .heatmap-empty { background-color: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
+
+        /* DMAIC Tracker Steps */
+        .dmaic-step { position: relative; flex: 1; text-align: center; padding: 16px 0; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.05em; color: #64748b; border-bottom: 5px solid #cbd5e1; transition: all 0.3s ease; }
+        .dmaic-step.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+        .dmaic-step.completed { color: #15803d; border-bottom-color: #15803d; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; border: 2px solid #e2e8f0; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        /* Modal & Toast Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-animate { animation: fadeIn 0.2s ease-out forwards; }
+        
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        .toast-animate { animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const MAX_ROWS = 300; // GOD MODE: DOM Crash Protection Limit
+
+        // --- STRICT MATHEMATICAL GETTERS ---
+        const getS = (row) => { if(!row || row.s === "") return 1; const v = parseInt(row.s); return isNaN(v) ? 1 : Math.max(1, Math.min(10, v)); };
+        const getO = (row) => { if(!row || row.o === "") return 1; const v = parseInt(row.o); return isNaN(v) ? 1 : Math.max(1, Math.min(10, v)); };
+        const getD = (row) => { if(!row || row.d === "") return 1; const v = parseInt(row.d); return isNaN(v) ? 1 : Math.max(1, Math.min(10, v)); };
+
+        const getNS = (row) => { 
+            if (row && row.newS !== "" && row.newS !== undefined && row.newS !== null) {
+                const v = parseInt(row.newS);
+                if (!isNaN(v)) return Math.max(1, Math.min(10, v));
+            }
+            return getS(row); 
+        };
+        const getNO = (row) => { 
+            if (row && row.newO !== "" && row.newO !== undefined && row.newO !== null) {
+                const v = parseInt(row.newO);
+                if (!isNaN(v)) return Math.max(1, Math.min(10, v));
+            }
+            return getO(row); 
+        };
+        const getND = (row) => { 
+            if (row && row.newD !== "" && row.newD !== undefined && row.newD !== null) {
+                const v = parseInt(row.newD);
+                if (!isNaN(v)) return Math.max(1, Math.min(10, v));
+            }
+            return getD(row); 
+        };
+
+        // --- SIMULATOR DATA ---
+        const industries = ["Blank Template", "Call Center", "Automotive", "Healthcare", "Software", "Manufacturing"];
+
+        const generateContextualAction = (failure, s, o, d) => {
+            const rpn = s * o * d;
+            if (rpn >= 200) return "URGENT: Redesign Process / Automate Task";
+            if (rpn >= 150) return "Deploy Mandatory Supervisor Validation";
+            if (s >= 8) return "Implement Hard Poka-Yoke / System Interlock";
+            if (o >= 8) return "Initiate Operator Retraining & Certification";
+            return "Maintain Routine Control Phase Monitoring";
+        };
+
+        const generateMockData = (industry) => {
+            if (industry === "Blank Template") {
+                return [];
+            }
+            
+            if (industry === "Call Center") {
+                return [
+                    { id: Date.now() + 1, step: "Call Routing (IVR)", failure: "Incorrect transfer", effect: "Frustrated customer", cause: "Poor IVR logic", s: 7, o: 6, d: 5, newS: 7, newO: 3, newD: 3, action: "Redesign IVR flow with call driver data" },
+                    { id: Date.now() + 2, step: "Queue Management", failure: "Long wait time", effect: "Abandonment, low CSAT", cause: "Understaffing, peak load", s: 8, o: 7, d: 4, newS: 8, newO: 4, newD: 2, action: "Dynamic staffing, real-time dashboards" },
+                    { id: Date.now() + 3, step: "Agent Resolution", failure: "Incorrect resolution", effect: "Repeat calls, low FCR", cause: "Inadequate training", s: 9, o: 5, d: 6, newS: 9, newO: 2, newD: 3, action: "Targeted training, knowledge base" },
+                    { id: Date.now() + 4, step: "Call Closure", failure: "No confirmation of issue", effect: "Unresolved issue", cause: "No checklist", s: 6, o: 4, d: 7, newS: 6, newO: 2, newD: 3, action: "Introduce call closure checklist" }
+                ];
+            }
+
+            const processes = {
+                "Automotive": ["Chassis Assembly", "Engine Mounting", "Painting", "Quality Control"],
+                "Healthcare": ["Patient Intake", "Diagnosis", "Medication Admin", "Discharge"],
+                "Software": ["Requirements", "Coding", "Testing", "Deployment"],
+                "Manufacturing": ["Material Prep", "Machining", "Assembly", "Packaging"]
+            };
+            const failures = ["Incorrect Execution", "Delay/Timeout", "Resource Unavailable", "System Failure", "Compliance Breach"];
+            const effects = ["Customer Frustration", "Defective Product", "Cost Overrun", "Safety Hazard", "Data Loss"];
+            const causes = ["Process Variation", "Human Error", "Hardware Failure", "Software Bug"];
+            
+            return (processes[industry] || processes["Manufacturing"]).map((proc, index) => {
+                const s = Math.floor(Math.random() * 6) + 4; const o = Math.floor(Math.random() * 7) + 3; const d = Math.floor(Math.random() * 6) + 3;
+                const failureMode = failures[Math.floor(Math.random() * failures.length)];
+                return {
+                    id: Date.now() + index, step: proc, failure: failureMode, effect: effects[Math.floor(Math.random() * effects.length)],
+                    cause: causes[Math.floor(Math.random() * causes.length)], s, o, d, 
+                    newS: s, newO: Math.max(1, o - 2), newD: Math.max(1, d - 1),
+                    action: generateContextualAction(failureMode, s, o, d)
+                };
+            });
+        };
+
+        // --- MATH LOGIC ---
+        const convert10to25 = (val10) => {
+            if (!val10) return 0;
+            let v = parseFloat(val10);
+            if (v < 1) v = 1; if (v > 10) v = 10;
+            return Math.round(((v - 1) / 9) * 24 + 1);
+        };
+
+        // High Contrast RPN Colors
+        const getRPNColor = (rpn) => {
+            if (rpn >= 200) return 'bg-red-600 text-white border-red-800 shadow-md';
+            if (rpn >= 100) return 'bg-amber-400 text-amber-900 border-amber-600 shadow-md font-black';
+            return 'bg-emerald-500 text-white border-emerald-700 shadow-md';
+        };
+
+        const getSODClass = (val, isLocked, isSabotage = false) => {
+            if (val === "" || val === undefined || val === null) return isLocked ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-gray-900 border-gray-300';
+            const v = parseInt(val);
+            if (isNaN(v)) return isLocked ? 'bg-slate-100 text-slate-400' : 'bg-white text-gray-900';
+            
+            let colorClass = '';
+            
+            if (isSabotage) return 'bg-red-100 text-red-900 border-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]';
+
+            if (v >= 8) colorClass = 'bg-red-200 text-red-950 border-red-500 shadow-sm';
+            else if (v >= 4) colorClass = 'bg-amber-200 text-amber-950 border-amber-500 shadow-sm';
+            else colorClass = 'bg-emerald-200 text-emerald-950 border-emerald-500 shadow-sm';
+
+            return `${colorClass} ${isLocked ? 'opacity-90 grayscale-[15%]' : ''}`;
+        };
+
+        const sanitizeCSV = (str) => {
+            if (str === null || str === undefined) return '""';
+            const stringified = String(str);
+            return `"${stringified.replace(/"/g, '""')}"`;
+        };
+
+        const generateSafeID = () => {
+            return typeof crypto !== 'undefined' && crypto.randomUUID 
+                ? crypto.randomUUID() 
+                : Date.now().toString(36) + Math.random().toString(36).substr(2);
+        };
+
+        // --- UI COMPONENTS ---
+        const TrafficLight = ({ rpn }) => {
+            const isRed = rpn >= 200; const isYellow = rpn >= 100 && rpn < 200; const isGreen = rpn < 100;
+            return (
+                <div className="flex space-x-1.5 justify-center items-center mt-1 p-1.5 bg-slate-200 rounded-full w-max mx-auto border border-slate-300 shadow-inner">
+                    <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${isRed ? 'bg-red-500 glow-red' : 'bg-red-900/20'}`}></div>
+                    <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${isYellow ? 'bg-yellow-400 glow-yellow' : 'bg-yellow-900/20'}`}></div>
+                    <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${isGreen ? 'bg-green-500 glow-green' : 'bg-green-900/20'}`}></div>
+                </div>
+            );
+        };
+
+        const ToastContainer = ({ toasts }) => (
+            <div className="fixed bottom-6 right-6 z-[200] flex flex-col gap-3 pointer-events-none">
+                {toasts.map(t => (
+                    <div key={t.id} className={`toast-animate flex items-center p-4 rounded-xl shadow-2xl border-l-8 pointer-events-auto max-w-sm ${t.type === 'error' ? 'bg-white border-red-600 text-red-900' : (t.type === 'warning' ? 'bg-white border-amber-500 text-amber-900' : 'bg-slate-900 border-blue-500 text-white')}`}>
+                        <div className="mr-3">
+                            {t.type === 'error' && <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
+                            {t.type === 'warning' && <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>}
+                            {t.type === 'success' && <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>}
+                        </div>
+                        <div>
+                            <h4 className="text-xs font-black tracking-widest uppercase opacity-80 mb-0.5">{t.type}</h4>
+                            <p className="text-sm font-bold leading-tight">{t.msg}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+
+        const RiskMatrixImprint = ({ fmeaData, isCapaMode }) => {
+            const matrix = [
+                { label: "A. Almost Certain", vals: [5, 5, 15, 22, 25] }, 
+                { label: "B. Likely", vals: [4, 8, 15, 14, 24] },
+                { label: "C. Possible", vals: [3, 6, 9, 12, 15] },
+                { label: "D. Unlikely", vals: [2, 4, 6, 8, 10] },
+                { label: "E. Rare", vals: [1, 2, 3, 4, 5] }
+            ];
+            const cols = ["1. Insignificant", "2. Minor", "3. Moderate", "4. Major", "5. Catastrophic"];
+            const map10to5 = (val) => Math.min(5, Math.max(1, Math.ceil((val || 1) / 2)));
+
+            const cellItems = {};
+            if (fmeaData) {
+                fmeaData.forEach(row => {
+                    const s = isCapaMode ? getNS(row) : getS(row);
+                    const o = isCapaMode ? getNO(row) : getO(row);
+                    const rpn = s * o * getD(row); 
+                    
+                    const colIdx = map10to5(s) - 1; 
+                    const rowIdx = 5 - map10to5(o);
+                    const key = `${rowIdx}-${colIdx}`;
+                    if (!cellItems[key]) cellItems[key] = [];
+                    cellItems[key].push(rpn);
+                });
+            }
+
+            return (
+                <div className="glass-panel p-5 flex flex-col justify-between xl:col-span-5 border-t-8 border-t-amber-500">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest flex items-center">
+                            <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            5x5 Enterprise Risk Profile
+                        </h2>
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-gray-300 shadow-sm w-full">
+                        <table className="w-full text-[11px] text-center border-collapse bg-white">
+                            <thead>
+                                <tr>
+                                    <th className="border border-gray-300 p-2 bg-gray-100 text-gray-800 whitespace-nowrap font-black">Likelihood \ Impact</th>
+                                    {cols.map(c => <th key={c} className="border border-gray-300 p-2 bg-gray-100 text-gray-800 font-bold whitespace-nowrap">{c}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {matrix.map((row, i) => (
+                                    <tr key={i}>
+                                        <td className="border border-gray-300 p-2 font-black text-left whitespace-nowrap bg-gray-100 text-gray-800">{row.label}</td>
+                                        {row.vals.map((v, j) => {
+                                            const items = cellItems[`${i}-${j}`] || [];
+                                            let bgClass = items.length > 0 ? "heatmap-low" : "heatmap-empty";
+                                            if (v >= 17) bgClass = items.length > 0 ? "heatmap-high" : "heatmap-empty"; 
+                                            else if (v >= 9) bgClass = items.length > 0 ? "heatmap-med" : "heatmap-empty";
+                                            
+                                            return (
+                                                <td key={j} className={`border border-gray-300 p-2 align-top h-14 relative transition-all duration-300 ${bgClass} min-w-[50px]`}>
+                                                    <div className="flex flex-col justify-between h-full relative z-10">
+                                                        <div className="flex flex-wrap gap-1 mb-1 min-h-[16px]">
+                                                            {items.map((rpn, idx) => {
+                                                                const isRed = rpn >= 200; const isYellow = rpn >= 100 && rpn < 200;
+                                                                const dotColor = isRed ? 'bg-red-200 border-red-900 shadow-md' : (isYellow ? 'bg-yellow-200 border-yellow-900 shadow-md' : 'bg-green-200 border-green-900 shadow-md');
+                                                                return <div key={idx} className={`w-3 h-3 rounded-full ${dotColor} border-2`} title={`RPN: ${rpn}`}></div>;
+                                                            })}
+                                                        </div>
+                                                        <div className="flex justify-between items-end w-full mt-auto">
+                                                            <span className="text-[9px] font-bold text-gray-400 opacity-80" title="Matrix Zone Risk Weight">R{v}</span>
+                                                            <span className={`text-sm font-black block drop-shadow-sm ${items.length > 0 ? 'text-gray-900' : (v >= 17 ? 'text-red-600' : (v >= 9 ? 'text-amber-600' : 'text-emerald-600'))}`} title={`${items.length} nodes in this zone`}>
+                                                                {items.length}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        };
+
+        const DmaicTracker = ({ isCapaMode, reduction }) => {
+            const states = {
+                define: true, measure: true, analyze: true, improve: isCapaMode, control: isCapaMode && reduction >= 30 
+            };
+
+            return (
+                <div className="flex w-full bg-slate-100 border-b-2 border-gray-300 px-4 py-2">
+                    <div className={`dmaic-step ${states.define ? 'completed' : ''}`}><span className="block text-3xl mb-2">🔍</span> DEFINE</div>
+                    <div className={`dmaic-step ${states.measure ? 'completed' : ''}`}><span className="block text-3xl mb-2">📏</span> MEASURE</div>
+                    <div className={`dmaic-step ${states.analyze && !isCapaMode ? 'active' : (isCapaMode ? 'completed' : '')}`}><span className="block text-3xl mb-2">🧠</span> ANALYZE</div>
+                    <div className={`dmaic-step ${states.improve && !states.control ? 'active' : (states.control ? 'completed' : '')}`}><span className="block text-3xl mb-2">⚡</span> IMPROVE</div>
+                    <div className={`dmaic-step ${states.control ? 'completed' : ''}`}><span className="block text-3xl mb-2">🛡️</span> CONTROL</div>
+                </div>
+            );
+        };
+
+        const DmaicDataPanel = ({ fmeaData, isCapaMode, reduction, metricsList, originalData }) => {
+            let maxBaseRpn = -1; let worstStep = "N/A";
+            let totalS = 0, totalO = 0, totalD = 0;
+            let improvedNodes = 0; let hazardsCleared = 0;
+            
+            // GOD MODE: Prototype Pollution Safeguard
+            const causeMap = Object.create(null);
+
+            fmeaData.forEach((row, idx) => {
+                const baseRow = (isCapaMode && originalData && originalData[idx]) ? originalData[idx] : row;
+                const bS = getS(baseRow); const bO = getO(baseRow); const bD = getD(baseRow);
+                const bRpn = bS * bO * bD;
+
+                totalS += bS; totalO += bO; totalD += bD;
+
+                if (bRpn > maxBaseRpn) { maxBaseRpn = bRpn; worstStep = baseRow.step || "Unnamed Step"; }
+                if (baseRow.cause && baseRow.cause.trim() !== '') { causeMap[baseRow.cause] = (causeMap[baseRow.cause] || 0) + bRpn; }
+
+                if (isCapaMode) {
+                    const cRpn = getNS(row) * getNO(row) * getND(row);
+                    if (cRpn < bRpn) improvedNodes++;
+                    if (bRpn >= 100 && cRpn < 100) hazardsCleared++;
+                }
+            });
+
+            const lengthSafe = fmeaData.length > 0 ? fmeaData.length : 1; 
+
+            const uniqueSteps = new Set(fmeaData.map(r => r.step).filter(Boolean)).size;
+            const totalModes = fmeaData.length;
+            const severityIndex = fmeaData.length > 0 ? (totalS / lengthSafe).toFixed(1) : "0.0";
+            const topCauses = Object.entries(causeMap).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
+            
+            const avgO = fmeaData.length > 0 ? totalO / lengthSafe : 0;
+            const avgD = fmeaData.length > 0 ? totalD / lengthSafe : 0;
+            let systemProfile = "Balanced Risk Profile";
+            if (fmeaData.length > 0) {
+                if (avgO > avgD * 1.2) systemProfile = "High Process Instability"; 
+                if (avgD > avgO * 1.2) systemProfile = "Critical Blindspots";      
+            } else {
+                systemProfile = "No Data";
+            }
+            
+            const optimizationRate = fmeaData.length > 0 ? Math.round((improvedNodes / lengthSafe) * 100) : 0;
+            const meanRpn = metricsList[0]?.currentStr || "0";
+            const criticalNodes = metricsList[2]?.currentStr || "0";
+            const residualRisk = metricsList[3]?.currentStr || "0%";
+
+            return (
+                <div className="p-6 bg-slate-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        
+                        <div className="bg-white rounded-xl border border-gray-300 border-t-8 border-t-blue-600 p-5 shadow-lg flex flex-col justify-between">
+                            <div className="text-sm font-black text-blue-900 mb-5 tracking-widest uppercase flex items-center">
+                                <span className="w-3 h-3 rounded-full bg-blue-600 mr-3 shadow-sm"></span>1. Define Scope
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center cursor-help group" title="Origin: Total unique 'Process Steps' entered in the FMEA grid.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-blue-500 transition-colors">Scope Checked</span> 
+                                    <span className="text-base font-black text-blue-900 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-lg whitespace-nowrap">{uniqueSteps} Steps</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Origin: Total number of identified 'Failure Modes' (rows) in the grid.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-blue-500 transition-colors">Failure Modes</span> 
+                                    <span className="text-base font-black text-blue-900 bg-blue-100 border border-blue-300 px-3 py-1.5 rounded-lg whitespace-nowrap">{totalModes} Modes</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: The specific process step mathematically carrying the highest Baseline RPN.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-blue-500 transition-colors">Primary Bottleneck</span> 
+                                    <span className="text-sm font-black text-white bg-blue-700 border border-blue-900 px-3 py-1.5 rounded-lg max-w-[180px] truncate shadow-md" title={worstStep}>{worstStep}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-300 border-t-8 border-t-amber-500 p-5 shadow-lg flex flex-col justify-between">
+                            <div className="text-sm font-black text-amber-900 mb-5 tracking-widest uppercase flex items-center">
+                                <span className="w-3 h-3 rounded-full bg-amber-500 mr-3 shadow-sm"></span>2. Measure Baseline
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: The average of all current Baseline RPNs across the entire system.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-amber-500 transition-colors">Mean Sys. RPN</span> 
+                                    <span className="text-base font-black text-amber-900 bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-lg whitespace-nowrap">{meanRpn}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Origin: Total number of process steps that mathematically score an RPN ≥ 100.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-amber-500 transition-colors">Critical Nodes</span> 
+                                    <span className={`text-base font-black px-3 py-1.5 rounded-lg border whitespace-nowrap ${criticalNodes !== "0" ? 'bg-red-600 text-white border-red-800 shadow-md' : 'bg-green-600 text-white border-green-800 shadow-md'}`}>{criticalNodes}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: Average Severity (S) score across all failure modes. Scores ≥ 7 flag severe compliance/safety risks.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-amber-500 transition-colors">Severity Index</span> 
+                                    <span className={`text-base font-black px-3 py-1.5 rounded-lg border whitespace-nowrap ${severityIndex >= 7 ? 'bg-red-600 text-white border-red-800 shadow-md' : 'bg-amber-100 text-amber-900 border-amber-300'}`}>{severityIndex} / 10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-300 border-t-8 border-t-purple-600 p-5 shadow-lg flex flex-col justify-between">
+                            <div className="text-sm font-black text-purple-900 mb-5 tracking-widest uppercase flex items-center">
+                                <span className="w-3 h-3 rounded-full bg-purple-600 mr-3 shadow-sm"></span>3. Analyze Drivers
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: The #1 Root Cause dynamically weighted by its total RPN contribution across all occurrences.">
+                                    <span className="text-sm font-black text-white bg-purple-700 border border-purple-900 px-3 py-2 rounded-lg w-full truncate shadow-md" title={topCauses[0] || 'N/A'}>#1: {topCauses[0] || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: The #2 Root Cause dynamically weighted by its total RPN contribution across all occurrences.">
+                                    <span className="text-sm font-black text-purple-900 bg-purple-100 border border-purple-300 px-3 py-2 rounded-lg w-full truncate shadow-sm" title={topCauses[1] || 'N/A'}>#2: {topCauses[1] || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Diagnostic: Mathematically compares Average Occurrence vs Detection to diagnose core systemic weaknesses (e.g. Instability vs Blindspots).">
+                                    <span className="text-sm font-black text-purple-900 bg-purple-200 border-2 border-purple-400 px-3 py-2 rounded-lg w-full truncate text-center uppercase tracking-wider">{systemProfile}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-300 border-t-8 border-t-emerald-600 p-5 shadow-lg flex flex-col justify-between">
+                            <div className="text-sm font-black text-emerald-900 mb-5 tracking-widest uppercase flex items-center">
+                                <span className="w-3 h-3 rounded-full bg-emerald-600 mr-3 shadow-sm"></span>4. Improve (CAPA)
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center cursor-help group" title="Origin: Indicates whether the CAPA editing mode is currently toggled active.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-emerald-500 transition-colors">Phase Status</span> 
+                                    <span className={`text-sm font-black px-3 py-1.5 rounded-lg border whitespace-nowrap shadow-sm ${isCapaMode ? 'bg-emerald-600 text-white border-emerald-800' : 'bg-gray-200 text-gray-700 border-gray-400'}`}>{isCapaMode ? 'ACTIVE' : 'PENDING'}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Origin: Counts the number of process steps that contain a documented 'Recommended Action'.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-emerald-500 transition-colors">Action Plans</span> 
+                                    <span className="text-base font-black text-emerald-900 bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-lg whitespace-nowrap">{fmeaData.filter(r=>r.action && r.action.trim() !== "").length} Listed</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: Percentage of process steps where the CAPA RPN is mathematically strictly less than the Baseline RPN.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-emerald-500 transition-colors">Optimization Rate</span> 
+                                    <span className={`text-base font-black px-3 py-1.5 rounded-lg border whitespace-nowrap ${isCapaMode ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>{isCapaMode ? `${optimizationRate}%` : 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-300 border-t-8 border-t-indigo-600 p-5 shadow-lg flex flex-col justify-between">
+                            <div className="text-sm font-black text-indigo-900 mb-5 tracking-widest uppercase flex items-center">
+                                <span className="w-3 h-3 rounded-full bg-indigo-600 mr-3 shadow-sm"></span>5. Control Guardrails
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: (Total Baseline RPN - Total CAPA RPN) / Total Baseline RPN. Target is > 30%.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-indigo-500 transition-colors">Risk Reduced</span> 
+                                    <span className={`text-base font-black px-3 py-1.5 rounded-lg border whitespace-nowrap shadow-sm ${reduction >= 30 ? 'bg-green-600 text-white border-green-800' : (reduction > 0 ? 'bg-blue-600 text-white border-blue-800' : 'bg-gray-200 text-gray-800 border-gray-400')}`}>{reduction.toFixed(1)}%</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: Represents mathematically un-eliminable risk. (Mean Active RPN / 1000) * 100. Target is < 10%.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-indigo-500 transition-colors">Residual Capacity</span> 
+                                    <span className="text-base font-black text-indigo-900 bg-indigo-100 border border-indigo-300 px-3 py-1.5 rounded-lg whitespace-nowrap">{residualRisk}</span>
+                                </div>
+                                <div className="flex justify-between items-center cursor-help group" title="Calculation: Counts how many 'Critical Nodes' (Baseline ≥ 100) were successfully driven below 100 via CAPA mitigation.">
+                                    <span className="text-base text-gray-700 font-bold border-b-2 border-dashed border-gray-300 group-hover:border-indigo-500 transition-colors">Hazards Cleared</span> 
+                                    <span className={`text-base font-black px-3 py-1.5 rounded-lg border whitespace-nowrap ${isCapaMode && hazardsCleared > 0 ? 'bg-indigo-600 text-white border-indigo-800 shadow-md' : (isCapaMode ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300')}`}>{isCapaMode ? `${hazardsCleared} Nodes` : 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [industry, setIndustry] = useState("Blank Template");
+            const [fmeaData, setFmeaData] = useState([]);
+            const [originalData, setOriginalData] = useState([]);
+            const [isCapaMode, setIsCapaMode] = useState(false);
+            const [rawInput, setRawInput] = useState("");
+            const [showDmaicView, setShowDmaicView] = useState(false); 
+            
+            const [toasts, setToasts] = useState([]);
+            const addToast = useCallback((msg, type = 'success') => {
+                const id = Date.now() + Math.random();
+                setToasts(prev => [...prev, { id, msg, type }]);
+                setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 4500);
+            }, []);
+
+            const dynamicMetrics = useMemo(() => {
+                let totalActiveRpn = 0;
+                let maxRpn = 0;
+                let criticalNodes = 0;
+                let baselineRpnSum = 0;
+                let projectedRpnSum = 0;
+
+                if (fmeaData && fmeaData.length > 0) {
+                    fmeaData.forEach((row, idx) => {
+                        const baseRow = (isCapaMode && originalData && originalData[idx]) ? originalData[idx] : row;
+                        const baseS = getS(baseRow);
+                        const baseO = getO(baseRow);
+                        const baseD = getD(baseRow);
+                        const origRpn = baseS * baseO * baseD;
+                        baselineRpnSum += origRpn;
+                        
+                        const ns = getNS(row);
+                        const no = getNO(row);
+                        const nd = getND(row);
+                        const capaRpn = ns * no * nd;
+                        projectedRpnSum += capaRpn;
+
+                        let currentRpn = isCapaMode ? capaRpn : origRpn;
+                        
+                        totalActiveRpn += currentRpn;
+                        
+                        if (currentRpn > maxRpn) maxRpn = currentRpn;
+                        if (currentRpn >= 100) criticalNodes++;
+                    });
+                }
+                
+                const safeLength = (fmeaData && fmeaData.length > 0) ? fmeaData.length : 1;
+                const avgRpn = Math.max(0, totalActiveRpn / safeLength);
+                const systemRiskPercent = avgRpn / 10; 
+                const reduction = baselineRpnSum > 0 ? ((baselineRpnSum - projectedRpnSum) / baselineRpnSum) * 100 : 0;
+
+                const getStatus = (current, target, isLessBetter) => {
+                    if (isLessBetter) {
+                        if (current <= target) return { text: "TARGET MET", classes: "text-white bg-green-600 border-green-800 shadow-sm" };
+                        if (current <= target * 1.2) return { text: "NEARING TARGET", classes: "text-amber-900 bg-amber-400 border-amber-600 shadow-sm" };
+                        return { text: "ACTION REQUIRED", classes: "text-white bg-red-600 border-red-800 shadow-sm" };
+                    } else {
+                        if (current >= target) return { text: "TARGET MET", classes: "text-white bg-green-600 border-green-800 shadow-sm" };
+                        if (current >= target * 0.8) return { text: "NEARING TARGET", classes: "text-amber-900 bg-amber-400 border-amber-600 shadow-sm" };
+                        return { text: "ACTION REQUIRED", classes: "text-white bg-red-600 border-red-800 shadow-sm" };
+                    }
+                };
+
+                let reductionStatus;
+                if (reduction >= 30) reductionStatus = { text: "TARGET MET", classes: "text-white bg-green-600 border-green-800 shadow-sm" };
+                else if (reduction > 0) reductionStatus = { text: "IN PROGRESS", classes: "text-amber-900 bg-amber-400 border-amber-600 shadow-sm" };
+                else if (reduction < 0) reductionStatus = { text: "RISK INCREASED", classes: "text-white bg-red-600 border-red-800 shadow-sm" };
+                else reductionStatus = { text: "AWAITING INPUT", classes: "text-gray-800 bg-gray-200 border-gray-400 shadow-sm" };
+
+                return {
+                    reductionVal: reduction,
+                    metrics: [
+                        {
+                            name: "Mean Risk Priority (RPN)",
+                            targetStr: "< 100",
+                            currentStr: avgRpn.toFixed(1),
+                            status: getStatus(avgRpn, 100, true),
+                            tooltip: "THRESHOLD: Mean RPN must be strictly below 100."
+                        },
+                        {
+                            name: "Peak System Risk (Max RPN)",
+                            targetStr: "< 150",
+                            currentStr: maxRpn.toString(),
+                            status: getStatus(maxRpn, 150, true),
+                            tooltip: "THRESHOLD: No single process step should exceed an RPN of 150."
+                        },
+                        {
+                            name: "Critical Risk Nodes",
+                            targetStr: "0 nodes",
+                            currentStr: criticalNodes.toString(),
+                            status: criticalNodes === 0 ? { text: "TARGET MET", classes: "text-white bg-green-600 border-green-800 shadow-sm" } : { text: "ACTION REQUIRED", classes: "text-white bg-red-600 border-red-800 shadow-sm" },
+                            tooltip: "THRESHOLD: 0 nodes allowed with RPN ≥ 100."
+                        },
+                        {
+                            name: isCapaMode ? "Residual System Risk" : "Current System Risk",
+                            targetStr: "< 10%",
+                            currentStr: `${systemRiskPercent.toFixed(1)}%`,
+                            status: getStatus(systemRiskPercent, 10, true),
+                            tooltip: isCapaMode ? "THRESHOLD: Residual risk must be < 10%." : "THRESHOLD: Overall system risk capacity must be < 10%."
+                        },
+                        {
+                            name: "CAPA Risk Reduction",
+                            targetStr: "> 30%",
+                            currentStr: `${reduction.toFixed(1)}%`,
+                            status: reductionStatus,
+                            tooltip: "THRESHOLD: CAPA must reduce total system risk by at least 30%."
+                        }
+                    ]
+                };
+            }, [fmeaData, originalData, isCapaMode]);
+
+            const syncToRaw = (data) => {
+                if (!data || data.length === 0) {
+                    setRawInput("");
+                    return;
+                }
+                const text = data.map(r => {
+                    const ns = (r.newS === "" || r.newS === undefined) ? "" : r.newS;
+                    const no = (r.newO === "" || r.newO === undefined) ? "" : r.newO;
+                    const nd = (r.newD === "" || r.newD === undefined) ? "" : r.newD;
+                    return `${String(r.step).padEnd(22)} | ${String(r.failure).padEnd(25)} | ${String(r.effect).padEnd(22)} | ${String(r.cause).padEnd(25)} | ${String(getS(r)).padEnd(3)} | ${String(getO(r)).padEnd(3)} | ${String(getD(r)).padEnd(3)} | ${String(ns).padEnd(3)} | ${String(no).padEnd(3)} | ${String(nd).padEnd(3)} | ${r.action}`;
+                }).join('\n');
+                setRawInput(text);
+            };
+
+            useEffect(() => {
+                const initial = generateMockData(industry);
+                setFmeaData(initial); 
+                setOriginalData(JSON.parse(JSON.stringify(initial))); 
+                syncToRaw(initial);
+                setIsCapaMode(false);
+            }, [industry]);
+
+            const applyRawInput = () => {
+                const lines = rawInput.split('\n');
+                let successfulRows = 0;
+                
+                let newData = lines.filter(l => l.trim() !== '').map((line, index) => {
+                    let parts = line.split('\t'); if (parts.length < 3) parts = line.split('|'); if (parts.length < 3) parts = line.split(',');
+                    
+                    const s = Math.max(1, Math.min(10, parseInt(parts[4]) || 1));
+                    const o = Math.max(1, Math.min(10, parseInt(parts[5]) || 1));
+                    const d = Math.max(1, Math.min(10, parseInt(parts[6]) || 1));
+
+                    let newS = ""; let newO = ""; let newD = "";
+                    let action = parts[7]?.trim() || 'Review needed';
+
+                    if (parts.length >= 10) {
+                        const pNS = parseInt(parts[7]);
+                        const pNO = parseInt(parts[8]);
+                        const pND = parseInt(parts[9]);
+                        
+                        newS = isNaN(pNS) ? "" : Math.max(1, Math.min(10, pNS));
+                        newO = isNaN(pNO) ? "" : Math.max(1, Math.min(10, pNO));
+                        newD = isNaN(pND) ? "" : Math.max(1, Math.min(10, pND));
+                        action = parts[10]?.trim() || 'Review needed';
+                    }
+                    
+                    successfulRows++;
+                    return {
+                        id: generateSafeID(), step: parts[0]?.trim() || 'New Step', failure: parts[1]?.trim() || 'Unknown', effect: parts[2]?.trim() || '',
+                        cause: parts[3]?.trim() || '', s, o, d, newS, newO, newD, action
+                    };
+                });
+                
+                // GOD MODE FIX: Prevent DOM Crash from massive copy-paste
+                let truncated = false;
+                if (newData.length > MAX_ROWS) {
+                    newData = newData.slice(0, MAX_ROWS);
+                    truncated = true;
+                }
+
+                if(newData.length > 0) { 
+                    setFmeaData(newData); 
+                    setOriginalData(JSON.parse(JSON.stringify(newData))); 
+                    syncToRaw(newData); 
+                    if (truncated) {
+                        addToast(`System protected: Import truncated to ${MAX_ROWS} nodes maximum to prevent browser crash.`, 'warning');
+                    } else {
+                        addToast(`Successfully synced ${newData.length} nodes to Matrix.`, 'success');
+                    }
+                } else {
+                    addToast('Data format unreadable. Please check delimiter formatting.', 'error');
+                }
+            };
+
+            const handleInputChange = (id, field, value) => {
+                let safeValue = value;
+                
+                if (['s', 'o', 'd', 'newS', 'newO', 'newD'].includes(field)) {
+                    if (value === "") {
+                        safeValue = ""; 
+                    } else {
+                        const num = parseInt(value, 10);
+                        if (isNaN(num)) {
+                            addToast(`Invalid input. Reverting to empty.`, 'error');
+                            safeValue = "";
+                        } else if (num > 10) {
+                            addToast(`Limit Exceeded: Value cannot be > 10. Auto-clamped.`, 'warning');
+                            safeValue = 10;
+                        } else if (num < 1) {
+                            addToast(`Limit Exceeded: Value cannot be < 1. Auto-clamped.`, 'warning');
+                            safeValue = 1;
+                        } else {
+                            safeValue = num;
+                        }
+                    }
+                }
+
+                const newData = fmeaData.map(row => {
+                    if (row.id === id) {
+                        const updatedRow = { ...row, [field]: safeValue };
+                        
+                        if (!isCapaMode && ['s', 'o', 'd', 'failure'].includes(field)) {
+                            updatedRow.action = generateContextualAction(updatedRow.failure, getS(updatedRow), getO(updatedRow), getD(updatedRow));
+                        }
+
+                        if (isCapaMode && ['newS', 'newO', 'newD'].includes(field)) {
+                            const bRpn = getS(row) * getO(row) * getD(row);
+                            const cRpn = getNS(updatedRow) * getNO(updatedRow) * getND(updatedRow);
+                            if (cRpn > bRpn) {
+                                addToast(`CRITICAL: Proposed CAPA action mathematically increases system risk!`, 'error');
+                            }
+                        }
+                        
+                        return updatedRow;
+                    }
+                    return row;
+                });
+                setFmeaData(newData); syncToRaw(newData);
+            };
+
+            const toggleCapa = () => { 
+                if (!isCapaMode) {
+                    setOriginalData(JSON.parse(JSON.stringify(fmeaData))); 
+                    addToast('CAPA Phase Activated. Structural grid edits locked.', 'success');
+                } else {
+                    addToast('CAPA Phase Hidden. Grid unlocked for structural editing.', 'success');
+                }
+                setIsCapaMode(!isCapaMode); 
+            };
+
+            const deleteRow = (id) => {
+                const newData = fmeaData.filter(r => r.id !== id);
+                setFmeaData(newData);
+                setOriginalData(JSON.parse(JSON.stringify(newData)));
+                syncToRaw(newData);
+                addToast('Process node permanently eliminated.', 'warning');
+            };
+
+            const clearAllData = () => {
+                setFmeaData([]);
+                setOriginalData([]);
+                setRawInput("");
+                setIsCapaMode(false);
+                setIndustry("Blank Template");
+                addToast('System Reset: All data successfully purged.', 'success');
+            };
+
+            const downloadCSV = () => {
+                if (!fmeaData || fmeaData.length === 0) {
+                    addToast('Cannot export empty database. Please add data first.', 'warning');
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                let headers = ["Process Step", "Failure Mode", "Effect", "Cause", "S (1-10)", "O (1-10)", "D (1-10)", "RPN", "Risk (25-Scale)", "Action"];
+                if (isCapaMode) headers.push("New S", "New O", "New D", "New RPN", "RPN Reduction %");
+                csvContent += headers.join(",") + "\r\n";
+                
+                fmeaData.forEach((row, idx) => {
+                    const baseRow = (isCapaMode && originalData[idx]) ? originalData[idx] : row;
+                    const s = getS(baseRow); const o = getO(baseRow); const d = getD(baseRow);
+                    const rpn = s * o * d; const risk25 = Math.round((convert10to25(s) + convert10to25(o)) / 2); 
+                    
+                    let rowData = [
+                        sanitizeCSV(row.step), sanitizeCSV(row.failure), sanitizeCSV(row.effect), sanitizeCSV(row.cause), 
+                        s, o, d, rpn, risk25, sanitizeCSV(row.action)
+                    ];
+                    
+                    if (isCapaMode) {
+                        const ns = getNS(row); const no = getNO(row); const nd = getND(row);
+                        const newRpn = ns * no * nd;
+                        rowData.push(row.newS||"", row.newO||"", row.newD||"", newRpn, rpn > 0 ? (((rpn - newRpn) / rpn) * 100).toFixed(1) + "%" : "0%");
+                    }
+                    csvContent += rowData.join(",") + "\r\n";
+                });
+                const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `FMEA_Enterprise_Export.csv`);
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                addToast('Secure CSV Database Exported Successfully', 'success');
+            };
+
+            return (
+                <div className="min-h-screen pb-12 font-sans relative">
+                    <ToastContainer toasts={toasts} />
+                    
+                    <header className="glass-header sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+                        <div className="flex items-center space-x-5">
+                            <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center shadow-lg border border-blue-600">
+                                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl sm:text-3xl font-black tracking-widest uppercase text-gray-900">
+                                    MECTS SET GO
+                                </h1>
+                                <p className="text-blue-700 text-sm sm:text-base font-bold tracking-widest mt-1 uppercase">
+                                    RISK & FMEA WITH DMAIC INTEGRATION PLATFORM
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex space-x-3">
+                            <span className="px-4 py-2 bg-green-100 border border-green-300 text-green-800 text-sm font-black rounded-full flex items-center shadow-sm tracking-wide">
+                                <span className="w-2.5 h-2.5 bg-green-600 rounded-full mr-2.5 animate-pulse"></span> SYSTEM NOMINAL
+                            </span>
+                        </div>
+                    </header>
+
+                    <div className="max-w-[1500px] mx-auto mt-10 px-4 space-y-8">
+                        
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                            
+                            <div className="glass-panel p-6 flex flex-col justify-between xl:col-span-3">
+                                <div>
+                                    <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-4">Simulation Command Center</h2>
+                                    <div className="mb-5">
+                                        <label className="block text-sm font-bold text-gray-800 mb-2">Select Industry Segment</label>
+                                        <select className="w-full bg-white border-2 border-gray-300 rounded-lg text-base font-bold text-gray-900 focus:ring-blue-500 focus:border-blue-600 p-3 outline-none shadow-sm cursor-pointer hover:border-gray-400 transition-colors" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+                                            {industries.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                                        </select>
+                                    </div>
+                                    <p className="text-sm text-gray-600 font-medium mt-2">Selecting an industry generates randomized real-time data populated in the grids below.</p>
+                                </div>
+                                <div className="space-y-4 mt-6">
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <button onClick={toggleCapa} className={`flex-1 py-3 px-2 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-md border-2 ${isCapaMode ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border-indigo-400' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-800'}`}>
+                                            {isCapaMode ? 'Hide CAPA Phase' : 'Initiate CAPA Phase'}
+                                        </button>
+                                        
+                                        <button onClick={() => setShowDmaicView(true)} className="flex-1 py-3 px-2 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest transition-all shadow-md border-2 bg-slate-800 text-white border-slate-900 hover:bg-slate-700">
+                                            SHOW DMAIC
+                                        </button>
+                                    </div>
+
+                                    <button onClick={downloadCSV} className="w-full py-3.5 px-4 rounded-lg text-sm font-black uppercase tracking-widest text-gray-800 bg-white border-2 border-gray-300 hover:bg-gray-100 hover:border-gray-400 transition-all flex justify-center items-center shadow-md">
+                                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        Export (CSV)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="glass-panel p-6 shadow-sm border-t-8 border-t-blue-600 flex flex-col justify-between xl:col-span-4">
+                                <h2 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-5 flex items-center">
+                                    <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                    Live FMEA Telemetry
+                                </h2>
+                                <div className="space-y-3">
+                                    {dynamicMetrics.metrics.map((m, i) => (
+                                        <div key={i} className="group relative flex justify-between items-center bg-gray-50 border border-gray-300 p-3 rounded-lg transition-all duration-300 hover:bg-blue-50 hover:border-blue-300 cursor-help shadow-sm">
+                                            <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 w-72 p-3 bg-gray-900 text-white text-xs font-medium rounded-lg shadow-xl z-50 pointer-events-none">
+                                                {m.tooltip}
+                                                <div className="absolute top-full left-6 -mt-1 w-3 h-3 bg-gray-900 transform rotate-45"></div>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-800 border-b border-dashed border-gray-400 inline-block">{m.name}</div>
+                                            </div>
+                                            <div className="text-right flex items-center space-x-4">
+                                                <div className="text-lg font-black text-gray-900">{m.currentStr}</div>
+                                                <div className={`text-[10px] sm:text-xs font-black px-2.5 py-1 rounded border-2 min-w-[110px] text-center tracking-widest ${m.status.classes}`}>
+                                                    {m.status.text}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <RiskMatrixImprint fmeaData={fmeaData} isCapaMode={isCapaMode} />
+                        </div>
+
+                        <div className="glass-panel p-6 bg-white border-l-8 border-blue-600 shadow-md">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4">
+                                <div>
+                                    <h2 className="text-base font-black text-gray-900 uppercase flex items-center tracking-wide">
+                                        <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        USER INPUT: PASTE YOUR DATA HERE
+                                    </h2>
+                                    <p className="text-sm font-medium text-gray-600 mt-1.5">
+                                        Paste your custom data directly from Excel (it reads tabs automatically), or type using the pipe delimiter `|`. 
+                                    </p>
+                                </div>
+                                <div className="flex space-x-3">
+                                    <button onClick={clearAllData} disabled={isCapaMode} className={`bg-white text-sm font-black py-2.5 px-5 rounded-lg uppercase tracking-wider border-2 shadow-sm transition-colors ${isCapaMode ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-gray-800 border-gray-300 hover:bg-gray-100'}`} title={isCapaMode ? "Disable CAPA Phase to clear grid." : "Clear all data from the system"}>Clear Data</button>
+                                    <button onClick={applyRawInput} disabled={isCapaMode} className={`text-white text-sm font-black py-2.5 px-5 rounded-lg uppercase tracking-wider border-2 shadow-md transition-colors ${isCapaMode ? 'bg-blue-300 border-blue-300 cursor-not-allowed' : 'bg-blue-600 border-blue-800 hover:bg-blue-700'}`} title={isCapaMode ? "Disable CAPA Phase to sync new baseline data." : "Sync raw text into Matrix"}>Sync to Grid</button>
+                                </div>
+                            </div>
+                            <div className="relative mt-2">
+                                {rawInput.length === 0 && (
+                                    <div className="absolute top-5 left-5 text-gray-500 pointer-events-none font-mono text-[11px] leading-relaxed whitespace-pre font-bold opacity-80">
+                                        REQUIRED FORMAT (Paste columns directly from Excel, or use Pipes '|'):{'\n'}
+                                        [Step]                 | [Failure Mode]            | [Effect]               | [Cause]                   | [S] | [O] | [D] | [nS]| [nO]| [nD]| [Recommended Action]{'\n\n'}
+                                        Example:{'\n'}
+                                        Queue Management       | Long wait time            | Abandonment            | Understaffing             | 8   | 7   | 4   | 8   | 4   | 2   | Dynamic staffing
+                                    </div>
+                                )}
+                                <textarea
+                                    className={`w-full h-48 p-5 border-2 rounded-xl font-mono text-xs font-bold focus:ring-4 transition-all outline-none whitespace-pre overflow-x-auto shadow-inner ${isCapaMode ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-slate-50 border-gray-300 text-gray-900 focus:border-blue-600 focus:ring-blue-500/20'}`}
+                                    value={rawInput} onChange={(e) => setRawInput(e.target.value)} spellCheck="false" disabled={isCapaMode}
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div className="glass-panel overflow-hidden shadow-xl border border-gray-300">
+                            <div className="p-5 border-b border-gray-200 flex justify-between items-center bg-white">
+                                <div>
+                                    <h2 className="text-base font-black text-gray-900 uppercase tracking-widest flex items-center">
+                                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                        EDITABLE FMEA MASTER GRID
+                                    </h2>
+                                    <p className="text-sm font-medium text-gray-600 mt-1.5">Mandatory fields glow red if missing. Grid structure is strictly locked while CAPA Phase is active.</p>
+                                </div>
+                                <button disabled={isCapaMode} onClick={() => {
+                                    if (fmeaData.length >= MAX_ROWS) {
+                                        addToast(`Maximum capacity (${MAX_ROWS} nodes) reached to prevent system crash.`, "error");
+                                        return;
+                                    }
+                                    const initialAction = generateContextualAction("Identified Failure", 5, 5, 5);
+                                    const newRow = { id: generateSafeID(), step: "New Process", failure: "Identified Failure", effect: "", cause: "", s: 5, o: 5, d: 5, action: initialAction, newS: "", newO: "", newD: "" };
+                                    const newData = [...fmeaData, newRow]; setFmeaData(newData); setOriginalData(JSON.parse(JSON.stringify(newData))); syncToRaw(newData);
+                                }} className={`text-xs sm:text-sm py-2.5 px-5 rounded-lg shadow-sm font-black tracking-wider border-2 transition-colors uppercase ${isCapaMode ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white hover:bg-gray-100 text-gray-900 border-gray-300'}`} title={isCapaMode ? "Disable CAPA Phase to add new rows." : "Add a blank FMEA Row"}>
+                                    + ADD BLANK ROW
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto w-full">
+                                <table className="w-full text-xs text-left text-gray-800 border-collapse">
+                                    <thead className="text-[11px] text-gray-700 uppercase bg-gray-100 border-b-2 border-gray-300">
+                                        <tr>
+                                            <th scope="col" className="px-3 py-3 min-w-[130px] max-w-[200px] font-black tracking-widest border-r border-gray-200">Process Step</th>
+                                            <th scope="col" className="px-3 py-3 min-w-[130px] max-w-[200px] font-black tracking-widest border-r border-gray-200">Failure Mode</th>
+                                            <th scope="col" className="px-3 py-3 min-w-[130px] max-w-[200px] font-black tracking-widest border-r-2 border-gray-300">Effect</th>
+                                            
+                                            <th scope="col" className="px-3 py-3 min-w-[130px] max-w-[200px] font-black tracking-widest text-purple-900 border-r-2 border-purple-200 bg-purple-100">Root Cause</th>
+                                            
+                                            <th scope="col" className="px-2 py-3 text-center border-r border-gray-200" title="Severity (1-10)">S</th>
+                                            <th scope="col" className="px-2 py-3 text-center border-r border-gray-200" title="Occurrence (1-10)">O</th>
+                                            <th scope="col" className="px-2 py-3 text-center border-r border-gray-200" title="Detection (1-10)">D</th>
+                                            <th scope="col" className="px-3 py-3 text-center font-black text-gray-900 border-r border-gray-200 text-sm" title="Risk Priority Number">RPN</th>
+                                            <th scope="col" className="px-2 py-3 text-center leading-tight border-r-2 border-gray-300" title="Mapped 1-25 Matrix Score">R<br/>25</th>
+                                            
+                                            <th scope="col" className="px-3 py-3 min-w-[180px] max-w-[300px] font-black tracking-widest text-emerald-900 bg-emerald-100">Recommended Action</th>
+                                            
+                                            {isCapaMode && (
+                                                <React.Fragment>
+                                                    <th scope="col" className="px-2 py-3 text-center bg-indigo-200 text-indigo-900 border-l-4 border-indigo-400 font-black text-sm">nS</th>
+                                                    <th scope="col" className="px-2 py-3 text-center bg-indigo-200 text-indigo-900 border-l border-indigo-300 font-black text-sm">nO</th>
+                                                    <th scope="col" className="px-2 py-3 text-center bg-indigo-200 text-indigo-900 border-l border-indigo-300 font-black text-sm">nD</th>
+                                                    <th scope="col" className="px-3 py-3 text-center bg-indigo-300 text-indigo-950 font-black border-l border-indigo-400 text-sm">nRPN</th>
+                                                </React.Fragment>
+                                            )}
+
+                                            <th scope="col" className="px-2 py-3 text-center font-black tracking-widest">Del</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y-2 divide-gray-100 bg-white">
+                                        {fmeaData.map((row, idx) => {
+                                            const baseRow = (isCapaMode && originalData && originalData[idx]) ? originalData[idx] : row;
+                                            const s = getS(baseRow); const o = getO(baseRow); const d = getD(baseRow);
+                                            const rpn = s * o * d;
+                                            const risk25Score = Math.round((convert10to25(s) + convert10to25(o)) / 2); 
+                                            
+                                            let newRpn = rpn;
+                                            const isSabotage = isCapaMode && ((getNS(row) * getNO(row) * getND(row)) > rpn);
+
+                                            if(isCapaMode) newRpn = getNS(row) * getNO(row) * getND(row);
+
+                                            return (
+                                                <tr key={row.id} className="hover:bg-blue-50/70 transition-colors">
+                                                    <td className="px-2 py-2 border-r border-gray-100 break-words max-w-[200px]"><input type="text" disabled={isCapaMode} className={`input-cell font-bold text-gray-900 ${!row.step ? 'input-error' : ''} ${isCapaMode ? 'cursor-not-allowed opacity-70' : ''}`} value={row.step !== undefined ? row.step : ""} onChange={(e) => handleInputChange(row.id, 'step', e.target.value)} /></td>
+                                                    <td className="px-2 py-2 border-r border-gray-100 break-words max-w-[200px]"><input type="text" disabled={isCapaMode} className={`input-cell font-medium text-gray-800 ${!row.failure ? 'input-error' : ''} ${isCapaMode ? 'cursor-not-allowed opacity-70' : ''}`} value={row.failure !== undefined ? row.failure : ""} onChange={(e) => handleInputChange(row.id, 'failure', e.target.value)} /></td>
+                                                    <td className="px-2 py-2 border-r-2 border-gray-200 break-words max-w-[200px]"><input type="text" disabled={isCapaMode} className={`input-cell font-medium text-gray-800 ${isCapaMode ? 'cursor-not-allowed opacity-70' : ''}`} value={row.effect !== undefined ? row.effect : ""} onChange={(e) => handleInputChange(row.id, 'effect', e.target.value)} /></td>
+                                                    
+                                                    <td className="px-2 py-2 border-r-2 border-purple-200 bg-purple-50/40 break-words max-w-[200px]"><input type="text" disabled={isCapaMode} className={`input-cell text-purple-900 font-bold ${isCapaMode ? 'cursor-not-allowed opacity-70' : ''}`} value={row.cause !== undefined ? row.cause : ""} onChange={(e) => handleInputChange(row.id, 'cause', e.target.value)} placeholder="Analyze cause..." /></td>
+                                                    
+                                                    <td className="px-1 py-2 border-r border-gray-100"><input type="number" min="1" max="10" disabled={isCapaMode} className={`input-cell num-input ${getSODClass(row.s, isCapaMode)} ${isCapaMode ? 'cursor-not-allowed' : ''}`} value={row.s !== undefined ? row.s : ""} onChange={(e) => handleInputChange(row.id, 's', e.target.value)}/></td>
+                                                    <td className="px-1 py-2 border-r border-gray-100"><input type="number" min="1" max="10" disabled={isCapaMode} className={`input-cell num-input ${getSODClass(row.o, isCapaMode)} ${isCapaMode ? 'cursor-not-allowed' : ''}`} value={row.o !== undefined ? row.o : ""} onChange={(e) => handleInputChange(row.id, 'o', e.target.value)}/></td>
+                                                    <td className="px-1 py-2 border-r border-gray-100"><input type="number" min="1" max="10" disabled={isCapaMode} className={`input-cell num-input ${getSODClass(row.d, isCapaMode)} ${isCapaMode ? 'cursor-not-allowed' : ''}`} value={row.d !== undefined ? row.d : ""} onChange={(e) => handleInputChange(row.id, 'd', e.target.value)}/></td>
+                                                    
+                                                    <td className="px-2 py-2 text-center align-middle border-r border-gray-100">
+                                                        <div className={`px-2 py-1 rounded-lg font-black text-xs tracking-widest border-2 ${getRPNColor(rpn)} inline-block min-w-[45px] ${isCapaMode ? 'opacity-80' : ''}`}>{rpn}</div>
+                                                        {!isCapaMode && <TrafficLight rpn={rpn} />}
+                                                    </td>
+                                                    <td className="px-1 py-2 text-center align-middle border-r-2 border-gray-200"><div className={`px-1 py-1 rounded text-[10px] font-black border ${rpn >= 200 ? 'text-red-800 bg-red-100 border-red-300' : (rpn >= 100 ? 'text-amber-900 bg-amber-100 border-amber-300' : 'text-green-800 bg-green-100 border-green-300')} ${isCapaMode ? 'opacity-80' : ''}`}>{risk25Score}</div></td>
+                                                    
+                                                    <td className="px-2 py-2 break-words max-w-[300px]"><textarea className="input-cell resize-none h-12 w-full text-emerald-900 bg-emerald-50/40 font-bold text-xs" value={row.action !== undefined ? row.action : ""} onChange={(e) => handleInputChange(row.id, 'action', e.target.value)} /></td>
+
+                                                    {isCapaMode && (
+                                                        <React.Fragment>
+                                                            <td className={`px-1 py-2 border-l-4 border-indigo-400 ${isSabotage ? 'bg-red-50' : 'bg-indigo-50'}`}><input type="number" min="1" max="10" className={`input-cell num-input border-2 font-black text-sm shadow-sm focus:border-indigo-600 focus:bg-indigo-50 ${row.newS !== "" && row.newS !== undefined ? getSODClass(row.newS, false, isSabotage) : 'bg-white border-indigo-400 text-indigo-900'}`} value={row.newS !== undefined ? row.newS : ""} onChange={(e) => handleInputChange(row.id, 'newS', e.target.value)} placeholder={s}/></td>
+                                                            <td className={`px-1 py-2 border-l border-indigo-200 ${isSabotage ? 'bg-red-50' : 'bg-indigo-50'}`}><input type="number" min="1" max="10" className={`input-cell num-input border-2 font-black text-sm shadow-sm focus:border-indigo-600 focus:bg-indigo-50 ${row.newO !== "" && row.newO !== undefined ? getSODClass(row.newO, false, isSabotage) : 'bg-white border-indigo-400 text-indigo-900'}`} value={row.newO !== undefined ? row.newO : ""} onChange={(e) => handleInputChange(row.id, 'newO', e.target.value)} placeholder={o}/></td>
+                                                            <td className={`px-1 py-2 border-l border-indigo-200 ${isSabotage ? 'bg-red-50' : 'bg-indigo-50'}`}><input type="number" min="1" max="10" className={`input-cell num-input border-2 font-black text-sm shadow-sm focus:border-indigo-600 focus:bg-indigo-50 ${row.newD !== "" && row.newD !== undefined ? getSODClass(row.newD, false, isSabotage) : 'bg-white border-indigo-400 text-indigo-900'}`} value={row.newD !== undefined ? row.newD : ""} onChange={(e) => handleInputChange(row.id, 'newD', e.target.value)} placeholder={d}/></td>
+                                                            <td className="px-2 py-2 text-center bg-indigo-100 border-l border-indigo-300 align-middle">
+                                                                <div className={`px-2 py-1 rounded-lg font-black text-sm tracking-widest border-2 ${getRPNColor(newRpn)}`}>
+                                                                    {newRpn}
+                                                                    {newRpn < rpn && <span className="mt-0.5 text-[9px] text-white block tracking-wide font-bold bg-black/20 rounded px-1">({Math.round(((rpn-newRpn)/rpn)*100)}% ↓)</span>}
+                                                                    {newRpn > rpn && <span className="mt-0.5 text-[9px] text-white block tracking-wide font-bold bg-red-900/60 rounded px-1">({Math.round(((newRpn-rpn)/rpn)*100)}% ↑)</span>}
+                                                                </div>
+                                                                <TrafficLight rpn={newRpn} />
+                                                            </td>
+                                                        </React.Fragment>
+                                                    )}
+
+                                                    <td className="px-2 py-2 text-center align-middle">
+                                                        <button disabled={isCapaMode} onClick={() => deleteRow(row.id)} className={`p-1.5 rounded-lg transition-colors ${isCapaMode ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:bg-red-50 focus:ring-2 focus:ring-red-500/30'}`} title={isCapaMode ? "Disable CAPA Phase to delete rows." : "Permanently Delete Node"}>
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* ---------------- FULL-SCREEN DMAIC MODAL OVERLAY ---------------- */}
+                    {showDmaicView && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 sm:p-6 overflow-y-auto modal-animate">
+                            <div className="bg-white rounded-2xl shadow-2xl border-2 border-slate-300 w-full max-w-5xl overflow-hidden flex flex-col max-h-full">
+                                <div className="px-6 py-5 border-b-2 border-gray-200 flex justify-between items-center bg-slate-50">
+                                    <h2 className="text-lg sm:text-xl font-black text-gray-900 uppercase tracking-widest flex items-center">
+                                        <svg className="w-6 h-6 mr-3 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                        DMAIC Executive Summary
+                                    </h2>
+                                    <button onClick={() => setShowDmaicView(false)} className="text-gray-500 hover:text-red-600 transition-colors p-1" title="Close Dashboard">
+                                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                                
+                                <div className="overflow-y-auto bg-white flex-1">
+                                    <DmaicTracker isCapaMode={isCapaMode} reduction={dynamicMetrics.reductionVal} />
+                                    <DmaicDataPanel fmeaData={fmeaData} originalData={originalData} isCapaMode={isCapaMode} reduction={dynamicMetrics.reductionVal} metricsList={dynamicMetrics.metrics} />
+                                </div>
+
+                                <div className="px-6 py-5 bg-gray-50 border-t-2 border-gray-200 flex justify-center sm:justify-end">
+                                    <button onClick={() => setShowDmaicView(false)} className="w-full sm:w-auto px-10 py-3 bg-slate-900 text-white text-sm font-black uppercase tracking-widest rounded-lg hover:bg-blue-700 transition-all shadow-lg border-2 border-slate-950 hover:border-blue-900">
+                                        Close & Return to Grid
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

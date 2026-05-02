@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive VSM Workbook</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ExcelJS for Native .xlsx Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <style>
+        @media print {
+            .print\:hidden { display: none !important; }
+            .print\:shadow-none { box-shadow: none !important; }
+            .print\:border-none { border: none !important; }
+            .print\:m-0 { margin: 0 !important; }
+            .print\:p-0 { padding: 0 !important; }
+            .print\:break-after-page { page-break-after: always !important; }
+            .activity-section { display: block !important; }
+        }
+        textarea { resize: vertical; min-height: 60px; }
+        
+        /* NON-NEGOTIABLE: Force all table headers to stay on one line dynamically */
+        th { 
+            white-space: nowrap !important; 
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 py-10 px-4 font-sans text-gray-900">
+
+    <!-- INITIAL CAPTURE FORM -->
+    <div class="max-w-6xl mx-auto bg-blue-50 p-8 rounded-xl shadow-md mb-8 border border-blue-200 print:hidden">
+        <h1 class="text-2xl font-black text-blue-900 mb-2 uppercase tracking-wide">VSM PRACTICAL INSIGHTS</h1>
+        <p class="text-sm text-blue-700 mb-6 font-medium">Please fill in your details below. This will automatically update the headers on all activity pages.</p>
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div>
+                <label class="block text-sm font-bold text-blue-900 mb-1">Name</label>
+                <input type="text" id="setup-name" class="w-full p-2 border border-blue-300 rounded shadow-sm outline-none focus:border-blue-500" placeholder="John Doe" oninput="updateSetupDisplays()">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-blue-900 mb-1">Employee Code</label>
+                <input type="text" id="setup-empCode" class="w-full p-2 border border-blue-300 rounded shadow-sm outline-none focus:border-blue-500" placeholder="EMP-123" oninput="updateSetupDisplays()">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-blue-900 mb-1">Department</label>
+                <input type="text" id="setup-dept" class="w-full p-2 border border-blue-300 rounded shadow-sm outline-none focus:border-blue-500" placeholder="Assembly" oninput="updateSetupDisplays()">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-blue-900 mb-1">Date</label>
+                <input type="date" id="setup-date" class="w-full p-2 border border-blue-300 rounded shadow-sm outline-none focus:border-blue-500" oninput="updateSetupDisplays()">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-blue-900 mb-1">Workstation / Area</label>
+                <input type="text" id="setup-workstation" class="w-full p-2 border border-blue-300 rounded shadow-sm outline-none focus:border-blue-500" placeholder="Station 4" oninput="updateSetupDisplays()">
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVITY SELECTOR DROPDOWN -->
+    <div class="max-w-6xl mx-auto mb-10 bg-white p-6 rounded-lg border border-gray-300 shadow-sm print:hidden flex flex-col sm:flex-row items-center justify-between">
+        <label class="font-bold text-gray-800 text-lg mb-3 sm:mb-0">Select an Activity to Work On:</label>
+        <select id="activity-selector" class="border-2 border-indigo-500 p-3 rounded-md focus:ring-4 focus:ring-indigo-100 bg-indigo-50 font-bold text-indigo-900 outline-none transition-all shadow-sm cursor-pointer w-full sm:w-2/3 text-base" onchange="toggleSections()">
+            <option value="all">Show All Activities (Overview)</option>
+            <optgroup label="Module 1: Value, Waste & Flow">
+                <option value="valWaste">Identifying Value & Waste</option>
+                <option value="timwood">The 7 Wastes (TIMWOOD)</option>
+                <option value="threems">The 3Ms Analysis (Muda, Mura, Muri)</option>
+                <option value="fives">5S Workplace Audit (Gemba Walk)</option>
+            </optgroup>
+            <optgroup label="Module 2: Process Control & Metrics">
+                <option value="vsmData">VSM Process Data Box Capture</option>
+                <option value="metrics">VSM Metrics (Takt & OEE Calculator)</option>
+                <option value="5whys">5 Whys & Poka Yoke</option>
+                <option value="shewhart">Shewhart Chart (Process Log)</option>
+            </optgroup>
+            <optgroup label="Module 3: Problem Solving & Action (NEW)">
+                <option value="pdca">PDCA Cycle (Plan-Do-Check-Act)</option>
+                <option value="eisenhower">Eisenhower Matrix (Task Prioritization)</option>
+                <option value="kaizen">Kaizen Newspaper (Action Tracker)</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <div id="app-content">
+        <!-- Sections will be injected/toggled here -->
+    </div>
+
+<script>
+// --- STATE MANAGEMENT ---
+const state = {
+    setupInfo: {
+        name: '', empCode: '', dept: '', date: new Date().toISOString().split('T')[0], workstation: ''
+    },
+    valWasteData: Array.from({ length: 5 }, () => ({ desc: '', cares: '', change: '', right: '', classType: '', action: '' })),
+    timwoodData: ['T - Transportation', 'I - Inventory', 'M - Motion', 'W - Waiting', 'O - Overproduction', 'O - Overprocessing', 'D - Defects']
+        .map(waste => ({ waste, area: '', example: '', reason: '', countermeasure: '', severity: '' })),
+    threeMData: [
+        { category: 'Muda (Waste)', observation: '', impact: '', action: '' },
+        { category: 'Mura (Unevenness)', observation: '', impact: '', action: '' },
+        { category: 'Muri (Overburden)', observation: '', impact: '', action: '' }
+    ],
+    fiveSData: [
+        { s: '1S: Sort (Seiri)', observation: '', score: '', action: '' },
+        { s: '2S: Set in Order (Seiton)', observation: '', score: '', action: '' },
+        { s: '3S: Shine (Seiso)', observation: '', score: '', action: '' },
+        { s: '4S: Standardize (Seiketsu)', observation: '', score: '', action: '' },
+        { s: '5S: Sustain (Shitsuke)', observation: '', score: '', action: '' }
+    ],
+    vsmDataBox: Array.from({ length: 3 }, () => ({ processStep: '', cycleTime: '', changeoverTime: '', uptime: '', operators: '', wip: '' })),
+    taktData: { shift: 480, breaks: 50, demand: 70 },
+    oeeData: { planned: 450, operating: 338, idealCycle: 1, count: 320, good: 304 },
+    fiveWhysData: { problem: '', why1: '', why2: '', why3: '', why4: '', rootCause: '', type: '', description: '', status: '' },
+    shewhartData: {
+        variable: '', mean: '', ucl: '', lcl: '',
+        rows: Array.from({ length: 10 }, (_, i) => ({ sample: i + 1, value: '', limits: '', notes: '' }))
+    },
+    pdcaData: Array.from({ length: 3 }, () => ({ planProb: '', planSol: '', doTrial: '', checkResult: '', actNext: '', status: '' })),
+    eisenhowerData: Array.from({ length: 4 }, () => ({ task: '', urgent: '', important: '', quadrant: '', owner: '' })),
+    kaizenData: Array.from({ length: 4 }, () => ({ dateRaised: '', problem: '', action: '', owner: '', targetDate: '', status: '' }))
+};
+
+// Calculated Metrics
+let calculatedMetrics = { availableTime: 0, taktTime: 0, availability: 0, performance: 0, quality: 0, finalOEE: 0 };
+
+// --- HELPER: DOCUMENT PAGE TEMPLATE ---
+function getDocumentPageHeader() {
+    return `
+    <div class="max-w-6xl mx-auto bg-white shadow-xl border border-gray-200 mb-12 p-10 rounded-xl print:shadow-none print:border-none print:m-0 print:p-0 print:break-after-page">
+        <div class="text-center border-b-2 border-gray-800 pb-5 mb-6">
+            <h2 class="text-2xl font-black tracking-widest text-gray-800 uppercase">
+                MECTS....SET....GO... | VSM OBSERVATIONS
+            </h2>
+        </div>
+        <div class="text-left font-bold text-gray-800 text-sm mb-10 tracking-wide leading-relaxed">
+            Name: <span class="disp-name">________________</span> &nbsp;&nbsp;|&nbsp;&nbsp; 
+            Emp Code: <span class="disp-emp">_________</span> &nbsp;&nbsp;|&nbsp;&nbsp; 
+            Dept: <span class="disp-dept">________________</span> &nbsp;&nbsp;|&nbsp;&nbsp; 
+            Date: <span class="disp-date">_________</span>
+            <br />
+            <span class="text-blue-800 mt-2 inline-block">
+                Workstation / Focus Area: <span class="disp-workstation">________________________________________________</span>
+            </span>
+        </div>
+        <div>
+    `;
+}
+function getDocumentPageFooter() {
+    return `</div></div>`;
+}
+
+// --- SETUP SYNC ---
+function initSetupDate() {
+    document.getElementById('setup-date').value = state.setupInfo.date;
+    updateSetupDisplays();
+}
+
+function updateSetupDisplays() {
+    state.setupInfo.name = document.getElementById('setup-name').value;
+    state.setupInfo.empCode = document.getElementById('setup-empCode').value;
+    state.setupInfo.dept = document.getElementById('setup-dept').value;
+    state.setupInfo.date = document.getElementById('setup-date').value;
+    state.setupInfo.workstation = document.getElementById('setup-workstation').value;
+
+    document.querySelectorAll('.disp-name').forEach(el => el.textContent = state.setupInfo.name || '________________');
+    document.querySelectorAll('.disp-emp').forEach(el => el.textContent = state.setupInfo.empCode || '_________');
+    document.querySelectorAll('.disp-dept').forEach(el => el.textContent = state.setupInfo.dept || '________________');
+    document.querySelectorAll('.disp-date').forEach(el => el.textContent = state.setupInfo.date || '_________');
+    document.querySelectorAll('.disp-workstation').forEach(el => el.textContent = state.setupInfo.workstation || '________________________________________________');
+}
+
+// --- RENDER FUNCTIONS ---
+function renderApp() {
+    const container = document.getElementById('app-content');
+    container.innerHTML = `
+        <!-- SEC: VAL WASTE -->
+        <div id="sec-valWaste" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-blue-500 pl-3">MODULE 1: IDENTIFYING VALUE & WASTE</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> Identify key activities. Classify them to auto-generate Excel Cell Colors (Green VA, Yellow NVA, Red PW).</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/3">Activity / Task Description</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-20">Cares?</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-20">Change?</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-28">Error-Free?</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-32">Classification</th>
+                            <th class="border-b border-gray-300 p-3 text-left w-1/3">Action Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-valWaste"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('valWasteData')" class="mt-4 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded-lg border border-blue-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Another Activity</button>
+            <button onclick="exportValWaste()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: TIMWOOD -->
+        <div id="sec-timwood" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-blue-500 pl-3">MODULE 1: THE 7 WASTES (TIMWOOD)</h3>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-40">Waste</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-36">Severity</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left">Process Area</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left">Observed Example</th>
+                            <th class="border-b border-gray-300 p-3 text-left">Lean Countermeasure</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-timwood"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('timwoodData')" class="mt-4 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded-lg border border-blue-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Another Observation</button>
+            <button onclick="exportTimwood()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: 3MS -->
+        <div id="sec-threems" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-orange-500 pl-3">MODULE 1: THE 3Ms ANALYSIS (MUDA, MURA, MURI)</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> True Lean goes beyond just Waste (Muda). Identify instances of Mura (Unevenness) and Muri (Overburden).</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/5">Category (The 3 Ms)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/3">Observation</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Impact Level</th>
+                            <th class="border-b border-gray-300 p-3 text-left w-1/3">Corrective Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-threems"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('threeMData')" class="mt-4 bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold py-2 px-4 rounded-lg border border-orange-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Row</button>
+            <button onclick="exportThreeMs()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: 5S -->
+        <div id="sec-fives" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-indigo-500 pl-3">MODULE 1: 5S WORKPLACE AUDIT (GEMBA WALK)</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> Conduct a rapid 5S Gemba assessment. Score each pillar from 1 (Poor) to 5 (Excellent).</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/4">5S Pillar</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/3">Current Observation</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-24">Score (1-5)</th>
+                            <th class="border-b border-gray-300 p-3 text-left w-1/3">Action / Improvement Idea</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-fives"></tbody>
+                </table>
+            </div>
+            <button onclick="exportFiveS()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: VSM DATA -->
+        <div id="sec-vsmData" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-teal-500 pl-3">MODULE 2: VSM PROCESS DATA BOX CAPTURE</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> To build a Value Stream Map, we must capture actual metrics at each process step.</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-teal-700 text-white">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/4">Process Step / Workstation</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Cycle Time (CT)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Changeover (C/O)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Uptime (%)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Operators</th>
+                            <th class="border-b border-gray-300 p-3 text-center">WIP Inventory</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-vsmData"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('vsmDataBox')" class="mt-4 bg-teal-100 hover:bg-teal-200 text-teal-800 font-bold py-2 px-4 rounded-lg border border-teal-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Process Step</button>
+            <button onclick="exportVsmDataBox()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: METRICS -->
+        <div id="sec-metrics" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-blue-500 pl-3">MODULE 2: VSM METRICS (SMART CALCULATOR)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10" id="metrics-inputs">
+                <div class="bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                    <h4 class="font-bold text-lg p-3 bg-blue-50 text-blue-900 border-b border-blue-200 uppercase tracking-wide">PART A: TAKT TIME</h4>
+                    <table class="w-full border-collapse text-sm">
+                        <tbody>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700 w-1/2">Total Shift Duration (Mins)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="takt-shift" value="480" oninput="updateMetrics(event, 'taktData', 'shift')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Planned Breaks/Downtime (Mins)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="takt-breaks" value="50" oninput="updateMetrics(event, 'taktData', 'breaks')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-100 font-semibold text-gray-800">Available Production Time</td><td class="p-3 text-right bg-gray-100 font-bold text-gray-800" id="calc-avail">430 Mins</td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Customer Demand (Units)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="takt-demand" value="70" oninput="updateMetrics(event, 'taktData', 'demand')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr><td class="p-4 bg-blue-100 font-black text-blue-900 text-base uppercase">TAKT TIME</td><td class="p-4 bg-blue-100 font-black text-right text-blue-900 text-lg"><span id="calc-takt">6.14</span> <span class="text-sm font-semibold">Mins/Unit</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-white rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                    <h4 class="font-bold text-lg p-3 bg-blue-50 text-blue-900 border-b border-blue-200 uppercase tracking-wide">PART B: OEE</h4>
+                    <table class="w-full border-collapse text-sm">
+                        <tbody>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700 w-1/2">Planned Production Time (Mins)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="oee-planned" value="450" oninput="updateMetrics(event, 'oeeData', 'planned')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Actual Operating Time (Mins)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="oee-operating" value="338" oninput="updateMetrics(event, 'oeeData', 'operating')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Ideal Cycle Time (Mins/Unit)</td><td class="p-0 bg-yellow-50/50"><input type="number" id="oee-ideal" value="1" oninput="updateMetrics(event, 'oeeData', 'idealCycle')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Total Units Produced</td><td class="p-0 bg-yellow-50/50"><input type="number" id="oee-count" value="320" oninput="updateMetrics(event, 'oeeData', 'count')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-gray-50 font-semibold text-gray-700">Good Units Produced</td><td class="p-0 bg-yellow-50/50"><input type="number" id="oee-good" value="304" oninput="updateMetrics(event, 'oeeData', 'good')" class="w-full p-3 bg-transparent outline-none text-right font-bold text-blue-700"></td></tr>
+                            <tr><td class="p-4 bg-gray-100 font-black text-gray-800 text-base uppercase">FINAL OEE</td><td class="p-4 bg-gray-100 font-black text-right text-gray-800 text-xl" id="calc-oee">71.5%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <button onclick="exportMetrics()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: 5 WHYS -->
+        <div id="sec-5whys" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-blue-500 pl-3">MODULE 2: 5 WHYS & POKA YOKE</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" id="whys-container">
+                <div class="rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+                    <table class="w-full border-collapse text-sm">
+                        <tbody>
+                            <tr class="border-b border-gray-300"><td class="p-4 bg-red-100 font-bold text-red-900 w-1/3 border-r border-gray-300">Problem Identified:</td><td class="p-0 bg-white"><input type="text" oninput="state.fiveWhysData.problem=this.value" class="w-full h-full p-4 outline-none font-bold text-red-900 bg-transparent" placeholder="e.g. Wrong parameter..."></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-red-50 font-bold text-red-800 border-r border-gray-200 pl-6">Why 1?</td><td class="p-0 bg-white"><input type="text" oninput="state.fiveWhysData.why1=this.value" class="w-full h-full p-3 outline-none bg-transparent"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-red-50 font-bold text-red-800 border-r border-gray-200 pl-6">Why 2?</td><td class="p-0 bg-white"><input type="text" oninput="state.fiveWhysData.why2=this.value" class="w-full h-full p-3 outline-none bg-transparent"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-red-50 font-bold text-red-800 border-r border-gray-200 pl-6">Why 3?</td><td class="p-0 bg-white"><input type="text" oninput="state.fiveWhysData.why3=this.value" class="w-full h-full p-3 outline-none bg-transparent"></td></tr>
+                            <tr class="border-b border-gray-200"><td class="p-3 bg-red-50 font-bold text-red-800 border-r border-gray-200 pl-6">Why 4?</td><td class="p-0 bg-white"><input type="text" oninput="state.fiveWhysData.why4=this.value" class="w-full h-full p-3 outline-none bg-transparent"></td></tr>
+                            <tr><td class="p-4 bg-green-100 font-black text-green-900 border-r border-green-200 leading-tight">Why 5?<br><span class="text-sm">(Root Cause)</span></td><td class="p-0 bg-green-50"><input type="text" oninput="state.fiveWhysData.rootCause=this.value" class="w-full h-full p-4 outline-none bg-transparent font-black text-green-900"></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="border border-purple-200 rounded-lg p-6 bg-purple-50 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-black text-lg mb-4 text-purple-900 uppercase tracking-wide flex justify-between">
+                            <span>POKA YOKE (MISTAKE-PROOFING)</span>
+                            <select onchange="state.fiveWhysData.status=this.value" class="text-sm border border-purple-300 rounded p-1 font-bold outline-none cursor-pointer bg-white">
+                                <option value="">Select Status...</option><option value="Solved">🟢 Solved</option><option value="At Risk">🟡 At Risk</option><option value="Critical">🔴 Critical</option>
+                            </select>
+                        </h4>
+                        <div class="mb-6 bg-white p-4 rounded border border-purple-100">
+                            <label class="font-bold text-purple-900 block mb-3 text-sm uppercase tracking-wide">Type of Poka Yoke:</label>
+                            <div class="flex flex-col gap-3">
+                                <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="pokayoke" value="Control" onchange="state.fiveWhysData.type=this.value" class="w-5 h-5 text-purple-600 focus:ring-purple-500"><span class="text-gray-800"><strong>Control Type</strong> (Automatically stops process)</span></label>
+                                <label class="flex items-center gap-3 cursor-pointer"><input type="radio" name="pokayoke" value="Warning" onchange="state.fiveWhysData.type=this.value" class="w-5 h-5 text-purple-600 focus:ring-purple-500"><span class="text-gray-800"><strong>Warning Type</strong> (Alerts operator visually/audibly)</span></label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="font-bold text-purple-900 block mb-2 text-sm uppercase tracking-wide">Proposed Mechanism Description:</label>
+                            <textarea oninput="state.fiveWhysData.description=this.value" class="w-full p-4 border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 bg-white shadow-inner h-24 resize-none" placeholder="Describe how the system will prevent the root cause..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="export5Whys()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- SEC: SHEWHART -->
+        <div id="sec-shewhart" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-blue-500 pl-3">MODULE 2: SHEWHART CHART (PROCESS LOG)</h3>
+            <div class="flex flex-wrap gap-6 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div class="flex items-center gap-3"><label class="font-bold text-sm text-gray-700 uppercase tracking-wide">Process Variable:</label><input type="text" oninput="state.shewhartData.variable=this.value" class="border-b-2 border-gray-400 outline-none w-48 p-1 bg-transparent focus:border-blue-500 transition-colors font-medium" placeholder="e.g. Cycle Time"></div>
+                <div class="flex items-center gap-3"><label class="font-bold text-sm text-gray-700 uppercase tracking-wide">Target Mean:</label><input type="text" oninput="state.shewhartData.mean=this.value" class="border-b-2 border-gray-400 outline-none w-24 p-1 text-center bg-transparent focus:border-blue-500 transition-colors font-bold text-blue-700"></div>
+                <div class="flex items-center gap-3"><label class="font-bold text-sm text-gray-700 uppercase tracking-wide">UCL:</label><input type="text" oninput="state.shewhartData.ucl=this.value" class="border-b-2 border-gray-400 outline-none w-24 p-1 text-center bg-transparent focus:border-red-500 transition-colors text-red-600 font-black"></div>
+                <div class="flex items-center gap-3"><label class="font-bold text-sm text-gray-700 uppercase tracking-wide">LCL:</label><input type="text" oninput="state.shewhartData.lcl=this.value" class="border-b-2 border-gray-400 outline-none w-24 p-1 text-center bg-transparent focus:border-orange-500 transition-colors text-orange-600 font-black"></div>
+            </div>
+            <div class="overflow-x-auto mb-8 rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 w-20 text-center">Sample</th>
+                            <th class="border-b border-r border-gray-300 p-3 w-36 text-center">Observed Value</th>
+                            <th class="border-b border-r border-gray-300 p-3 w-36 text-center">Within Limits?</th>
+                            <th class="border-b border-gray-300 p-3 text-left">Observation Notes (Spikes, Trends)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-shewhart"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('shewhartData')" class="mt-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded-lg border border-blue-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Another Sample</button>
+            <button onclick="exportShewhart()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- NEW SEC: PDCA -->
+        <div id="sec-pdca" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-emerald-500 pl-3">MODULE 3: PDCA CYCLE (PLAN-DO-CHECK-ACT)</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> Use this structure to systematically solve problems and implement continuous improvement.</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-emerald-700 text-white">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Plan (Problem / Goal)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Plan (Proposed Solution)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Do (Trial Steps)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Check (Results / Metrics)</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/6">Act (Standardize / Next)</th>
+                            <th class="border-b border-gray-300 p-3 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pdca"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('pdcaData')" class="mt-4 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2 px-4 rounded-lg border border-emerald-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add PDCA Cycle</button>
+            <button onclick="exportPDCA()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- NEW SEC: EISENHOWER -->
+        <div id="sec-eisenhower" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-rose-500 pl-3">MODULE 3: EISENHOWER MATRIX (PRIORITIZATION)</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> List your tasks. Assess Urgency and Importance to classify them into the correct action quadrant.</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-800">
+                            <th class="border-b border-r border-gray-300 p-3 text-left w-1/3">Task / Activity</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Is it Urgent?</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center">Is it Important?</th>
+                            <th class="border-b border-r border-gray-300 p-3 text-center w-40">Quadrant Classification</th>
+                            <th class="border-b border-gray-300 p-3 text-left w-1/4">Action Owner / Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-eisenhower"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('eisenhowerData')" class="mt-4 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold py-2 px-4 rounded-lg border border-rose-300 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Task</button>
+            <button onclick="exportEisenhower()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+
+        <!-- NEW SEC: KAIZEN NEWSPAPER -->
+        <div id="sec-kaizen" class="activity-section">
+            ${getDocumentPageHeader()}
+            <h3 class="text-xl font-black mb-4 text-gray-800 border-l-4 border-yellow-500 pl-3">MODULE 3: KAIZEN NEWSPAPER (ACTION TRACKER)</h3>
+            <p class="mb-4 text-sm text-gray-700 leading-relaxed"><strong>Instructions:</strong> Use this to log and track specific action items identified during Gemba walks or VSM events.</p>
+            <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-sm">
+                <table class="w-full border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-yellow-100 text-yellow-900 border-b border-yellow-300">
+                            <th class="border-b border-r border-yellow-300 p-3 text-center w-32">Date Raised</th>
+                            <th class="border-b border-r border-yellow-300 p-3 text-left w-1/4">Problem / Item</th>
+                            <th class="border-b border-r border-yellow-300 p-3 text-left w-1/3">Countermeasure / Action</th>
+                            <th class="border-b border-r border-yellow-300 p-3 text-center w-32">Owner</th>
+                            <th class="border-b border-r border-yellow-300 p-3 text-center w-32">Target Date</th>
+                            <th class="border-b border-yellow-300 p-3 text-center w-32">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-kaizen"></tbody>
+                </table>
+            </div>
+            <button onclick="addRow('kaizenData')" class="mt-4 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold py-2 px-4 rounded-lg border border-yellow-400 shadow-sm flex items-center gap-2 print:hidden transition-colors text-sm"><span class="text-lg leading-none">+</span> Add Action Item</button>
+            <button onclick="exportKaizen()" class="mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md flex items-center gap-2 print:hidden transition-colors"><span class="text-xl">📥</span> Download .xlsx File</button>
+            ${getDocumentPageFooter()}
+        </div>
+    `;
+
+    // Render inner tables
+    renderTbody('valWaste');
+    renderTbody('timwood');
+    renderTbody('threems');
+    renderTbody('fives');
+    renderTbody('vsmData');
+    renderTbody('shewhart');
+    renderTbody('pdca');
+    renderTbody('eisenhower');
+    renderTbody('kaizen');
+    
+    // Attach Event Delegation to dynamic tables
+    attachTableDelegation('tbody-valWaste', 'valWasteData');
+    attachTableDelegation('tbody-timwood', 'timwoodData');
+    attachTableDelegation('tbody-threems', 'threeMData');
+    attachTableDelegation('tbody-fives', 'fiveSData');
+    attachTableDelegation('tbody-vsmData', 'vsmDataBox');
+    attachTableDelegation('tbody-pdca', 'pdcaData');
+    attachTableDelegation('tbody-kaizen', 'kaizenData');
+    
+    // Shewhart requires nested update
+    document.getElementById('tbody-shewhart').addEventListener('input', e => {
+        if (e.target.dataset.index !== undefined) {
+            state.shewhartData.rows[e.target.dataset.index][e.target.dataset.field] = e.target.value;
+        }
+    });
+
+    // Eisenhower manual/auto logic update
+    document.getElementById('tbody-eisenhower').addEventListener('input', e => {
+        if (e.target.dataset.index !== undefined) {
+            let row = state.eisenhowerData[e.target.dataset.index];
+            row[e.target.dataset.field] = e.target.value;
+            // Auto Update Quadrant if Urgent/Important are selected
+            if (row.urgent && row.important) {
+                if (row.urgent === 'Yes' && row.important === 'Yes') row.quadrant = 'Q1: Do First';
+                if (row.urgent === 'No' && row.important === 'Yes') row.quadrant = 'Q2: Schedule';
+                if (row.urgent === 'Yes' && row.important === 'No') row.quadrant = 'Q3: Delegate';
+                if (row.urgent === 'No' && row.important === 'No') row.quadrant = 'Q4: Eliminate';
+                // Find and update the select box specifically so the user sees it happen live
+                const selectElement = document.querySelector(`select[data-index="${e.target.dataset.index}"][data-field="quadrant"]`);
+                if (selectElement) selectElement.value = row.quadrant;
+            }
+        }
+    });
+
+    updateMetrics(); // Initial calculation
+    updateSetupDisplays(); // Initial header sync
+}
+
+// --- DYNAMIC TABLE RENDERING ---
+function renderTbody(type) {
+    const tbody = document.getElementById(`tbody-${type}`);
+    tbody.innerHTML = '';
+    
+    if (type === 'valWaste') {
+        state.valWasteData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="desc" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Activity ${i+1}...">${row.desc}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><select data-index="${i}" data-field="cares" class="w-full h-full p-3 bg-transparent outline-none cursor-pointer text-center font-bold text-gray-600"><option value=""></option><option value="Y" ${row.cares==='Y'?'selected':''}>Y</option><option value="N" ${row.cares==='N'?'selected':''}>N</option></select></td>
+                <td class="border-b border-r border-gray-300 p-0"><select data-index="${i}" data-field="change" class="w-full h-full p-3 bg-transparent outline-none cursor-pointer text-center font-bold text-gray-600"><option value=""></option><option value="Y" ${row.change==='Y'?'selected':''}>Y</option><option value="N" ${row.change==='N'?'selected':''}>N</option></select></td>
+                <td class="border-b border-r border-gray-300 p-0"><select data-index="${i}" data-field="right" class="w-full h-full p-3 bg-transparent outline-none cursor-pointer text-center font-bold text-gray-600"><option value=""></option><option value="Y" ${row.right==='Y'?'selected':''}>Y</option><option value="N" ${row.right==='N'?'selected':''}>N</option></select></td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="classType" class="w-full h-full p-3 bg-transparent outline-none cursor-pointer text-center font-bold text-blue-700">
+                        <option value=""></option><option value="VA" ${row.classType==='VA'?'selected':''}>🟢 VA</option><option value="NVA" ${row.classType==='NVA'?'selected':''}>🟡 NVA</option><option value="PW" ${row.classType==='PW'?'selected':''}>🔴 PW</option>
+                    </select>
+                </td>
+                <td class="border-b border-gray-300 p-0"><textarea data-index="${i}" data-field="action" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="- Step 1...&#10;- Step 2...">${row.action}</textarea></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'timwood') {
+        state.timwoodData.forEach((row, i) => {
+            const wastes = ['T - Transportation', 'I - Inventory', 'M - Motion', 'W - Waiting', 'O - Overproduction', 'O - Overprocessing', 'D - Defects'];
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="waste" class="w-full h-full p-3 bg-transparent outline-none font-bold text-gray-700 cursor-pointer">
+                        <option value="">Select...</option>
+                        ${wastes.map(w => `<option value="${w}" ${row.waste===w?'selected':''}>${w}</option>`).join('')}
+                    </select>
+                </td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="severity" class="w-full h-full p-3 bg-transparent outline-none font-bold">
+                        <option value=""></option><option value="🔴 High" ${row.severity==='🔴 High'?'selected':''}>🔴 High</option><option value="🟡 Medium" ${row.severity==='🟡 Medium'?'selected':''}>🟡 Medium</option><option value="🟢 Low" ${row.severity==='🟢 Low'?'selected':''}>🟢 Low</option>
+                    </select>
+                </td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="area" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Area...">${row.area}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="example" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="- Point 1...">${row.example}</textarea></td>
+                <td class="border-b border-gray-300 p-0"><textarea data-index="${i}" data-field="countermeasure" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="- Action 1...">${row.countermeasure}</textarea></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'threems') {
+        state.threeMData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="category" class="w-full h-full p-3 bg-transparent outline-none font-bold text-gray-700 cursor-pointer">
+                        <option value="">Select M...</option><option value="Muda (Waste)" ${row.category==='Muda (Waste)'?'selected':''}>🔴 Muda (Waste)</option><option value="Mura (Unevenness)" ${row.category==='Mura (Unevenness)'?'selected':''}>🟡 Mura (Unevenness)</option><option value="Muri (Overburden)" ${row.category==='Muri (Overburden)'?'selected':''}>🟠 Muri (Overburden)</option>
+                    </select>
+                </td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="observation" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="What is happening?...">${row.observation}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="impact" class="w-full h-full p-3 bg-transparent outline-none font-bold">
+                        <option value=""></option><option value="High" ${row.impact==='High'?'selected':''}>High</option><option value="Medium" ${row.impact==='Medium'?'selected':''}>Medium</option><option value="Low" ${row.impact==='Low'?'selected':''}>Low</option>
+                    </select>
+                </td>
+                <td class="border-b border-gray-300 p-0"><textarea data-index="${i}" data-field="action" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="How to fix this?...">${row.action}</textarea></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'fives') {
+        state.fiveSData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-3 font-bold text-indigo-900 bg-indigo-50/30">${row.s}</td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="observation" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="What do you see?">${row.observation}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="score" class="w-full h-full p-3 bg-transparent outline-none font-bold text-center text-lg cursor-pointer">
+                        <option value=""></option><option value="1" ${row.score==='1'?'selected':''}>1</option><option value="2" ${row.score==='2'?'selected':''}>2</option><option value="3" ${row.score==='3'?'selected':''}>3</option><option value="4" ${row.score==='4'?'selected':''}>4</option><option value="5" ${row.score==='5'?'selected':''}>5</option>
+                    </select>
+                </td>
+                <td class="border-b border-gray-300 p-0"><textarea data-index="${i}" data-field="action" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Action required...">${row.action}</textarea></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'vsmData') {
+        state.vsmDataBox.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="processStep" type="text" value="${row.processStep}" class="w-full h-full p-3 outline-none bg-transparent font-bold" placeholder="Step ${i+1}"></td>
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="cycleTime" type="text" value="${row.cycleTime}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="e.g. 45s"></td>
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="changeoverTime" type="text" value="${row.changeoverTime}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="e.g. 15m"></td>
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="uptime" type="text" value="${row.uptime}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="e.g. 95%"></td>
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="operators" type="text" value="${row.operators}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="e.g. 2"></td>
+                <td class="border-b border-gray-300 p-0"><input data-index="${i}" data-field="wip" type="text" value="${row.wip}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="e.g. 120 pcs"></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'shewhart') {
+        state.shewhartData.rows.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-3 text-center font-bold bg-gray-50/50 text-gray-600">${row.sample}</td>
+                <td class="border-b border-r border-gray-300 p-0"><input data-index="${i}" data-field="value" type="number" value="${row.value}" class="w-full h-full p-3 text-center outline-none bg-transparent font-semibold"></td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="limits" class="w-full h-full p-3 text-center bg-transparent outline-none cursor-pointer font-bold text-gray-700">
+                        <option value=""></option><option value="Yes" ${row.limits==='Yes'?'selected':''}>Yes</option><option value="No" ${row.limits==='No'?'selected':''}>No</option>
+                    </select>
+                </td>
+                <td class="border-b border-gray-300 p-0"><textarea data-index="${i}" data-field="notes" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[50px]" placeholder="- Note 1...">${row.notes}</textarea></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'pdca') {
+        state.pdcaData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="planProb" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="What is the goal?">${row.planProb}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="planSol" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Idea/Countermeasure">${row.planSol}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="doTrial" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Steps taken...">${row.doTrial}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="checkResult" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Data/Outcome">${row.checkResult}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="actNext" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Standardize or retry?">${row.actNext}</textarea></td>
+                <td class="border-b border-gray-300 p-0">
+                    <select data-index="${i}" data-field="status" class="w-full h-full p-3 bg-transparent outline-none font-bold text-center">
+                        <option value=""></option><option value="Planning" ${row.status==='Planning'?'selected':''}>🟡 Planning</option><option value="Trialing" ${row.status==='Trialing'?'selected':''}>🔵 Trialing</option><option value="Successful" ${row.status==='Successful'?'selected':''}>🟢 Successful</option><option value="Failed/Retry" ${row.status==='Failed/Retry'?'selected':''}>🔴 Failed/Retry</option>
+                    </select>
+                </td>
+            </tr>`;
+        });
+    }
+    else if (type === 'eisenhower') {
+        state.eisenhowerData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="border-b border-r border-gray-300 p-0"><textarea data-index="${i}" data-field="task" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Task description...">${row.task}</textarea></td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="urgent" class="w-full h-full p-3 text-center bg-transparent outline-none cursor-pointer font-bold text-gray-700">
+                        <option value=""></option><option value="Yes" ${row.urgent==='Yes'?'selected':''}>Yes</option><option value="No" ${row.urgent==='No'?'selected':''}>No</option>
+                    </select>
+                </td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="important" class="w-full h-full p-3 text-center bg-transparent outline-none cursor-pointer font-bold text-gray-700">
+                        <option value=""></option><option value="Yes" ${row.important==='Yes'?'selected':''}>Yes</option><option value="No" ${row.important==='No'?'selected':''}>No</option>
+                    </select>
+                </td>
+                <td class="border-b border-r border-gray-300 p-0">
+                    <select data-index="${i}" data-field="quadrant" class="w-full h-full p-3 text-center bg-transparent outline-none font-bold text-gray-800">
+                        <option value="">(Auto-Calculates)</option>
+                        <option value="Q1: Do First" ${row.quadrant==='Q1: Do First'?'selected':''}>🔴 Q1: Do First</option>
+                        <option value="Q2: Schedule" ${row.quadrant==='Q2: Schedule'?'selected':''}>🔵 Q2: Schedule</option>
+                        <option value="Q3: Delegate" ${row.quadrant==='Q3: Delegate'?'selected':''}>🟡 Q3: Delegate</option>
+                        <option value="Q4: Eliminate" ${row.quadrant==='Q4: Eliminate'?'selected':''}>⚪ Q4: Eliminate</option>
+                    </select>
+                </td>
+                <td class="border-b border-gray-300 p-0"><input data-index="${i}" data-field="owner" type="text" value="${row.owner}" class="w-full h-full p-3 outline-none bg-transparent" placeholder="Who & When?"></td>
+            </tr>`;
+        });
+    }
+    else if (type === 'kaizen') {
+        state.kaizenData.forEach((row, i) => {
+            tbody.innerHTML += `
+            <tr class="hover:bg-yellow-50 transition-colors">
+                <td class="border-b border-r border-yellow-300 p-0"><input data-index="${i}" data-field="dateRaised" type="date" value="${row.dateRaised}" class="w-full h-full p-3 text-center outline-none bg-transparent"></td>
+                <td class="border-b border-r border-yellow-300 p-0"><textarea data-index="${i}" data-field="problem" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Issue found...">${row.problem}</textarea></td>
+                <td class="border-b border-r border-yellow-300 p-0"><textarea data-index="${i}" data-field="action" class="w-full h-full p-3 outline-none bg-transparent resize-y min-h-[60px]" placeholder="Countermeasure...">${row.action}</textarea></td>
+                <td class="border-b border-r border-yellow-300 p-0"><input data-index="${i}" data-field="owner" type="text" value="${row.owner}" class="w-full h-full p-3 text-center outline-none bg-transparent" placeholder="Owner"></td>
+                <td class="border-b border-r border-yellow-300 p-0"><input data-index="${i}" data-field="targetDate" type="date" value="${row.targetDate}" class="w-full h-full p-3 text-center outline-none bg-transparent"></td>
+                <td class="border-b border-yellow-300 p-0">
+                    <select data-index="${i}" data-field="status" class="w-full h-full p-3 text-center bg-transparent outline-none font-bold">
+                        <option value=""></option><option value="Not Started" ${row.status==='Not Started'?'selected':''}>🔴 Not Started</option><option value="In Progress" ${row.status==='In Progress'?'selected':''}>🟡 In Progress</option><option value="Done" ${row.status==='Done'?'selected':''}>🟢 Done</option>
+                    </select>
+                </td>
+            </tr>`;
+        });
+    }
+}
+
+function attachTableDelegation(tbodyId, stateArrayName) {
+    document.getElementById(tbodyId).addEventListener('input', e => {
+        if (e.target.dataset.index !== undefined) {
+            state[stateArrayName][e.target.dataset.index][e.target.dataset.field] = e.target.value;
+        }
+    });
+}
+
+function addRow(stateArrayName) {
+    if (stateArrayName === 'valWasteData') state.valWasteData.push({ desc: '', cares: '', change: '', right: '', classType: '', action: '' });
+    if (stateArrayName === 'timwoodData') state.timwoodData.push({ waste: '', area: '', example: '', reason: '', countermeasure: '', severity: '' });
+    if (stateArrayName === 'threeMData') state.threeMData.push({ category: '', observation: '', impact: '', action: '' });
+    if (stateArrayName === 'vsmDataBox') state.vsmDataBox.push({ processStep: '', cycleTime: '', changeoverTime: '', uptime: '', operators: '', wip: '' });
+    if (stateArrayName === 'shewhartData') state.shewhartData.rows.push({ sample: state.shewhartData.rows.length + 1, value: '', limits: '', notes: '' });
+    if (stateArrayName === 'pdcaData') state.pdcaData.push({ planProb: '', planSol: '', doTrial: '', checkResult: '', actNext: '', status: '' });
+    if (stateArrayName === 'eisenhowerData') state.eisenhowerData.push({ task: '', urgent: '', important: '', quadrant: '', owner: '' });
+    if (stateArrayName === 'kaizenData') state.kaizenData.push({ dateRaised: '', problem: '', action: '', owner: '', targetDate: '', status: '' });
+    
+    // Re-render specific table
+    const typeMap = { 'valWasteData': 'valWaste', 'timwoodData': 'timwood', 'threeMData': 'threems', 'vsmDataBox': 'vsmData', 'shewhartData': 'shewhart', 'pdcaData': 'pdca', 'eisenhowerData': 'eisenhower', 'kaizenData': 'kaizen' };
+    renderTbody(typeMap[stateArrayName]);
+}
+
+// --- VISIBILITY TOGGLE ---
+function toggleSections() {
+    const sel = document.getElementById('activity-selector').value;
+    ['sec-valWaste', 'sec-timwood', 'sec-threems', 'sec-fives', 'sec-vsmData', 'sec-metrics', 'sec-5whys', 'sec-shewhart', 'sec-pdca', 'sec-eisenhower', 'sec-kaizen'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (sel === 'all' || sel === id.split('-')[1]) ? 'block' : 'none';
+    });
+}
+
+// --- CALCULATIONS ---
+function updateMetrics(event, objType, field) {
+    if (event) state[objType][field] = Number(event.target.value);
+    
+    const availableTime = Math.max(0, state.taktData.shift - state.taktData.breaks);
+    const taktTime = state.taktData.demand > 0 ? (availableTime / state.taktData.demand).toFixed(2) : 0;
+    
+    const availability = state.oeeData.planned > 0 ? (state.oeeData.operating / state.oeeData.planned) : 0;
+    const performance = state.oeeData.operating > 0 ? ((state.oeeData.count * state.oeeData.idealCycle) / state.oeeData.operating) : 0;
+    const quality = state.oeeData.count > 0 ? (state.oeeData.good / state.oeeData.count) : 0;
+    const finalOEE = (availability * performance * quality * 100).toFixed(1);
+
+    calculatedMetrics = { availableTime, taktTime, availability, performance, quality, finalOEE };
+
+    document.getElementById('calc-avail').textContent = `${availableTime} Mins`;
+    document.getElementById('calc-takt').textContent = taktTime;
+    document.getElementById('calc-oee').textContent = `${finalOEE}%`;
+}
+
+
+// --- EXCELJS EXPORT ENGINE ---
+const getARGB = (hexColor) => {
+    if (!hexColor || hexColor === 'transparent') return '00000000';
+    const cleanHex = hexColor.replace('#', '').toUpperCase();
+    return cleanHex.length === 6 ? 'FF' + cleanHex : cleanHex;
+};
+
+async function exportToExcelFile(filename, headers, dataRows, metaRows = []) {
+    try {
+        if (!window.ExcelJS) { alert("Excel engine not loaded yet."); return; }
+        const workbook = new window.ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet(filename.substring(0, 31));
+
+        let currentRow = 1;
+
+        // 1. Participant Setup Info
+        sheet.mergeCells(currentRow, 1, currentRow, Math.max(headers.length, 5));
+        const titleCell = sheet.getCell(currentRow, 1);
+        titleCell.value = 'VSM PRACTICAL INSIGHTS - PARTICIPANT INFO';
+        titleCell.font = { bold: true, size: 14 };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+        titleCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        currentRow++;
+
+        const setupHeaders = ['Name', 'Emp Code', 'Dept', 'Date', 'Workstation / Area'];
+        setupHeaders.forEach((h, i) => {
+           const cell = sheet.getCell(currentRow, i + 1);
+           cell.value = h;
+           cell.font = { bold: true };
+           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+           cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
+        currentRow++;
+
+        const setupVals = [state.setupInfo.name || 'N/A', state.setupInfo.empCode || 'N/A', state.setupInfo.dept || 'N/A', state.setupInfo.date || 'N/A', state.setupInfo.workstation || 'N/A'];
+        setupVals.forEach((v, i) => {
+           const cell = sheet.getCell(currentRow, i + 1);
+           cell.value = v;
+           cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
+        currentRow += 2; 
+
+        // 2. Activity Export Title
+        sheet.mergeCells(currentRow, 1, currentRow, Math.max(headers.length, 5));
+        const actTitle = sheet.getCell(currentRow, 1);
+        actTitle.value = `ACTIVITY EXPORT: ${filename.toUpperCase()}`;
+        actTitle.font = { bold: true, size: 14 };
+        actTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+        actTitle.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        currentRow++;
+
+        // 3. Meta Rows
+        metaRows.forEach(row => {
+          row.forEach((cellData, i) => {
+             const c = sheet.getCell(currentRow, i + 1);
+             if (cellData && typeof cellData === 'object') {
+                c.value = cellData.value;
+                if (cellData.bold) c.font = { bold: true, color: { argb: cellData.color ? getARGB(cellData.color) : 'FF000000' } };
+                if (cellData.bgColor && cellData.bgColor !== 'transparent') {
+                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: getARGB(cellData.bgColor) } };
+                }
+             } else {
+                c.value = cellData;
+                c.font = { bold: true };
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+             }
+             c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+          });
+          currentRow++;
+        });
+        if (metaRows.length > 0) currentRow++; 
+
+        // 4. Main Table Headers
+        headers.forEach((h, i) => {
+           const c = sheet.getCell(currentRow, i + 1);
+           c.value = h;
+           c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+           c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; 
+           c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        });
+        currentRow++;
+
+        // 5. Main Data Rows
+        dataRows.forEach(row => {
+           row.forEach((cellData, i) => {
+               const c = sheet.getCell(currentRow, i + 1);
+               if (cellData && typeof cellData === 'object') {
+                  c.value = cellData.value;
+                  if (cellData.bold) c.font = { bold: true, color: { argb: cellData.color ? getARGB(cellData.color) : 'FF000000' } };
+                  if (cellData.bgColor && cellData.bgColor !== 'transparent') {
+                      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: getARGB(cellData.bgColor) } };
+                  }
+               } else {
+                  if (!isNaN(cellData) && cellData !== '') {
+                      c.value = Number(cellData);
+                  } else {
+                      c.value = cellData;
+                  }
+               }
+               c.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+               c.alignment = { wrapText: true, vertical: 'top' };
+           });
+           currentRow++;
+        });
+
+        // 6. Dynamic Column Width
+        sheet.columns.forEach(column => {
+          let maxLength = 0;
+          column.eachCell({ includeEmpty: true }, cell => {
+            const columnLength = cell.value ? cell.value.toString().length : 10;
+            if (columnLength > maxLength) maxLength = columnLength;
+          });
+          column.width = Math.min(Math.max(maxLength + 2, 12), 60); 
+        });
+
+        // 7. Generate Download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename.replace(/\s+/g, '_')}_${state.setupInfo.empCode || 'export'}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error("Excel Generation Error:", error);
+        alert("Excel Generation Failed. Please ensure internet connectivity for ExcelJS.");
+    }
+}
+
+// --- EXPORT FUNCTIONS (Mapped to buttons) ---
+window.exportValWaste = () => {
+    const headers = ["Status (Class)", "Activity Description", "Customer Cares?", "Physical Change?", "Error-Free?", "Action Plan"];
+    const rows = state.valWasteData.map(row => {
+        let bgColor = 'transparent'; let statusText = row.classType || 'Pending';
+        if (row.classType === 'VA') { bgColor = '#bbf7d0'; statusText = 'Value Added'; } 
+        if (row.classType === 'NVA') { bgColor = '#fef08a'; statusText = 'Necessary NVA'; } 
+        if (row.classType === 'PW') { bgColor = '#fecaca'; statusText = 'Pure Waste'; } 
+        return [ { value: statusText, bgColor: bgColor, bold: true }, row.desc, row.cares, row.change, row.right, row.action ];
+    });
+    exportToExcelFile("Value_and_Waste", headers, rows);
+};
+
+window.exportTimwood = () => {
+    const headers = ["Severity", "TIMWOOD Waste", "Process Area", "Observed Example", "Why is it Waste?", "Lean Countermeasure"];
+    const rows = state.timwoodData.map(row => {
+        let bgColor = 'transparent';
+        if (row.severity.includes('High')) bgColor = '#fecaca'; 
+        if (row.severity.includes('Medium')) bgColor = '#fef08a'; 
+        if (row.severity.includes('Low')) bgColor = '#bbf7d0'; 
+        return [ { value: row.severity.replace(/[🔴🟡🟢]/g, '').trim(), bgColor: bgColor, bold: true }, row.waste, row.area, row.example, row.reason, row.countermeasure ];
+    });
+    exportToExcelFile("TIMWOOD_Gemba", headers, rows);
+};
+
+window.exportThreeMs = () => {
+    const headers = ["Category (Muda/Mura/Muri)", "Observation", "Impact Level", "Corrective Action"];
+    const rows = state.threeMData.map(row => {
+        let bgColor = 'transparent';
+        if (row.category.includes('Muda')) bgColor = '#fecaca'; 
+        if (row.category.includes('Mura')) bgColor = '#fef08a'; 
+        if (row.category.includes('Muri')) bgColor = '#fed7aa'; 
+        return [ { value: row.category, bgColor: bgColor, bold: true }, row.observation, row.impact, row.action ];
+    });
+    exportToExcelFile("The_3Ms_Analysis", headers, rows);
+};
+
+window.exportFiveS = () => {
+    const headers = ["5S Pillar", "Current Observation", "Score (1-5)", "Action / Improvement"];
+    const rows = state.fiveSData.map(row => {
+        let scoreColor = 'transparent';
+        if (row.score === '1' || row.score === '2') scoreColor = '#fecaca';
+        else if (row.score === '3') scoreColor = '#fef08a'; 
+        else if (row.score === '4' || row.score === '5') scoreColor = '#bbf7d0'; 
+        return [ { value: row.s, bold: true }, row.observation, { value: row.score, bgColor: scoreColor, bold: true, color: '#000' }, row.action ];
+    });
+    exportToExcelFile("5S_Workplace_Audit", headers, rows);
+};
+
+window.exportVsmDataBox = () => {
+    const headers = ["Process Step / Workstation", "Cycle Time (CT)", "Changeover Time (C/O)", "Uptime (%)", "No. of Operators", "WIP Inventory"];
+    const rows = state.vsmDataBox.map(row => [ row.processStep, row.cycleTime, row.changeoverTime, row.uptime, row.operators, row.wip ]);
+    exportToExcelFile("VSM_Data_Box", headers, rows);
+};
+
+window.exportMetrics = () => {
+    const headers = ["Metric Category", "Parameter", "Calculated Value"];
+    const oeeNum = parseFloat(calculatedMetrics.finalOEE);
+    let oeeColor = '#fecaca'; 
+    if (oeeNum >= 85) oeeColor = '#bbf7d0'; 
+    else if (oeeNum >= 65) oeeColor = '#fef08a'; 
+    const rows = [
+      ["TAKT TIME", "Total Shift Duration", `${state.taktData.shift}`],
+      ["TAKT TIME", "Planned Breaks", `${state.taktData.breaks}`],
+      ["TAKT TIME", "Available Time", `${calculatedMetrics.availableTime}`],
+      ["TAKT TIME", "Customer Demand", `${state.taktData.demand}`],
+      [{ value: "TAKT TIME", bold: true}, { value: "CALCULATED TAKT", bold: true}, { value: `${calculatedMetrics.taktTime} mins/unit`, bgColor: '#bfdbfe', bold: true }],
+      ["", "", ""],
+      ["OEE", "Planned Production Time", `${state.oeeData.planned}`],
+      ["OEE", "Actual Operating Time", `${state.oeeData.operating}`],
+      ["OEE", "Ideal Cycle Time", `${state.oeeData.idealCycle}`],
+      ["OEE", "Total Units Produced", `${state.oeeData.count}`],
+      ["OEE", "Good Units Produced", `${state.oeeData.good}`],
+      ["OEE", "Availability %", `${(calculatedMetrics.availability * 100).toFixed(1)}%`],
+      ["OEE", "Performance %", `${(calculatedMetrics.performance * 100).toFixed(1)}%`],
+      ["OEE", "Quality %", `${(calculatedMetrics.quality * 100).toFixed(1)}%`],
+      [{ value: "OEE", bold: true}, { value: "FINAL OEE %", bold: true}, { value: `${calculatedMetrics.finalOEE}%`, bgColor: oeeColor, bold: true }]
+    ];
+    exportToExcelFile("VSM_Metrics", headers, rows);
+};
+
+window.export5Whys = () => {
+    const headers = ["Data Field", "Details"];
+    let statusColor = 'transparent';
+    if (state.fiveWhysData.status === 'Solved') statusColor = '#bbf7d0';
+    if (state.fiveWhysData.status === 'At Risk') statusColor = '#fef08a';
+    if (state.fiveWhysData.status === 'Critical') statusColor = '#fecaca';
+    const rows = [
+      ["Problem Identified", state.fiveWhysData.problem],
+      ["Why 1", state.fiveWhysData.why1],
+      ["Why 2", state.fiveWhysData.why2],
+      ["Why 3", state.fiveWhysData.why3],
+      ["Why 4", state.fiveWhysData.why4],
+      [{value: "Why 5 (Root Cause)", bold: true, color: '#991b1b'}, {value: state.fiveWhysData.rootCause, bgColor: '#fee2e2', bold: true}],
+      ["", ""],
+      ["Poka Yoke Type", state.fiveWhysData.type],
+      ["Mechanism Description", state.fiveWhysData.description],
+      [{value: "Overall Status", bold: true}, {value: state.fiveWhysData.status, bgColor: statusColor, bold: true}]
+    ];
+    exportToExcelFile("5_Whys_PokaYoke", headers, rows);
+};
+
+window.exportShewhart = () => {
+    const headers = ["Sample No.", "Observed Value", "Within Limits?", "Observation Notes"];
+    const metaRows = [
+      ["Variable Tracked", { value: state.shewhartData.variable, bold: true }, "", ""],
+      ["Target Mean", { value: state.shewhartData.mean, bold: true }, "", ""],
+      ["Upper Control Limit (UCL)", { value: state.shewhartData.ucl, bold: true, color: '#991b1b', bgColor: '#fee2e2' }, "", ""],
+      ["Lower Control Limit (LCL)", { value: state.shewhartData.lcl, bold: true, color: '#9a3412', bgColor: '#ffedd5' }, "", ""]
+    ];
+    const rows = state.shewhartData.rows.map(row => {
+      let limitColor = 'transparent';
+      if (row.limits === 'Yes') limitColor = '#bbf7d0';
+      if (row.limits === 'No') limitColor = '#fecaca';
+      return [ row.sample, row.value, { value: row.limits, bgColor: limitColor, bold: true }, row.notes ];
+    });
+    exportToExcelFile("Shewhart_Chart", headers, rows, metaRows);
+};
+
+window.exportPDCA = () => {
+    const headers = ["Plan (Problem/Goal)", "Plan (Proposed Solution)", "Do (Trial Steps)", "Check (Results/Metrics)", "Act (Standardize)", "Status"];
+    const rows = state.pdcaData.map(row => {
+      let statusColor = 'transparent';
+      if (row.status === 'Planning') statusColor = '#fef08a';
+      if (row.status === 'Trialing') statusColor = '#bfdbfe';
+      if (row.status === 'Successful') statusColor = '#bbf7d0';
+      if (row.status === 'Failed/Retry') statusColor = '#fecaca';
+      return [ row.planProb, row.planSol, row.doTrial, row.checkResult, row.actNext, { value: row.status.replace(/[🔴🟡🟢🔵]/g, '').trim(), bgColor: statusColor, bold: true } ];
+    });
+    exportToExcelFile("PDCA_Cycle", headers, rows);
+};
+
+window.exportEisenhower = () => {
+    const headers = ["Task / Activity", "Urgent?", "Important?", "Quadrant Classification", "Action Owner"];
+    const rows = state.eisenhowerData.map(row => {
+      let qColor = 'transparent';
+      if (row.quadrant.includes('Q1')) qColor = '#fecaca';
+      if (row.quadrant.includes('Q2')) qColor = '#bfdbfe';
+      if (row.quadrant.includes('Q3')) qColor = '#fef08a';
+      if (row.quadrant.includes('Q4')) qColor = '#e5e7eb';
+      return [ row.task, row.urgent, row.important, { value: row.quadrant.replace(/[🔴🟡⚪🔵]/g, '').trim(), bgColor: qColor, bold: true }, row.owner ];
+    });
+    exportToExcelFile("Eisenhower_Matrix", headers, rows);
+};
+
+window.exportKaizen = () => {
+    const headers = ["Date Raised", "Problem / Item", "Countermeasure / Action", "Owner", "Target Date", "Status"];
+    const rows = state.kaizenData.map(row => {
+      let statusColor = 'transparent';
+      if (row.status === 'Not Started') statusColor = '#fecaca';
+      if (row.status === 'In Progress') statusColor = '#fef08a';
+      if (row.status === 'Done') statusColor = '#bbf7d0';
+      return [ row.dateRaised, row.problem, row.action, row.owner, row.targetDate, { value: row.status.replace(/[🔴🟡🟢]/g, '').trim(), bgColor: statusColor, bold: true } ];
+    });
+    exportToExcelFile("Kaizen_Newspaper", headers, rows);
+};
+
+// --- INITIALIZE APPLICATION ---
+window.onload = () => {
+    initSetupDate();
+    renderApp();
+    toggleSections();
+};
+
+</script>
+</body>
+</html>

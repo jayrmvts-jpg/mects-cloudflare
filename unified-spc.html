@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Unified SPC Dashboard</title>
+    <!-- Chart.js, Datalabels Plugin, HTML2PDF & Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #003366;
+            --excel-blue: #4472C4;
+            --excel-orange: #ED7D31;
+            --excel-yellow: #FFC000;
+            --ucl-dark: #333333; 
+        }
+        
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        canvas {
+            max-height: 450px;
+            width: 100% !important;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        
+        .btn-action {
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            font-weight: 800;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+        
+        .editable-field {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px dashed transparent;
+            transition: all 0.2s;
+        }
+        
+        #copyToast {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        /* --- PDF GENERATION SPECIFIC CSS FIXES --- */
+        body.pdf-mode {
+            width: 850px !important; 
+            background-color: white !important;
+        }
+        
+        .pdf-mode * {
+            box-sizing: border-box !important;
+        }
+        
+        .pdf-mode .hide-in-pdf {
+            display: none !important;
+        }
+        
+        .pdf-mode .main-grid {
+            display: block !important;
+        }
+        
+        .pdf-mode .pdf-target {
+            width: 850px !important; 
+            max-width: 850px !important;
+            margin: 0 auto !important;
+            padding: 0 20px !important; 
+            background-color: white !important;
+        }
+        
+        .pdf-mode .overflow-hidden,
+        .pdf-mode .overflow-x-auto,
+        .pdf-mode #table-wrapper, 
+        .pdf-mode .custom-scrollbar {
+            max-height: none !important;
+            overflow: visible !important;
+            width: 100% !important;
+        }
+        
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+        
+        .pdf-mode table {
+            page-break-inside: auto;
+            width: 100% !important;
+            table-layout: fixed !important; 
+            white-space: normal !important; 
+        }
+        
+        .pdf-mode th, .pdf-mode td {
+            page-break-inside: avoid;
+            page-break-after: auto;
+            white-space: normal !important; 
+            word-wrap: break-word !important;
+            font-size: 12px !important; 
+            padding: 5px 4px !important; 
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        
+        .pdf-mode tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .pdf-mode .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+            margin-top: 14px !important; 
+        }
+
+        .pdf-mode .gap-4 { gap: 10px !important; }
+        .pdf-mode .gap-5 { gap: 12px !important; }
+        
+        .pdf-mode .p-5 { padding: 16px !important; }
+        .pdf-mode .p-6 { padding: 18px !important; }
+
+        .pdf-mode #section-verdict-capa p,
+        .pdf-mode #section-verdict-capa li,
+        .pdf-mode #section-verdict-capa div.mb-2,
+        .pdf-mode #section-verdict-capa .text-sm,
+        .pdf-mode #section-verdict-capa .text-xs,
+        .pdf-mode #section-verdict-capa .text-\[11px\],
+        .pdf-mode #section-verdict-capa .text-\[13px\] {
+            font-size: 15px !important;
+            line-height: 1.4 !important; 
+            margin-bottom: 6px !important;
+        }
+
+        .pdf-mode #section-verdict-capa h3 {
+            font-size: 20px !important;
+            margin-bottom: 8px !important;
+        }
+        
+        .pdf-mode #section-verdict-capa h4 {
+            font-size: 17px !important;
+            margin-bottom: 6px !important;
+        }
+
+        .pdf-mode #stat-grid > div > span:first-child { font-size: 13px !important; }
+        .pdf-mode #stat-grid > div > span:last-child { font-size: 24px !important; }
+        
+        .pdf-mode #stat-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 relative">
+
+    <!-- Toast Notification -->
+    <div id="copyToast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold opacity-0 pointer-events-none transform -translate-y-4">
+        Copied to clipboard!
+    </div>
+
+    <!-- Header -->
+    <header class="bg-black border-b-4 border-yellow-500 shadow-xl mb-8 relative hide-in-pdf">
+        <div class="absolute top-4 right-6">
+            <a href="https://www.mects.in" target="_blank" class="text-yellow-400 hover:text-yellow-300 font-bold text-sm tracking-wider flex items-center gap-1 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                www.mects.in
+            </a>
+        </div>
+        <div class="py-8 px-4 text-center">
+            <div class="text-lg md:text-2xl font-extrabold text-yellow-500 tracking-[0.3em] uppercase block mb-1">
+                MECTS SET......GO
+            </div>
+            <p class="text-[10px] md:text-xs font-bold text-gray-400 mt-1 mb-6 uppercase block max-w-3xl mx-auto tracking-[0.2em]">
+                MANAGING EFFECTIVE CORPORATE TRAINING SOLUTIONS
+            </p>
+            <h1 class="text-2xl md:text-4xl lg:text-5xl font-black text-white tracking-wide uppercase inline-block drop-shadow-lg mb-2 leading-tight">
+                <span class="text-yellow-500 block">Statistical Process Control</span>
+                <span class="block text-white text-[0.8em] mt-1">Analytics Suite</span>
+                <span class="text-yellow-500 block text-[0.7em] mt-1 tracking-widest">(SPC)</span>
+            </h1>
+            <br/>
+            <div class="mt-6 inline-block bg-yellow-500 text-black px-8 py-3 rounded-full font-black text-sm md:text-lg tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                <h2 id="dynamicMainTitle" class="uppercase outline-none">
+                    UNIFIED ATTRIBUTE CONTROL CHARTS
+                </h2>
+            </div>
+            <div id="chartDescription" class="mt-6 mx-auto text-gray-400 font-medium text-sm max-w-4xl border-t border-gray-800 pt-4">
+                Select a chart type below to begin your analysis.
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1400px] mx-auto px-4 pb-12">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 main-grid">
+            
+            <!-- Controls Hub -->
+            <div class="xl:col-span-4 space-y-6 hide-in-pdf">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-5">
+                    <h3 class="text-lg font-bold text-blue-900 flex items-center uppercase tracking-tight mb-4 border-b pb-2">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Analysis Hub Configuration
+                    </h3>
+
+                    <!-- Configuration Dropdowns -->
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center mb-1">
+                                <label class="block text-[11px] font-black text-gray-500 uppercase">Chart Type</label>
+                                <div class="relative group inline-block cursor-help ml-2 align-middle">
+                                    <svg class="w-4 h-4 text-blue-500 hover:text-blue-700 transition-colors" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                    <div class="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition duration-300 w-72 bg-gray-900 text-white text-[11px] rounded shadow-xl p-4 left-1/2 transform -translate-x-1/2 mt-2 pointer-events-none text-left font-normal leading-relaxed">
+                                        <strong class="text-yellow-400 text-xs block mb-1 uppercase tracking-wider">Stepped vs. Straight Limits</strong>
+                                        Because <b>P-Charts</b> and <b>U-Charts</b> handle subgroups with <i>varying</i> sample sizes (n), statistical rules require the limits (UCL/LCL) to recalculate for every single point—creating a <b>stepped</b> line.<br><br>
+                                        Smaller samples have wider limits; larger samples have tighter limits. <br><br>
+                                        <i>Why both?</i> For clarity, we plot the exact Stepped Limits for precision, AND an "Average Limit" (straight line based on the mean sample size) to help easily visualize the trend!
+                                    </div>
+                                </div>
+                            </div>
+                            <select id="chartType" class="w-full bg-gray-50 border border-gray-300 text-blue-900 font-bold text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" onchange="updateUIContext()">
+                                <optgroup label="Attribute Charts (Discrete Data)">
+                                    <option value="p">P-Chart (Proportion Defective - Varying n)</option>
+                                    <option value="np">NP-Chart (Number Defective - Constant n)</option>
+                                    <option value="c">C-Chart (Count of Defects - Constant Opportunity)</option>
+                                    <option value="u">U-Chart (Defects per Unit - Varying Opportunity)</option>
+                                </optgroup>
+                                <optgroup label="Variable Charts (Continuous Data)">
+                                    <option value="xbar">X-Bar Chart (Subgroup Averages)</option>
+                                    <option value="r">R-Chart (Range of Subgroups)</option>
+                                    <option value="s">S-Chart (Standard Deviation of Subgroups)</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-black text-gray-500 uppercase mb-1">Industry Segment</label>
+                            <select id="industrySegment" class="w-full bg-gray-50 border border-gray-300 text-gray-900 font-semibold text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5" onchange="updateIndustryContext()">
+                                <!-- Populated via JS -->
+                            </select>
+                        </div>
+
+                        <div class="flex items-center justify-between bg-gray-50 p-2.5 rounded-lg border border-gray-300 mt-2">
+                            <label class="text-[11px] font-black text-gray-600 uppercase cursor-pointer" for="showLabelsToggle">Show Data Values</label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="showLabelsToggle" class="sr-only peer" checked onchange="toggleLabels()">
+                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-900"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Controls -->
+                    <div class="pt-4 border-t border-gray-100 space-y-3">
+                        <label class="block text-[11px] font-black text-gray-500 uppercase mb-1">Simulation Engine</label>
+                        <div class="flex items-center space-x-3 bg-gray-50 p-2 rounded-lg border border-gray-200">
+                            <span class="text-xs font-bold text-gray-600 whitespace-nowrap">Sample Count (k):</span>
+                            <input type="number" id="simCount" value="25" min="5" max="100" class="w-full bg-transparent font-black text-blue-900 outline-none text-right" onchange="simulateProcess('stable')">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="simulateProcess('stable')" class="btn-action bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg border-b-4 border-green-800 shadow-sm">
+                                Simulate Stable
+                            </button>
+                            <button onclick="simulateProcess('ooc')" class="btn-action bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg border-b-4 border-red-800 shadow-sm">
+                                Simulate OOC
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Data Entry -->
+                    <div class="pt-4 border-t border-gray-100 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <label id="dataEntryLabel" class="block text-[11px] font-black text-gray-500 uppercase">Data Entry (n, defects)</label>
+                            <span class="text-[10px] text-gray-400 font-semibold">Paste from Excel/CSV</span>
+                        </div>
+                        <textarea id="dataInput" class="w-full h-40 p-3 font-mono text-sm text-left bg-blue-50 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner custom-scrollbar" placeholder="Format: Sample_Size  Defects&#10;100 5&#10;100 3&#10;..." oninput="markManualAndProcess()"></textarea>
+                        <div id="error-msg" class="hidden text-xs text-red-600 font-bold bg-red-100 p-2 rounded border border-red-200"></div>
+                    </div>
+
+                    <!-- Primary Actions -->
+                    <div class="pt-2 grid grid-cols-1 gap-2">
+                        <button onclick="processData()" class="btn-action bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-lg shadow-xl w-full">
+                            Analyze Data
+                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="clearData()" class="btn-action bg-gray-200 hover:bg-gray-300 text-gray-700 p-2.5 rounded-lg shadow-inner">
+                                Clear
+                            </button>
+                            <button onclick="exportToExcel()" class="btn-action bg-teal-600 hover:bg-teal-700 text-white p-2.5 rounded-lg shadow-sm">
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Display Area -->
+            <div id="pdf-capture-area" class="xl:col-span-8 space-y-6">
+                
+                <!-- SECTION 1: CHART AND CONTEXT -->
+                <div id="section-chart" class="space-y-3">
+                    <div class="flex justify-between items-end hide-in-pdf">
+                        <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Process Visualization</h3>
+                        <button onclick="generatePDF('section-chart', 'Control Chart Visualization')" class="text-yellow-700 font-bold text-[10px] uppercase flex items-center gap-1 border border-yellow-500 px-3 py-1.5 rounded bg-yellow-50 hover:bg-yellow-200 transition-colors shadow-sm">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> 
+                            Print Section
+                        </button>
+                    </div>
+
+                    <!-- Context Box -->
+                    <div id="problem-context" class="bg-blue-900 text-white p-5 rounded-xl shadow-lg border-l-8 border-blue-500 hidden avoid-break">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-[11px] font-black uppercase text-blue-300 tracking-widest">Industry Scenario</h4>
+                            <span id="scenarioStatusBadge" class="px-2 py-1 rounded text-[10px] font-bold uppercase"></span>
+                        </div>
+                        <p id="scenario-desc" class="text-base font-medium leading-relaxed italic"></p>
+                    </div>
+
+                    <!-- Chart Box -->
+                    <div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 avoid-break">
+                        <canvas id="controlChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Analysis Output Sections container -->
+                <div id="analysis-output" class="space-y-6 hidden">
+                    
+                    <!-- COMBINED SECTION: STATISTICAL METRICS & CAPA -->
+                    <div id="section-verdict-capa" class="space-y-6">
+                        <div class="flex justify-between items-end hide-in-pdf">
+                            <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Metrics & Knowledge Base</h3>
+                            <button onclick="generatePDF('section-verdict-capa', 'Metrics and CAPA Report')" class="bg-yellow-500 hover:bg-yellow-400 text-black border border-yellow-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition-colors hide-in-pdf flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> 
+                                Download PDF
+                            </button>
+                        </div>
+                        
+                        <!-- Stat Grid dynamically populated -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 avoid-break" id="stat-grid"></div>
+                        
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 relative avoid-break">
+                            <button onclick="copyStatsToClipboard()" class="absolute top-4 right-4 bg-gray-100 hover:bg-gray-200 text-blue-900 px-3 py-1.5 rounded text-[10px] font-black uppercase flex items-center shadow-sm transition-colors hide-in-pdf">
+                                Copy Summary
+                            </button>
+                            <h3 class="text-base font-bold text-blue-900 mb-3 flex items-center uppercase tracking-tight">
+                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Statistical Verdict
+                            </h3>
+                            <div id="interpretation-text" class="text-sm leading-relaxed text-gray-700 font-medium"></div>
+                        </div>
+
+                        <!-- CAPA GUIDE -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden avoid-break">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+                            <h3 class="text-lg font-bold text-black mb-3 flex items-center uppercase tracking-tight">
+                                <svg class="w-5 h-5 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                SPC Concepts & CAPA Guide
+                            </h3>
+                            <p id="kb-analogy" class="text-[13px] text-gray-700 mb-5 italic border-l-4 border-gray-300 pl-3">
+                                <!-- Dynamically populated by JS -->
+                            </p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                    <h4 class="font-black text-blue-900 text-[11px] uppercase mb-3 border-b border-blue-200 pb-1">Key Statistical Terms</h4>
+                                    <ul id="kb-terms-list" class="text-xs text-gray-800 space-y-3">
+                                        <!-- Dynamically populated by JS -->
+                                    </ul>
+                                </div>
+                                
+                                <div class="bg-red-50 p-4 rounded-lg border border-red-100">
+                                    <h4 class="font-black text-red-900 text-[11px] uppercase mb-3 border-b border-red-200 pb-1">CAPA Execution Steps (If Out of Control)</h4>
+                                    <ol class="text-xs text-gray-800 space-y-3 list-decimal list-inside">
+                                        <li><strong class="text-red-900">Containment:</strong> Stop the line. Quarantine the suspect batch immediately to prevent it from moving forward in the process.</li>
+                                        <li><strong class="text-red-900">Root Cause Analysis (RCA):</strong> Investigate the true cause of the variation using methods like <i>5 Whys</i> or <i>Fishbone Diagrams</i>.</li>
+                                        <li><strong class="text-red-900">Corrective Action:</strong> Fix the immediate problem directly identified by the RCA (e.g., replace the worn tool).</li>
+                                        <li><strong class="text-red-900">Preventive Action:</strong> Implement a systemic change to prevent recurrence (e.g., update the maintenance schedule).</li>
+                                        <li><strong class="text-red-900">Verification:</strong> Monitor the SPC chart for the next 5-10 batches to mathematically prove the process has returned within the Control Limits.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 3: LEDGER TABLE -->
+                    <div id="section-ledger" class="space-y-3">
+                        <div class="flex justify-between items-end hide-in-pdf">
+                            <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest pl-1">Data Records</h3>
+                            <button onclick="generatePDF('section-ledger', 'Computation Ledger')" class="bg-yellow-500 hover:bg-yellow-400 text-black border border-yellow-600 px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition-colors hide-in-pdf flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> 
+                                Download PDF
+                            </button>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
+                                <span class="font-black text-blue-900 uppercase text-xs tracking-tighter">Computation Ledger</span>
+                                <button onclick="copyTableToClipboard()" class="bg-blue-900 hover:bg-blue-800 text-white px-3 py-1.5 rounded text-[10px] font-black uppercase shadow-sm transition-colors hide-in-pdf">
+                                    Copy Table Data
+                                </button>
+                            </div>
+                            <div id="table-wrapper" class="overflow-x-auto custom-scrollbar max-h-[400px]">
+                                <table id="ledgerTable" class="w-full text-xs text-center border-collapse whitespace-nowrap">
+                                    <thead id="table-head" class="bg-white text-gray-500 uppercase font-black sticky top-0 shadow-sm">
+                                        <!-- Populated dynamically -->
+                                    </thead>
+                                    <tbody id="table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Register Datalabels Globally
+        Chart.register(ChartDataLabels);
+
+        // --- SPC Constants for Variable Charts (n=2 to 25) ---
+        const spcConstants = {
+            2: { d3: 0, d4: 3.267, b3: 0, b4: 3.267 },
+            3: { d3: 0, d4: 2.574, b3: 0, b4: 2.568 },
+            4: { d3: 0, d4: 2.282, b3: 0, b4: 2.266 },
+            5: { d3: 0, d4: 2.114, b3: 0, b4: 2.089 },
+            6: { d3: 0, d4: 2.004, b3: 0.030, b4: 1.970 },
+            7: { d3: 0.076, d4: 1.924, b3: 0.118, b4: 1.882 },
+            8: { d3: 0.136, d4: 1.864, b3: 0.185, b4: 1.815 },
+            9: { d3: 0.184, d4: 1.816, b3: 0.239, b4: 1.761 },
+            10: { d3: 0.223, d4: 1.777, b3: 0.284, b4: 1.716 },
+            11: { d3: 0.256, d4: 1.744, b3: 0.321, b4: 1.679 },
+            12: { d3: 0.283, d4: 1.717, b3: 0.354, b4: 1.646 },
+            13: { d3: 0.307, d4: 1.693, b3: 0.382, b4: 1.618 },
+            14: { d3: 0.328, d4: 1.672, b3: 0.406, b4: 1.594 },
+            15: { d3: 0.347, d4: 1.653, b3: 0.428, b4: 1.572 },
+            16: { d3: 0.363, d4: 1.637, b3: 0.448, b4: 1.552 },
+            17: { d3: 0.378, d4: 1.622, b3: 0.466, b4: 1.534 },
+            18: { d3: 0.391, d4: 1.608, b3: 0.482, b4: 1.518 },
+            19: { d3: 0.403, d4: 1.597, b3: 0.497, b4: 1.503 },
+            20: { d3: 0.415, d4: 1.585, b3: 0.510, b4: 1.490 },
+            21: { d3: 0.425, d4: 1.575, b3: 0.523, b4: 1.477 },
+            22: { d3: 0.434, d4: 1.566, b3: 0.534, b4: 1.466 },
+            23: { d3: 0.443, d4: 1.557, b3: 0.545, b4: 1.455 },
+            24: { d3: 0.451, d4: 1.548, b3: 0.555, b4: 1.445 },
+            25: { d3: 0.459, d4: 1.541, b3: 0.565, b4: 1.435 }
+        };
+
+        // --- 20 Industry Segments Data ---
+        const industries = [
+            { id: 1, name: "Automotive Manufacturing", p: "Monitoring the proportion of defective parts across varying daily production batch sizes.", np: "Tracking the exact number of defective vehicles in constant shift production runs of 100 units." },
+            { id: 2, name: "Aerospace Engineering", p: "Analyzing proportion of faulty rivets on varying sizes of fuselage panels.", np: "Monitoring defective turbine blades per fixed batch of 50 units." },
+            { id: 3, name: "Pharmaceuticals Production", p: "Tracking the proportion of contaminated vials across varying liquid batch sizes.", np: "Monitoring rejected blister packs per fixed hourly sample of 200." },
+            { id: 4, name: "Food & Beverage Packaging", p: "Measuring proportion of underfilled cans during fluctuating daily production.", np: "Tracking defective vacuum seals per fixed batch of 500 meals." },
+            { id: 5, name: "Electronics Assembly", p: "Monitoring proportion of failed microchips across varying silicon wafer yields.", np: "Tracking defective smartphones found in constant hourly QA samples of 50." },
+            { id: 6, name: "Medical Device Mfg", p: "Analyzing proportion of faulty syringes in varying supplier lot sizes.", np: "Monitoring defective pacemakers per fixed weekly QA output of 100." },
+            { id: 7, name: "Textile & Apparel", p: "Tracking proportion of flawed garments across varying custom order quantities.", np: "Monitoring defective fabric rolls in fixed daily inspection batches." },
+            { id: 8, name: "Chemical Processing", p: "Analyzing proportion of off-spec solvent batches over varying production schedules.", np: "Tracking rejected drums per constant outbound shipping load of 120." },
+            { id: 9, name: "Semiconductor Fabrication", p: "Monitoring proportion of die defects on wafers of varying diameters.", np: "Tracking failed processors per fixed functional test batch." },
+            { id: 10, name: "Renewable Energy Equipment", p: "Tracking proportion of cracked solar cells across varying daily shipments.", np: "Monitoring defective wind turbine sensors per fixed testing lot." },
+            { id: 11, name: "Construction Materials", p: "Analyzing proportion of cracked bricks across varying delivery truck sizes.", np: "Tracking defective steel beams per fixed inspection batch of 40." },
+            { id: 12, name: "Consumer Packaged Goods (CPG)", p: "Monitoring proportion of damaged packaging across fluctuating daily volume.", np: "Tracking defective soap bars per fixed standard carton." },
+            { id: 13, name: "Metal Fabrication", p: "Analyzing proportion of out-of-tolerance parts across varying custom machining runs.", np: "Tracking defective castings per fixed mold cycle." },
+            { id: 14, name: "Plastic Injection Molding", p: "Monitoring proportion of warped parts across varying hourly run volumes.", np: "Tracking defective bottles per fixed automated vision-check batch." },
+            { id: 15, name: "Software / IT Services", p: "Tracking proportion of buggy lines of code across varying repository commit sizes.", np: "Monitoring failed build tests per fixed regression test suite run." },
+            { id: 16, name: "Telecommunications", p: "Analyzing proportion of dropped network packets over varying daily bandwidth traffic.", np: "Tracking defective routers per fixed pallet of 100 units." },
+            { id: 17, name: "Call Center Operations", p: "Tracking proportion of unresolved tickets against varying daily call volumes.", np: "Monitoring failed QA audits per fixed daily agent sample of 25." },
+            { id: 18, name: "Logistics & Supply Chain", p: "Analyzing proportion of late deliveries against varying daily route assignments.", np: "Tracking damaged packages per fixed standard truckload." },
+            { id: 19, name: "Hospitality & Services", p: "Monitoring proportion of room complaints against varying seasonal occupancy rates.", np: "Tracking incorrect room service orders per fixed sample of 100 orders." },
+            { id: 20, name: "Financial Services", p: "Tracking proportion of processing errors across varying daily transaction volumes.", np: "Monitoring rejected loan applications per fixed daily review batch." }
+        ];
+
+        // --- Dictionary of Randomized Analogies for each Chart Type ---
+        const analogiesDictionary = {
+            'p': [
+                "<strong>The 'Customer Service' Analogy:</strong> Imagine you run a call center. A P-Chart helps you track the percentage of dropped calls each day. Because you receive a different total number of calls every day, the chart dynamically adjusts its limits to give you an accurate proportion.",
+                "<strong>The 'Fruit Inspector' Analogy:</strong> Think of inspecting shipments of apples. You receive different amounts of fruit boxes daily, and you want to track the overall proportion of bruised apples over time to ensure quality isn't slipping.",
+                "<strong>The 'Website Traffic' Analogy:</strong> Imagine tracking visitors on a website. Since daily traffic varies wildly, a P-Chart helps you accurately monitor the proportion of visitors who encounter a 404 error page."
+            ],
+            'np': [
+                "<strong>The 'Baking Cookies' Analogy:</strong> Imagine you bake exactly 100 cookies per batch. An NP-Chart tracks the exact *count* of burnt cookies in every 100-cookie batch to ensure your oven is consistently performing.",
+                "<strong>The 'Smartphone Assembly' Analogy:</strong> If you test a fixed batch of 50 smartphones every hour, the NP-chart safely tracks the exact number of phones that fail the power-on test.",
+                "<strong>The 'Document Audit' Analogy:</strong> Imagine auditing exactly 25 invoices every day. The NP-Chart tracks the exact count of invoices containing errors, making it easy to spot when the error rate spikes."
+            ],
+            'c': [
+                "<strong>The 'Car Door Paint' Analogy:</strong> Imagine inspecting standard-sized car doors. The C-Chart tracks the total number of paint scratches on each door. Since the area (the door) is always the same size, you can fairly compare scratch counts.",
+                "<strong>The 'Fabric Weaving' Analogy:</strong> Think of checking exactly 10 square meters of fabric. The C-chart counts the total number of weaving flaws found within that specific, constant area.",
+                "<strong>The 'PCB Board' Analogy:</strong> Imagine inspecting standard printed circuit boards. The C-Chart counts the exact number of soldering defects found per board, assuming all boards are identical in size and complexity."
+            ],
+            'u': [
+                "<strong>The 'Software Bug' Analogy:</strong> Imagine reviewing lines of code. Since developers write a varying number of lines each day, the U-Chart tracks the rate of bugs <i>per thousand lines</i> of code to keep the comparison fair.",
+                "<strong>The 'Carpet Manufacturing' Analogy:</strong> If you produce carpets of different lengths, the U-Chart helps you track the number of defects <i>per square meter</i> so you can compare the quality of small and large carpets accurately.",
+                "<strong>The 'Hospital Incident' Analogy:</strong> Imagine tracking patient falls in a hospital. Because patient numbers vary daily, the U-Chart tracks the defect rate per 100 patient-days."
+            ],
+            'r': [
+                "<strong>The 'Machined Parts' Analogy:</strong> Imagine cutting steel shafts. The R-Chart measures the difference between the thickest and thinnest shaft in a small batch to monitor how much your machine's precision is drifting.",
+                "<strong>The 'Pizza Delivery' Analogy:</strong> Think of a delivery service. For every 5 deliveries, the R-Chart tracks the time difference between the fastest and slowest delivery, monitoring the consistency of your service.",
+                "<strong>The 'Injection Molding' Analogy:</strong> Imagine molding plastic bottles. The R-Chart measures the range in bottle weights within a small batch to ensure the plastic injector isn't becoming erratic."
+            ],
+            's': [
+                "<strong>The 'Pharmaceuticals' Analogy:</strong> Imagine filling pill capsules. The S-Chart calculates the standard deviation of pill weights in large batches to strictly monitor the variance and ensure safe, uniform dosages.",
+                "<strong>The 'Battery Life' Analogy:</strong> When testing batches of 20 batteries, the S-Chart tracks the standard deviation of their lifespan to ensure every battery performs reliably close to the exact average.",
+                "<strong>The 'Call Center Wait Time' Analogy:</strong> Imagine monitoring hold times. The S-Chart tracks the standard deviation of wait times across hundreds of calls to ensure the wait time variance stays consistently tight."
+            ],
+            'xbar': [
+                "<strong>The 'Coffee Cup' Analogy:</strong> Imagine filling cups of coffee. The X-Bar chart tracks the average volume of coffee in a sample of 5 cups to ensure you are consistently hitting the 12oz target without overfilling or underfilling.",
+                "<strong>The 'Metal Bolt' Analogy:</strong> When producing metal bolts, the X-Bar chart tracks the average length of a random sample of bolts to ensure the overall machine setting hasn't shifted off-center.",
+                "<strong>The 'Package Weight' Analogy:</strong> Imagine filling cereal boxes. The X-Bar chart plots the average weight of 5 boxes coming off the line, ensuring the machine's central target weight is perfectly calibrated."
+            ]
+        };
+
+        let myChart = null;
+        let currentData = {}; 
+        let isManualData = false; 
+
+        // --- Initialization ---
+        window.onload = () => {
+            industries.push({ id: 21, name: "User Defined / Custom Input", p: "User Defined Analysis: Evaluating custom input data for proportional variations.", np: "User Defined Analysis: Evaluating custom input data for absolute defect variations." });
+
+            const select = document.getElementById('industrySegment');
+            industries.forEach((ind, index) => {
+                let option = document.createElement('option');
+                option.value = index;
+                option.text = ind.name;
+                select.appendChild(option);
+            });
+
+            updateUIContext();
+            simulateProcess('stable');
+        };
+
+        // --- UI Context Management ---
+        function updateUIContext() {
+            const type = document.getElementById('chartType').value;
+            const title = document.getElementById('dynamicMainTitle');
+            const desc = document.getElementById('chartDescription');
+            const dataEntryLabel = document.getElementById('dataEntryLabel');
+            const dataInput = document.getElementById('dataInput');
+
+            const isVariableChart = type === 'r' || type === 's' || type === 'xbar';
+
+            if (isVariableChart) {
+                dataEntryLabel.innerText = "Data Entry (n, measure)";
+                dataInput.placeholder = "Format: Sample_Size  Measurement\n5 1.25\n5 1.30\n...";
+            } else {
+                dataEntryLabel.innerText = "Data Entry (n, defects)";
+                dataInput.placeholder = "Format: Sample_Size  Defects\n100 5\n100 3\n...";
+            }
+
+            if (type === 'p') {
+                title.innerText = "P-CHART (PROPORTION DEFECTIVE)";
+                desc.innerText = "The P-Chart monitors process stability by tracking the proportion of non-conforming items. It easily handles attribute data where subgroup sample sizes vary.";
+            } else if (type === 'np') {
+                title.innerText = "NP-CHART (NUMBER DEFECTIVE)";
+                desc.innerText = "The NP-Chart tracks the absolute number of defective units in a process. It is best suited for scenarios where the subgroup size (n) remains constant.";
+            } else if (type === 'c') {
+                title.innerText = "C-CHART (COUNT OF DEFECTS)";
+                desc.innerText = "The C-Chart tracks the total count of defects. It is applied when the area of opportunity (sample size) remains constant.";
+            } else if (type === 'u') {
+                title.innerText = "U-CHART (DEFECTS PER UNIT)";
+                desc.innerText = "The U-Chart monitors the defect rate per unit. It is ideal for processes where the sample size or opportunity for defects varies.";
+            } else if (type === 'r') {
+                title.innerText = "R-CHART (RANGE)";
+                desc.innerText = "The R-Chart monitors process variability by tracking the range of continuous data within subgroups. Used for smaller sample sizes (typically n < 10).";
+            } else if (type === 's') {
+                title.innerText = "S-CHART (STANDARD DEVIATION)";
+                desc.innerText = "The S-Chart monitors process variability by tracking the standard deviation of subgroups. Preferred over R-Charts for larger sample sizes (n > 10).";
+            } else if (type === 'xbar') {
+                title.innerText = "X-BAR CHART (SUBGROUP AVERAGES)";
+                desc.innerText = "The X-Bar Chart monitors the process mean. Because subgroup ranges are not provided in this simplified data entry format, control limits are estimated using the Moving Range (MR) of the inputted subgroup averages.";
+            }
+
+            document.getElementById('error-msg').classList.add('hidden');
+
+            const indIndex = document.getElementById('industrySegment').value;
+            const scenarioDesc = document.getElementById('scenario-desc');
+            if (scenarioDesc && industries[indIndex]) {
+                if (type === 'p') scenarioDesc.innerText = industries[indIndex].p;
+                else if (type === 'np') scenarioDesc.innerText = industries[indIndex].np;
+                else if (type === 'c') scenarioDesc.innerText = `Monitoring total defect counts per constant unit in ${industries[indIndex].name}.`;
+                else if (type === 'u') scenarioDesc.innerText = `Tracking defect rates per varying unit size in ${industries[indIndex].name}.`;
+                else if (type === 'r') scenarioDesc.innerText = `Monitoring process dispersion (Range) for continuous measurements in ${industries[indIndex].name}.`;
+                else if (type === 's') scenarioDesc.innerText = `Tracking standard deviation variability for precision continuous metrics in ${industries[indIndex].name}.`;
+                else if (type === 'xbar') scenarioDesc.innerText = `Monitoring process center/mean (X-Bar) for continuous measurements in ${industries[indIndex].name}.`;
+            }
+
+            if (isManualData) {
+                processData(); 
+            } else {
+                simulateProcess('stable');
+            }
+        }
+
+        function updateIndustryContext() {
+            const indIndex = document.getElementById('industrySegment').value;
+            if (indIndex == 20) {
+                isManualData = true;
+                if (document.getElementById('dataInput').value.trim() !== '') {
+                    processData();
+                }
+            } else {
+                simulateProcess('stable');
+            }
+        }
+
+        // --- Simulation Engine ---
+        function simulateProcess(mode) {
+            isManualData = false; 
+            const type = document.getElementById('chartType').value;
+            const indIndex = document.getElementById('industrySegment').value;
+            const kCount = Math.max(5, Math.min(100, parseInt(document.getElementById('simCount').value) || 25));
+
+            const contextBox = document.getElementById('problem-context');
+            const scenarioDesc = document.getElementById('scenario-desc');
+            const badge = document.getElementById('scenarioStatusBadge');
+
+            contextBox.classList.remove('hidden');
+            if (type === 'p') scenarioDesc.innerText = industries[indIndex].p;
+            else if (type === 'np') scenarioDesc.innerText = industries[indIndex].np;
+            else if (type === 'c') scenarioDesc.innerText = `Monitoring total defect counts per constant unit in ${industries[indIndex].name}.`;
+            else if (type === 'u') scenarioDesc.innerText = `Tracking defect rates per varying unit size in ${industries[indIndex].name}.`;
+            else if (type === 'r') scenarioDesc.innerText = `Monitoring process dispersion (Range) for continuous measurements in ${industries[indIndex].name}.`;
+            else if (type === 's') scenarioDesc.innerText = `Tracking standard deviation variability for precision continuous metrics in ${industries[indIndex].name}.`;
+            else if (type === 'xbar') scenarioDesc.innerText = `Monitoring process center/mean (X-Bar) for continuous measurements in ${industries[indIndex].name}.`;
+
+            if(mode === 'stable') {
+                badge.innerText = "Stable Process";
+                badge.className = "px-2 py-1 rounded text-[10px] font-bold uppercase bg-green-500 text-white";
+            } else {
+                badge.innerText = "Out of Control Process";
+                badge.className = "px-2 py-1 rounded text-[10px] font-bold uppercase bg-red-500 text-white";
+            }
+
+            let dataStr = "";
+            
+            if (type === 'p') {
+                let base_p = 0.05;
+                for (let i = 1; i <= kCount; i++) {
+                    let n = Math.floor(Math.random() * (150 - 50 + 1)) + 50; 
+                    let p = mode === 'stable' ? base_p : base_p;
+                    if (mode === 'ooc' && (i === Math.floor(kCount/2) || i === kCount - 2)) p = 0.18; 
+                    else if (mode === 'stable') p += (Math.random() * 0.04 - 0.02);
+                    else p += (Math.random() * 0.06 - 0.03);
+                    let x = Math.max(0, Math.round(n * p));
+                    dataStr += `${n}\t${x}\n`;
+                }
+            } else if (type === 'np') {
+                let n = 100;
+                for (let i = 1; i <= kCount; i++) {
+                    let x;
+                    if (mode === 'stable') {
+                        x = Math.floor(Math.random() * 6) + 2; 
+                    } else {
+                        if (i % 7 === 0 || i === kCount - 1) x = Math.floor(Math.random() * 8) + 15; 
+                        else x = Math.floor(Math.random() * 5) + 1; 
+                    }
+                    dataStr += `${n}\t${x}\n`;
+                }
+            } else if (type === 'c') {
+                let n = 1; 
+                for (let i = 1; i <= kCount; i++) {
+                    let x;
+                    if (mode === 'stable') {
+                        x = Math.floor(Math.random() * 8) + 5; 
+                    } else {
+                        if (i === Math.floor(kCount/2) || i === kCount - 2) x = Math.floor(Math.random() * 10) + 20; 
+                        else x = Math.floor(Math.random() * 8) + 5; 
+                    }
+                    dataStr += `${n}\t${x}\n`;
+                }
+            } else if (type === 'u') {
+                let base_u = 0.12;
+                for (let i = 1; i <= kCount; i++) {
+                    let n = Math.floor(Math.random() * (150 - 50 + 1)) + 50; 
+                    let u = mode === 'stable' ? base_u : base_u;
+                    if (mode === 'ooc' && (i === Math.floor(kCount/2) || i === kCount - 2)) u = 0.35; 
+                    else if (mode === 'stable') u += (Math.random() * 0.06 - 0.03);
+                    else u += (Math.random() * 0.08 - 0.04);
+                    let x = Math.max(0, Math.round(n * u));
+                    dataStr += `${n}\t${x}\n`;
+                }
+            } else if (type === 'r') {
+                let n = 5; 
+                for (let i = 1; i <= kCount; i++) {
+                    let r;
+                    if (mode === 'stable') r = (Math.random() * 2 + 1.5).toFixed(2);
+                    else {
+                        if (i === Math.floor(kCount/2) || i === kCount - 2) r = (Math.random() * 4 + 5.0).toFixed(2);
+                        else r = (Math.random() * 2 + 1.5).toFixed(2);
+                    }
+                    dataStr += `${n}\t${r}\n`;
+                }
+            } else if (type === 's') {
+                let n = 12; 
+                for (let i = 1; i <= kCount; i++) {
+                    let s;
+                    if (mode === 'stable') s = (Math.random() * 0.5 + 0.5).toFixed(3);
+                    else {
+                        if (i === Math.floor(kCount/2) || i === kCount - 2) s = (Math.random() * 1.5 + 1.5).toFixed(3);
+                        else s = (Math.random() * 0.5 + 0.5).toFixed(3);
+                    }
+                    dataStr += `${n}\t${s}\n`;
+                }
+            } else if (type === 'xbar') {
+                let n = 5; 
+                for (let i = 1; i <= kCount; i++) {
+                    let xbar;
+                    if (mode === 'stable') xbar = (Math.random() * 2 + 50.0).toFixed(2);
+                    else {
+                        if (i === Math.floor(kCount/2) || i === kCount - 2) xbar = (Math.random() * 2 + 56.0).toFixed(2);
+                        else xbar = (Math.random() * 2 + 50.0).toFixed(2);
+                    }
+                    dataStr += `${n}\t${xbar}\n`;
+                }
+            }
+
+            document.getElementById('dataInput').value = dataStr.trim();
+            processData();
+        }
+
+        // --- Core Calculation Engine ---
+        function markManualAndProcess() {
+            isManualData = true;
+            processData();
+        }
+
+        function processData() {
+            const raw = document.getElementById('dataInput').value.trim();
+            const errorDiv = document.getElementById('error-msg');
+
+            if (!raw) {
+                errorDiv.innerText = "Input data is empty. Please enter data or run a simulation.";
+                errorDiv.classList.remove('hidden');
+                if (myChart) { myChart.destroy(); myChart = null; }
+                document.getElementById('analysis-output').classList.add('hidden');
+                return;
+            }
+            
+            errorDiv.classList.add('hidden');
+
+            const type = document.getElementById('chartType').value;
+            const lines = raw.split('\n');
+
+            let labels = [], nArr = [], xArr = [], plotVals = [];
+            let totalN = 0, totalX = 0;
+
+            // Parse Data
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if(!line) continue;
+                let parts = line.split(/[,\t\s]+/).map(Number).filter(n => !isNaN(n));
+                
+                if (parts.length >= 2) {
+                    let n = parts[parts.length - 2];
+                    let x = parts[parts.length - 1];
+                    
+                    // FIX #1: Ensure negative numbers are processed properly ONLY for X-Bar charts.
+                    // Attributes and standard deviations/ranges cannot be physically negative.
+                    if (n > 0 && (x >= 0 || type === 'xbar')) {
+                        labels.push(labels.length + 1);
+                        nArr.push(n);
+                        xArr.push(x);
+                        totalN += n;
+                        totalX += x;
+                    }
+                }
+            }
+
+            if (isManualData) {
+                document.getElementById('simCount').value = labels.length;
+                document.getElementById('industrySegment').value = 20; 
+                
+                document.getElementById('scenarioStatusBadge').innerText = "Custom Input";
+                document.getElementById('scenarioStatusBadge').className = "px-2 py-1 rounded text-[10px] font-bold uppercase bg-purple-600 text-white";
+                
+                if (type === 'p') document.getElementById('scenario-desc').innerText = industries[20].p;
+                else if (type === 'np') document.getElementById('scenario-desc').innerText = industries[20].np;
+                else if (type === 'c') document.getElementById('scenario-desc').innerText = "User Defined Analysis: Evaluating total counts of defects in a constant area of opportunity.";
+                else if (type === 'u') document.getElementById('scenario-desc').innerText = "User Defined Analysis: Evaluating defect rates per unit across varying sample sizes.";
+                else if (type === 'r') document.getElementById('scenario-desc').innerText = "User Defined Analysis: Evaluating process dispersion using subgroup Ranges.";
+                else if (type === 's') document.getElementById('scenario-desc').innerText = "User Defined Analysis: Evaluating process variability using subgroup Standard Deviations.";
+                else if (type === 'xbar') document.getElementById('scenario-desc').innerText = "User Defined Analysis: Evaluating process center/mean using subgroup Averages.";
+                
+                document.getElementById('problem-context').classList.remove('hidden');
+            }
+
+            if (labels.length < 5 || labels.length > 100) {
+                errorDiv.innerHTML = `⚠️ <b>Data Sample Warning:</b> Valid data rows (k) = <b>${labels.length}</b>. For mathematically reliable SPC analysis, please provide between a minimum of <b>5</b> and a maximum of <b>100</b> data samples.`;
+                errorDiv.classList.remove('hidden');
+                if (myChart) { myChart.destroy(); myChart = null; }
+                document.getElementById('analysis-output').classList.add('hidden');
+                return;
+            }
+
+            // --- SPC Math Calculations ---
+            let clArr = [], uclArr = [], lclArr = [], statuses = [];
+            let avgUclArr = [], avgLclArr = []; 
+            let oocCount = 0;
+
+            let avgN = totalN / labels.length;
+            let p_bar = totalX / totalN; 
+            let u_bar = totalX / totalN; 
+            let c_bar = totalX / labels.length; 
+            let r_bar = totalX / labels.length; 
+            let s_bar = totalX / labels.length; 
+            let xbar_bar = totalX / labels.length; 
+
+            if (type === 'p') {
+                let avgStdDev = Math.sqrt((p_bar * (1 - p_bar)) / avgN);
+                let avgUcl = p_bar + (3 * avgStdDev);
+                let avgLcl = Math.max(0, p_bar - (3 * avgStdDev));
+
+                for (let i = 0; i < labels.length; i++) {
+                    let p = xArr[i] / nArr[i];
+                    plotVals.push(p);
+                    clArr.push(p_bar);
+                    let stdDev = Math.sqrt((p_bar * (1 - p_bar)) / nArr[i]);
+                    let ucl = p_bar + (3 * stdDev);
+                    let lcl = Math.max(0, p_bar - (3 * stdDev));
+                    uclArr.push(ucl);
+                    lclArr.push(lcl);
+                    avgUclArr.push(avgUcl);
+                    avgLclArr.push(avgLcl);
+                    let isOoc = (p > ucl + 0.000001) || (p < lcl - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 'np') {
+                let cl = avgN * p_bar;
+                let constantUCL = cl + 3 * Math.sqrt(cl * (1 - p_bar));
+                let constantLCL = Math.max(0, cl - 3 * Math.sqrt(cl * (1 - p_bar)));
+
+                for (let i = 0; i < labels.length; i++) {
+                    plotVals.push(xArr[i]);
+                    clArr.push(cl);
+                    uclArr.push(constantUCL);
+                    lclArr.push(constantLCL);
+                    avgUclArr.push(constantUCL);
+                    avgLclArr.push(constantLCL);
+                    let isOoc = (xArr[i] > constantUCL + 0.000001) || (xArr[i] < constantLCL - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 'c') {
+                let constantUCL = c_bar + 3 * Math.sqrt(c_bar);
+                let constantLCL = Math.max(0, c_bar - 3 * Math.sqrt(c_bar));
+
+                for (let i = 0; i < labels.length; i++) {
+                    plotVals.push(xArr[i]);
+                    clArr.push(c_bar);
+                    uclArr.push(constantUCL);
+                    lclArr.push(constantLCL);
+                    avgUclArr.push(constantUCL);
+                    avgLclArr.push(constantLCL);
+                    let isOoc = (xArr[i] > constantUCL + 0.000001) || (xArr[i] < constantLCL - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 'u') {
+                let avgStdDev = Math.sqrt(u_bar / avgN);
+                let avgUcl = u_bar + (3 * avgStdDev);
+                let avgLcl = Math.max(0, u_bar - (3 * avgStdDev));
+
+                for (let i = 0; i < labels.length; i++) {
+                    let u = xArr[i] / nArr[i];
+                    plotVals.push(u);
+                    clArr.push(u_bar);
+                    let stdDev = Math.sqrt(u_bar / nArr[i]);
+                    let ucl = u_bar + (3 * stdDev);
+                    let lcl = Math.max(0, u_bar - (3 * stdDev));
+                    uclArr.push(ucl);
+                    lclArr.push(lcl);
+                    avgUclArr.push(avgUcl);
+                    avgLclArr.push(avgLcl);
+                    let isOoc = (u > ucl + 0.000001) || (u < lcl - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 'r') {
+                for (let i = 0; i < labels.length; i++) {
+                    let r = xArr[i];
+                    let n = Math.min(25, Math.max(2, nArr[i])); 
+                    let constants = spcConstants[n] || { d3: 0, d4: 1.541 };
+                    
+                    let ucl = constants.d4 * r_bar;
+                    let lcl = constants.d3 * r_bar;
+                    
+                    plotVals.push(r);
+                    clArr.push(r_bar);
+                    uclArr.push(ucl);
+                    lclArr.push(lcl);
+                    avgUclArr.push(ucl);
+                    avgLclArr.push(lcl);
+                    let isOoc = (r > ucl + 0.000001) || (r < lcl - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 's') {
+                for (let i = 0; i < labels.length; i++) {
+                    let s = xArr[i];
+                    let n = Math.min(25, Math.max(2, nArr[i])); 
+                    let constants = spcConstants[n] || { b3: 0.565, b4: 1.435 };
+                    
+                    let ucl = constants.b4 * s_bar;
+                    let lcl = constants.b3 * s_bar;
+                    
+                    plotVals.push(s);
+                    clArr.push(s_bar);
+                    uclArr.push(ucl);
+                    lclArr.push(lcl);
+                    avgUclArr.push(ucl);
+                    avgLclArr.push(lcl);
+                    let isOoc = (s > ucl + 0.000001) || (s < lcl - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            } else if (type === 'xbar') {
+                let mrSum = 0;
+                for (let i = 1; i < labels.length; i++) {
+                    mrSum += Math.abs(xArr[i] - xArr[i-1]);
+                }
+                let mrBar = labels.length > 1 ? mrSum / (labels.length - 1) : 0;
+                let constantUCL = xbar_bar + (2.66 * mrBar);
+                let constantLCL = xbar_bar - (2.66 * mrBar);
+
+                for (let i = 0; i < labels.length; i++) {
+                    plotVals.push(xArr[i]);
+                    clArr.push(xbar_bar);
+                    uclArr.push(constantUCL);
+                    lclArr.push(constantLCL);
+                    avgUclArr.push(constantUCL);
+                    avgLclArr.push(constantLCL);
+                    let isOoc = (xArr[i] > constantUCL + 0.000001) || (xArr[i] < constantLCL - 0.000001);
+                    statuses.push(isOoc);
+                    if (isOoc) oocCount++;
+                }
+            }
+
+            currentData = { type, labels, nArr, xArr, plotVals, clArr, uclArr, lclArr, avgUclArr, avgLclArr, statuses, p_bar, u_bar, c_bar, r_bar, s_bar, xbar_bar, oocCount, totalN, totalX };
+            
+            renderChart();
+            renderAnalysisOutput();
+        }
+
+        // --- Charting Engine ---
+        function renderChart() {
+            const ctx = document.getElementById('controlChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            const { type, labels, plotVals, clArr, uclArr, lclArr, avgUclArr, avgLclArr } = currentData;
+            const isVariableLimits = type === 'p' || type === 'u';
+            const showLabels = document.getElementById('showLabelsToggle').checked;
+
+            const allVals = [...plotVals, ...uclArr, ...lclArr];
+            const minVal = Math.min(...allVals);
+            const maxVal = Math.max(...allVals);
+            const range = maxVal - minVal;
+            const yMax = maxVal + (range * 0.2) + (isVariableLimits ? 0.02 : 2);
+            // Dynamic minimum allowance for X-Bar charting negative numbers
+            const yMin = type === 'xbar' ? minVal - (range * 0.2) : Math.max(0, minVal - (range * 0.2));
+
+            let plotLabel = '';
+            let yAxisLabel = '';
+            if(type === 'p') { plotLabel = 'Proportion (p)'; yAxisLabel = 'Proportion Defective'; }
+            if(type === 'np') { plotLabel = 'Defectives (np)'; yAxisLabel = 'Count of Defectives'; }
+            if(type === 'c') { plotLabel = 'Defect Count (c)'; yAxisLabel = 'Total Defect Count'; }
+            if(type === 'u') { plotLabel = 'Defects per Unit (u)'; yAxisLabel = 'Defects Rate per Unit'; }
+            if(type === 'r') { plotLabel = 'Range (R)'; yAxisLabel = 'Subgroup Range'; }
+            if(type === 's') { plotLabel = 'Std Dev (S)'; yAxisLabel = 'Subgroup Std Dev'; }
+            if(type === 'xbar') { plotLabel = 'Mean (X-Bar)'; yAxisLabel = 'Subgroup Average'; }
+
+            let datasets = [
+                { 
+                    label: plotLabel, 
+                    data: plotVals, 
+                    borderColor: '#4472C4', backgroundColor: '#4472C4', 
+                    borderWidth: 2.5, tension: 0.1, pointRadius: 4, pointHoverRadius: 6, z: 10 
+                },
+                { 
+                    label: isVariableLimits ? 'UCL (Exact Stepped)' : 'UCL', data: uclArr, 
+                    borderColor: '#333333', borderWidth: 2, pointRadius: 0, 
+                    stepped: isVariableLimits, borderDash: isVariableLimits ? [] : [5,5], fill: false 
+                },
+                { 
+                    label: 'Center Line', data: clArr, 
+                    borderColor: '#ED7D31', borderWidth: 2, pointRadius: 0, 
+                    fill: false 
+                },
+                { 
+                    label: isVariableLimits ? 'LCL (Exact Stepped)' : 'LCL', data: lclArr, 
+                    borderColor: '#FFC000', borderWidth: 2, pointRadius: 0, 
+                    stepped: isVariableLimits, borderDash: isVariableLimits ? [] : [5,5], fill: false 
+                }
+            ];
+
+            if (isVariableLimits) {
+                datasets.push({
+                    label: 'Avg UCL (Straight)', data: avgUclArr,
+                    borderColor: '#9ca3af', borderWidth: 1.5, pointRadius: 0,
+                    borderDash: [4,4], fill: false
+                });
+                datasets.push({
+                    label: 'Avg LCL (Straight)', data: avgLclArr,
+                    borderColor: '#9ca3af', borderWidth: 1.5, pointRadius: 0,
+                    borderDash: [4,4], fill: false
+                });
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    animation: false, 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    layout: { padding: { top: 20 } },
+                    plugins: {
+                        datalabels: {
+                            display: function(context) {
+                                return showLabels && context.datasetIndex === 0; 
+                            },
+                            align: 'top',
+                            anchor: 'end',
+                            offset: 3,
+                            color: '#003366',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: function(value) {
+                                return (type === 'xbar' || type === 'p' || type === 'u' || type === 's') ? value.toFixed(3) : value.toFixed(2); 
+                            }
+                        },
+                        title: { display: true, text: `ATTRIBUTE ${type.toUpperCase()}-CHART`, font: { size: 18, weight: 'bold' }, color: '#003366' },
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }
+                    },
+                    scales: {
+                        y: { 
+                            min: yMin, max: yMax,
+                            title: { display: true, text: yAxisLabel, font: {weight: 'bold'} },
+                            grid: { color: '#f0f0f0' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Subgroup / Sample Number' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- HTML Rendering Engine ---
+        function renderAnalysisOutput() {
+            document.getElementById('analysis-output').classList.remove('hidden');
+            const { type, labels, nArr, xArr, plotVals, clArr, uclArr, lclArr, avgUclArr, avgLclArr, statuses, p_bar, u_bar, c_bar, r_bar, s_bar, xbar_bar, oocCount, totalN, totalX } = currentData;
+            const isVariableLimits = type === 'p' || type === 'u';
+            const isVariableChart = type === 'r' || type === 's' || type === 'xbar';
+
+            let avgVal = '';
+            let avgLabel = '';
+            if(type === 'p') { avgVal = p_bar.toFixed(4); avgLabel = 'Average (\\xbar{p})'; }
+            if(type === 'np') { avgVal = clArr[0].toFixed(2); avgLabel = 'Average (CL)'; }
+            if(type === 'c') { avgVal = c_bar.toFixed(3); avgLabel = 'Average (\\xbar{c})'; }
+            if(type === 'u') { avgVal = u_bar.toFixed(4); avgLabel = 'Average (\\xbar{u})'; }
+            if(type === 'r') { avgVal = r_bar.toFixed(3); avgLabel = 'Average Range (\\xbar{R})'; }
+            if(type === 's') { avgVal = s_bar.toFixed(3); avgLabel = 'Average Std Dev (\\xbar{S})'; }
+            if(type === 'xbar') { avgVal = xbar_bar.toFixed(3); avgLabel = 'Grand Avg (\\xbar{\\xbar{X}})'; }
+
+            const uclVal = isVariableLimits ? avgUclArr[0].toFixed(3) : uclArr[0].toFixed(3);
+            const lclVal = isVariableLimits ? avgLclArr[0].toFixed(3) : lclArr[0].toFixed(3);
+            const uclLabel = isVariableLimits ? 'Avg UCL' : 'UCL';
+            const lclLabel = isVariableLimits ? 'Avg LCL' : 'LCL';
+
+            const grid = document.getElementById('stat-grid');
+            grid.innerHTML = `
+                <div class="p-4 rounded-xl shadow-md text-center bg-gradient-to-br from-blue-600 to-blue-800 text-white transform transition-transform hover:scale-105">
+                    <span class="block text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">Total Samples (n)</span>
+                    <span class="text-3xl font-black drop-shadow-md">${totalN.toLocaleString()}</span>
+                </div>
+                <div class="p-4 rounded-xl shadow-md text-center bg-gradient-to-br from-indigo-500 to-indigo-700 text-white transform transition-transform hover:scale-105">
+                    <span class="block text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">${(isVariableChart) ? 'Sum of Measures (Σx)' : 'Total Defectives (x)'}</span>
+                    <span class="text-3xl font-black drop-shadow-md">${(isVariableChart) ? totalX.toFixed(2) : totalX.toLocaleString()}</span>
+                </div>
+                <div class="p-4 rounded-xl shadow-md text-center bg-gradient-to-br from-orange-500 to-orange-700 text-white transform transition-transform hover:scale-105">
+                    <span class="block text-[10px] font-black text-orange-200 uppercase tracking-widest mb-1">${avgLabel}</span>
+                    <span class="text-3xl font-black drop-shadow-md">${avgVal}</span>
+                </div>
+                <div class="p-4 rounded-xl shadow-md text-center bg-gradient-to-br from-purple-600 to-purple-800 text-white transform transition-transform hover:scale-105">
+                    <span class="block text-[10px] font-black text-purple-200 uppercase tracking-widest mb-1">${uclLabel} (Upper Limit)</span>
+                    <span class="text-3xl font-black drop-shadow-md">${uclVal}</span>
+                </div>
+                <div class="p-4 rounded-xl shadow-md text-center bg-gradient-to-br from-fuchsia-600 to-fuchsia-800 text-white transform transition-transform hover:scale-105">
+                    <span class="block text-[10px] font-black text-fuchsia-200 uppercase tracking-widest mb-1">${lclLabel} (Lower Limit)</span>
+                    <span class="text-3xl font-black drop-shadow-md">${lclVal}</span>
+                </div>
+                <div class="p-4 rounded-xl shadow-md text-center text-white transform transition-transform hover:scale-105 ${oocCount > 0 ? 'bg-gradient-to-br from-red-600 to-red-900' : 'bg-gradient-to-br from-green-500 to-green-700'}">
+                    <span class="block text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">Alarms Detected</span>
+                    <span class="text-3xl font-black drop-shadow-md">${oocCount}</span>
+                </div>
+            `;
+
+            let npWarning = "";
+            let isNConstant = nArr.every(val => val === nArr[0]);
+            if ((type === 'np' || type === 'c' || type === 'r' || type === 's') && !isNConstant) {
+                npWarning = `<span class="inline-block text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200 mr-1 mb-1">⚠️ WARNING: VARYING SAMPLE SIZES</span> You are using a chart designed for constant sample sizes, but your subgroup sizes (n) vary. The limits shown are dynamically calculated or approximate. Please ensure this fits your analysis criteria.`;
+            }
+
+            document.getElementById('interpretation-text').innerHTML = `
+                <div class="mb-2">The process was evaluated using a <strong>${type.toUpperCase()}-Chart</strong> across <strong>${labels.length}</strong> subgroups.</div>
+                ${oocCount > 0 
+                    ? `<div class="mb-2"><span class="inline-block text-red-600 font-bold bg-red-50 px-2 py-1 rounded mr-1 mb-1">⚠️ SPECIAL CAUSE VARIATION DETECTED</span> The process is statistically OUT OF CONTROL. Investigate the ${oocCount} alarm point(s) to determine root assignable causes.</div>` 
+                    : `<div class="mb-2"><span class="inline-block text-green-700 font-bold bg-green-50 px-2 py-1 rounded mr-1 mb-1">✅ PROCESS IS STABLE</span> Only common cause variation is present. No immediate corrective action is required on process outputs.</div>`}
+                ${npWarning ? `<div class="mt-1">${npWarning}</div>` : ''}
+            `;
+
+            let plotColHeader = '';
+            if(type === 'p') plotColHeader = 'Prop (p)';
+            if(type === 'np') plotColHeader = 'Count (np)';
+            if(type === 'c') plotColHeader = 'Count (c)';
+            if(type === 'u') plotColHeader = 'Rate (u)';
+            if(type === 'r') plotColHeader = 'Range (R)';
+            if(type === 's') plotColHeader = 'Std Dev (S)';
+            if(type === 'xbar') plotColHeader = 'Mean (X-Bar)';
+
+            const thead = document.getElementById('table-head');
+            thead.innerHTML = `
+                <tr>
+                    <th class="p-3 border-r border-b">Subgroup (k)</th>
+                    <th class="p-3 border-r border-b">Sample (n)</th>
+                    <th class="p-3 border-r border-b">${(isVariableChart) ? 'Input Measure' : 'Defects (x)'}</th>
+                    <th class="p-3 border-r border-b">${plotColHeader}</th>
+                    <th class="p-3 border-r border-b text-orange-600">Center Line</th>
+                    <th class="p-3 border-r border-b text-gray-900">UCL</th>
+                    <th class="p-3 border-r border-b text-yellow-600">LCL</th>
+                    <th class="p-3 border-b">Status</th>
+                </tr>
+            `;
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = labels.map((lbl, i) => {
+                return `
+                    <tr class="border-b transition-colors ${statuses[i] ? 'bg-red-50' : 'hover:bg-gray-50'}">
+                        <td class="p-2 border-r font-bold text-gray-500">${lbl}</td>
+                        <td class="p-2 border-r">${nArr[i]}</td>
+                        <td class="p-2 border-r font-semibold">${xArr[i]}</td>
+                        <td class="p-2 border-r font-mono text-blue-800">${plotVals[i].toFixed(4)}</td>
+                        <td class="p-2 border-r font-mono text-orange-600">${clArr[i].toFixed(4)}</td>
+                        <td class="p-2 border-r font-mono text-gray-800">${uclArr[i].toFixed(4)}</td>
+                        <td class="p-2 border-r font-mono text-yellow-600">${lclArr[i].toFixed(4)}</td>
+                        <td class="p-2 font-black text-[10px] ${statuses[i] ? 'text-red-600' : 'text-green-600'}">${statuses[i] ? 'OUT OF CONTROL' : 'STABLE'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const kbAnalogy = document.getElementById('kb-analogy');
+            const kbTerms = document.getElementById('kb-terms-list');
+            
+            const specificAnalogies = analogiesDictionary[type];
+            const randomAnalogy = specificAnalogies[Math.floor(Math.random() * specificAnalogies.length)];
+            
+            kbAnalogy.innerHTML = randomAnalogy;
+            
+            if (isVariableChart) {
+                kbTerms.innerHTML = `
+                    <li><strong class="text-blue-900">Subgroup (k):</strong> A continuous batch of items measured at one specific time.</li>
+                    <li><strong class="text-blue-900">Sample (n):</strong> How many items you randomly measured in that specific batch.</li>
+                    <li><strong class="text-blue-900">Input Measure (x):</strong> The exact continuous data measurement (e.g., width, weight, time) recorded.</li>
+                    <li><strong class="text-blue-900">Metric (X-Bar/R/S):</strong> The mathematical average, dispersion, or variance within that specific batch.</li>
+                    <li><strong class="text-blue-900">Center Line (CL):</strong> The historical average of the variation across <i>all</i> measured batches.</li>
+                    <li><strong class="text-blue-900">Control Limits (UCL / LCL):</strong> The statistical limits of natural variance. Breaching these limits means a Special Cause is actively making your machine unstable.</li>
+                `;
+            } else {
+                kbTerms.innerHTML = `
+                    <li><strong class="text-blue-900">Subgroup (k):</strong> A discrete batch of items inspected at one specific time.</li>
+                    <li><strong class="text-blue-900">Sample (n):</strong> How many items/units you randomly inspected or the area of opportunity.</li>
+                    <li><strong class="text-blue-900">Defects (x):</strong> The number of flawed items or total flaws found.</li>
+                    <li><strong class="text-blue-900">Metric (p/np/c/u):</strong> The standard metric used to quantify the defect rate or count for that batch.</li>
+                    <li><strong class="text-blue-900">Center Line (CL):</strong> The historical average of defects/rates across <i>all</i> batches. The "Expected Norm".</li>
+                    <li><strong class="text-blue-900">Control Limits (UCL / LCL):</strong> The mathematical "guardrails" of your process. If a batch lands outside these limits, the process is fundamentally broken (Special Cause), it is not just random bad luck (Common Cause).</li>
+                `;
+            }
+        }
+
+        // --- Utilities ---
+        function toggleLabels() {
+            if (myChart) {
+                const showLabels = document.getElementById('showLabelsToggle').checked;
+                myChart.options.plugins.datalabels.display = function(context) {
+                    return showLabels && context.datasetIndex === 0;
+                };
+                myChart.update();
+            }
+        }
+
+        function clearData() {
+            document.getElementById('dataInput').value = '';
+            document.getElementById('analysis-output').classList.add('hidden');
+            document.getElementById('problem-context').classList.add('hidden');
+            document.getElementById('error-msg').classList.add('hidden');
+            if (myChart) myChart.destroy();
+            myChart = null;
+            currentData = {};
+        }
+
+        function showToast() {
+            const toast = document.getElementById('copyToast');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -1rem)';
+            }, 2000);
+        }
+
+        function copyText(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast();
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function copyStatsToClipboard() {
+            if (!currentData.labels) return;
+            // FIX #4: Lock clipboard values to 2 decimals for cleaner output on variable charts
+            const isVariable = currentData.type === 'r' || currentData.type === 's' || currentData.type === 'xbar';
+            const formattedX = isVariable ? currentData.totalX.toFixed(2) : currentData.totalX;
+            const text = `SPC ANALYSIS REPORT\nType: ${currentData.type.toUpperCase()}-Chart\nTotal N: ${currentData.totalN}\n${isVariable ? 'Sum of Measures' : 'Total Defects'}: ${formattedX}\nAlarms: ${currentData.oocCount}`;
+            copyText(text);
+        }
+
+        function copyTableToClipboard() {
+            const table = document.getElementById("ledgerTable");
+            if (!table) return;
+            let tsv = [];
+            for (let i = 0; i < table.rows.length; i++) {
+                let row = [];
+                for (let j = 0; j < table.rows[i].cells.length; j++) {
+                    row.push(table.rows[i].cells[j].innerText);
+                }
+                tsv.push(row.join("\t")); 
+            }
+            copyText(tsv.join("\n"));
+        }
+
+        function exportToExcel() {
+            if (!currentData.labels || currentData.labels.length === 0) {
+                alert("No data available to export.");
+                return;
+            }
+            const { type, labels, nArr, xArr, plotVals, clArr, uclArr, lclArr, statuses } = currentData;
+            
+            let valueLabel = '';
+            if(type === 'p') valueLabel = 'Proportion(p)';
+            if(type === 'np') valueLabel = 'Count(np)';
+            if(type === 'c') valueLabel = 'Count(c)';
+            if(type === 'u') valueLabel = 'Rate(u)';
+            if(type === 'r') valueLabel = 'Range(R)';
+            if(type === 's') valueLabel = 'StdDev(S)';
+            if(type === 'xbar') valueLabel = 'Mean(X-Bar)';
+
+            const isVariable = type === 'r' || type === 's' || type === 'xbar';
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // FIX #3: Eliminate redundant double columns in Excel for variable charts
+            if (isVariable) {
+                csvContent += `Subgroup,Sample(n),${valueLabel},CenterLine,UCL,LCL,Status\n`;
+            } else {
+                csvContent += `Subgroup,Sample(n),Defects(x),${valueLabel},CenterLine,UCL,LCL,Status\n`;
+            }
+
+            for (let i = 0; i < labels.length; i++) {
+                let row = isVariable 
+                    ? [labels[i], nArr[i], plotVals[i].toFixed(5), clArr[i].toFixed(5), uclArr[i].toFixed(5), lclArr[i].toFixed(5), statuses[i] ? "OOC" : "OK"]
+                    : [labels[i], nArr[i], xArr[i], plotVals[i].toFixed(5), clArr[i].toFixed(5), uclArr[i].toFixed(5), lclArr[i].toFixed(5), statuses[i] ? "OOC" : "OK"];
+                csvContent += row.join(",") + "\n";
+            }
+
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            // FIX #2: Name of the downloaded Excel file corrected
+            link.setAttribute("download", `MECTS_${type.toUpperCase()}_Chart_Export.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- NEW PDF Generation Engine (Section-Specific Support) ---
+        async function generatePDF(targetId, sectionName) {
+            if (!currentData.labels || currentData.labels.length === 0) {
+                alert("No data to generate PDF. Please analyze data first.");
+                return;
+            }
+
+            let triggerBtn = null;
+            let originalText = "";
+            try { triggerBtn = event.currentTarget; originalText = triggerBtn.innerHTML; triggerBtn.innerHTML = 'Generating...'; } catch(e){}
+
+            window.scrollTo(0, 0);
+
+            const element = document.getElementById(targetId);
+            document.body.classList.add('pdf-mode');
+            element.classList.add('pdf-target');
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const chartSelect = document.getElementById('chartType');
+            const chartTypeName = chartSelect.options[chartSelect.selectedIndex].text.split(' - ')[0];
+
+            const opt = {
+                margin: [1.05, 0.5, 0.5, 0.5], 
+                filename: `MECTS_${sectionName.replace(/\s+/g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    windowWidth: 850, 
+                    width: 850, 
+                    scrollY: 0,
+                    scrollX: 0
+                }, 
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            };
+
+            try {
+                await html2pdf().from(element).set(opt).toPdf().get('pdf').then(function(pdf) {
+                    const totalPages = pdf.internal.getNumberOfPages();
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const pageHeight = pdf.internal.pageSize.getHeight();
+                    
+                    for (let i = 1; i <= totalPages; i++) {
+                        pdf.setPage(i);
+                        
+                        pdf.setFillColor(0, 0, 0); 
+                        pdf.rect(0, 0, pageWidth, 0.90, 'F'); 
+                        
+                        pdf.setFillColor(234, 179, 8);
+                        pdf.rect(0, 0.90, pageWidth, 0.05, 'F');
+
+                        pdf.setTextColor(234, 179, 8);
+                        pdf.setFontSize(10); 
+                        pdf.setFont("helvetica", "bold");
+                        pdf.text("MECTS SET......GO", pageWidth / 2, 0.20, { align: "center" });
+
+                        pdf.setTextColor(200, 200, 200);
+                        pdf.setFontSize(6);
+                        pdf.setFont("helvetica", "bold");
+                        pdf.text("MANAGING EFFECTIVE CORPORATE TRAINING SOLUTIONS", pageWidth / 2, 0.30, { align: "center" });
+
+                        pdf.setTextColor(234, 179, 8);
+                        pdf.setFontSize(12); 
+                        pdf.text("STATISTICAL PROCESS CONTROL", pageWidth / 2, 0.46, { align: "center" });
+
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.setFontSize(10); 
+                        pdf.text("ANALYTICS SUITE", pageWidth / 2, 0.58, { align: "center" });
+
+                        pdf.setTextColor(234, 179, 8);
+                        pdf.setFontSize(9); 
+                        pdf.text("(SPC)", pageWidth / 2, 0.70, { align: "center" });
+
+                        pdf.setTextColor(255, 255, 255);
+                        pdf.setFontSize(9);
+                        pdf.text(`${chartTypeName.toUpperCase()}  |  ${sectionName.toUpperCase()}`, pageWidth / 2, 0.82, { align: "center" });
+
+                        pdf.setTextColor(150, 150, 150);
+                        pdf.setFontSize(9);
+                        pdf.setFont("helvetica", "normal");
+                        pdf.text(`Page ${i} of ${totalPages}`, pageWidth - 0.5, pageHeight - 0.3, { align: "right" });
+                        
+                        pdf.setFontSize(7);
+                        pdf.text("MANAGEMENT REVIEW DOCUMENT - CONFIDENTIAL", pageWidth / 2, pageHeight - 0.3, { align: "center" });
+                    }
+                }).save();
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred while generating the PDF.");
+            } finally {
+                document.body.classList.remove('pdf-mode');
+                element.classList.remove('pdf-target');
+                if(triggerBtn) triggerBtn.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>

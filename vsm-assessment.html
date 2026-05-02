@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VSM Corporate Assessment | MECTS SET</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; overflow-x: hidden; }
+        .hide { display: none !important; }
+        .corp-header { background: #000000; color: #ffffff; position: sticky; top: 0; z-index: 100; }
+        .vsm-title { letter-spacing: 0.1em; font-weight: 700; }
+        .login-header { color: #1e3a8a; font-weight: 800; text-transform: uppercase; }
+        .level-card { transition: all 0.2s ease; cursor: pointer; border: 2px solid transparent; }
+        .level-card:hover { transform: translateY(-2px); }
+        .level-basic { background: #16a34a; color: white; } 
+        .level-int { background: #d97706; color: white; }   
+        .level-adv { background: #dc2626; color: white; }   
+        .level-selected { border-color: #000 !important; outline: 3px solid #fbbf24; }
+        .race-btn { background: #000000; color: #ffffff; transition: all 0.2s; border-bottom: 4px solid #fbbf24; font-weight: 800; letter-spacing: 0.05em; }
+        .race-btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+        .ans-btn { transition: all 0.2s; border: 1px solid #e2e8f0; background: white; width: 100%; text-align: left; padding: 1rem 1.25rem; }
+        .ans-selected { border-color: #1e3a8a !important; background-color: #eff6ff !important; font-weight: 700; color: #1e3a8a; }
+        .app-card { background: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        #hold-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #000; width: 0%; transition: width 3s linear; }
+        .score-red { background-color: #fee2e2; color: #991b1b; } 
+        .score-green { background-color: #dcfce7; color: #166534; } 
+        .ans-correct { background-color: #dcfce7 !important; border-color: #16a34a !important; color: #166534; }
+        .ans-wrong { background-color: #fee2e2 !important; border-color: #dc2626 !important; color: #991b1b; }
+    </style>
+</head>
+<body class="text-slate-900 min-h-screen pb-20">
+
+    <header class="corp-header w-full py-4 px-8 border-b-4 border-yellow-400">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div id="admin-trigger" class="bg-yellow-400 text-black px-4 py-1.5 rounded font-extrabold text-lg select-none relative">
+                    MECTS
+                    <div id="hold-progress"></div>
+                </div>
+                <h1 class="vsm-title text-base uppercase hidden sm:block">VSM Corporate Assessment</h1>
+            </div>
+            <div id="admin-status" class="hide flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Trainer Active</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-[9999] flex flex-col items-center justify-center">
+        <div class="text-blue-900 font-bold text-xl animate-pulse uppercase tracking-widest">Initialising Assessment Portal...</div>
+        <p class="text-[10px] text-slate-400 mt-4 uppercase">Waiting for Secure Connection</p>
+    </div>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="modal-admin-auth" class="modal-overlay hide">
+        <div class="bg-white p-8 rounded-xl max-w-xs w-full shadow-2xl">
+            <h3 class="text-xs font-bold uppercase mb-4 text-center tracking-widest">Trainer Access Required</h3>
+            <input type="password" id="admin-password-input" placeholder="ACCESS CODE" class="w-full p-4 bg-slate-50 rounded-lg font-bold border border-slate-200 focus:border-blue-900 outline-none text-center mb-4">
+            <div class="grid grid-cols-2 gap-2">
+                <button id="btn-admin-verify" class="py-3 bg-blue-900 text-white font-bold rounded-lg uppercase text-[10px]">Verify</button>
+                <button id="btn-admin-cancel" class="py-3 bg-slate-100 text-slate-500 font-bold rounded-lg uppercase text-[10px]">Cancel</button>
+            </div>
+            <p id="admin-auth-error" class="text-red-500 text-[10px] font-bold uppercase mt-3 text-center hide">Invalid Code</p>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 mt-12">
+        
+        <!-- LOGIN VIEW -->
+        <div id="view-login" class="max-w-lg mx-auto app-card p-10 relative overflow-hidden">
+            <h2 class="login-header text-2xl text-center mb-10">Your Login Credentials</h2>
+            <div class="space-y-6">
+                <input type="text" id="input-name" placeholder="FULL NAME" class="w-full p-4 bg-slate-50 rounded-lg font-semibold border border-slate-200 outline-none focus:border-blue-900 uppercase">
+                <input type="text" id="input-code" placeholder="EMPLOYEE ID" class="w-full p-4 bg-slate-50 rounded-lg font-semibold border border-slate-200 outline-none focus:border-blue-900 uppercase">
+                <input type="text" id="input-dept" placeholder="DEPARTMENT" class="w-full p-4 bg-slate-50 rounded-lg font-semibold border border-slate-200 outline-none focus:border-blue-900 uppercase">
+                
+                <p class="text-[11px] font-bold uppercase text-slate-400 pt-4 text-center">Select Assessment Level</p>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="level-card level-basic p-4 rounded-lg text-center" data-level="Basic">
+                        <span class="block font-bold text-xs uppercase">BASIC</span>
+                    </div>
+                    <div class="level-card level-int p-4 rounded-lg text-center" data-level="Intermediate">
+                        <span class="block font-bold text-xs uppercase">INTERMEDIATE</span>
+                    </div>
+                    <div class="level-card level-adv p-4 rounded-lg text-center" data-level="Advanced">
+                        <span class="block font-bold text-xs uppercase">ADVANCED</span>
+                    </div>
+                </div>
+
+                <div class="pt-8">
+                    <button id="btn-start" class="race-btn w-full p-5 rounded-lg text-xl uppercase">MECTS ... SET ... GO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN VIEW -->
+        <div id="view-admin" class="max-w-6xl mx-auto app-card p-8 hide">
+            <div class="flex justify-between items-center mb-6 border-b pb-6">
+                <h2 class="font-bold uppercase text-xl text-blue-900">Telemetry Console</h2>
+                <div class="flex gap-2">
+                    <button id="btn-clear-data" class="bg-red-50 text-red-600 px-4 py-2 rounded text-[11px] font-bold uppercase">Clear Records</button>
+                    <button id="btn-exit-admin" class="bg-slate-100 px-4 py-2 rounded text-[11px] font-bold uppercase">Exit</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="text-[11px] uppercase text-slate-400 border-b">
+                            <th class="p-3">S.NO</th>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Level</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-log-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TEST VIEW -->
+        <div id="view-test" class="max-w-4xl mx-auto space-y-6 hide">
+            <div class="sticky top-[72px] z-40 bg-white border-b-2 border-slate-200 p-5 flex justify-between items-center rounded-lg shadow-sm">
+                <div>
+                    <p id="display-user" class="font-extrabold uppercase text-2xl tracking-tight text-blue-900">--</p>
+                    <p id="display-level" class="text-sm font-bold text-slate-500 uppercase">--</p>
+                </div>
+                <div id="progress-text" class="text-[11px] font-bold text-slate-400 uppercase">Question 0 / 25</div>
+            </div>
+            <div id="questions-container" class="space-y-6"></div>
+            <div id="submit-section" class="py-12">
+                <button id="btn-submit-main" class="w-full p-6 bg-blue-900 text-white font-bold rounded-lg uppercase shadow-lg text-xl">Finish Assessment</button>
+                <p id="err-msg" class="text-center text-red-600 text-[11px] font-bold mt-4 hide uppercase tracking-widest">Answer all questions to proceed.</p>
+            </div>
+            <button id="btn-final-home" onclick="location.reload()" class="hide w-full p-6 bg-slate-900 text-white font-bold rounded-lg uppercase">Return to Login</button>
+        </div>
+
+    </main>
+
+    <!-- SCORE MODAL -->
+    <div id="modal-score" class="modal-overlay hide">
+        <div class="bg-white p-10 rounded-2xl max-w-sm w-full text-center shadow-2xl">
+            <h3 class="text-xl font-bold uppercase mb-6">Assessment Results</h3>
+            <div class="bg-slate-50 py-8 rounded-xl mb-8 border border-slate-100">
+                <span id="final-score-val" class="text-6xl font-extrabold text-blue-900">0%</span>
+                <p id="pass-status" class="text-[11px] font-bold uppercase mt-4 text-slate-500">--</p>
+            </div>
+            <button id="btn-do-review" class="w-full py-4 bg-blue-900 text-white font-bold rounded-lg uppercase text-xs">Review Answers</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, doc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CONFIGURATION HANDLER
+        const configStr = window.__firebase_config || '{}';
+        const config = JSON.parse(configStr);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vsm-mects-set';
+        
+        let db, auth;
+        let isFirebaseActive = false;
+
+        // Try initializing Firebase, but don't let it block the app
+        try {
+            if (config.apiKey) {
+                const fb = initializeApp(config);
+                auth = getAuth(fb);
+                db = getFirestore(fb);
+                isFirebaseActive = true;
+            }
+        } catch (e) {
+            console.warn("Firebase Init Failed:", e);
+        }
+
+        let selectedLevel = null;
+        let activeQuestions = [];
+        let userAnswers = {};
+        let currentUser = null;
+
+        const MASTER_BANK = {
+            Basic: [
+                { q: "What does VSM stand for in Lean Manufacturing?", opts: ["Value Stream Mapping", "Variable System Management", "Validated Stream Monitoring", "Value Source Method"], a: "Value Stream Mapping" },
+                { q: "Lean production primarily focuses on:", opts: ["Waste elimination", "Maximizing inventory", "Increasing labor", "Reducing quality"], a: "Waste elimination" },
+                { q: "Which of these is one of the 8 wastes?", opts: ["Overproduction", "On-time delivery", "High quality", "Employee safety"], a: "Overproduction" },
+                { q: "What does the 'S' in 5S stand for regarding Seiton?", opts: ["Set in order", "Sort", "Shine", "Sustain"], a: "Set in order" },
+                { q: "Takt time is defined as:", opts: ["Pace of customer demand", "Machine cycle time", "Total lead time", "Employee break time"], a: "Pace of customer demand" },
+                { q: "A Kanban system is used for:", opts: ["Material replenishment", "Product design", "Payroll processing", "Quality auditing"], a: "Material replenishment" },
+                { q: "Which principle focuses on reducing lead time in a production environment?", opts: ["Inventory reduction", "Cycle time increase", "Overproduction", "Defect masking"], a: "Inventory reduction" },
+                { q: "The 5S methodology is primarily about:", opts: ["Workplace organization", "Fast shipping", "Selling products", "Software development"], a: "Workplace organization" },
+                { q: "Standardized work is essential because it:", opts: ["Provides a baseline for improvement", "Increases variability", "Is only for automation", "Decreases safety"], a: "Provides a baseline for improvement" },
+                { q: "Gemba refers to:", opts: ["The actual place where value is created", "The executive office", "The customer service center", "The warehouse annex"], a: "The actual place where value is created" },
+                { q: "What is Kaizen?", opts: ["Continuous improvement", "Radical restructuring", "Static standards", "Mass production"], a: "Continuous improvement" },
+                { q: "Which tool helps visualize workflow and limits WIP?", opts: ["Kanban board", "Histogram", "Gantt chart", "Scatter plot"], a: "Kanban board" },
+                { q: "Muda is the Japanese term for:", opts: ["Waste", "Unevenness", "Overburden", "Flow"], a: "Waste" },
+                { q: "Value is defined in lean from the perspective of the:", opts: ["Customer", "CEO", "Shareholder", "Supplier"], a: "Customer" },
+                { q: "PDCA stands for:", opts: ["Plan-Do-Check-Act", "Pre-Deliver-Check-Analyze", "Process-Design-Control-Adjust", "Plan-Draft-Change-Assign"], a: "Plan-Do-Check-Act" },
+                { q: "The goal of 5S is to create a workspace that is:", opts: ["Visual and organized", "Dark and quiet", "Complex and detailed", "Large and expensive"], a: "Visual and organized" },
+                { q: "Over-processing is a form of:", opts: ["Waste", "Efficiency", "Value-add", "Quality"], a: "Waste" },
+                { q: "A 'Push' system is triggered by:", opts: ["Schedules and forecasts", "Customer orders", "Real-time consumption", "Machine availability"], a: "Schedules and forecasts" },
+                { q: "Andon is a system to notify management of:", opts: ["Quality or process problems", "Daily sales figures", "Employee birthdays", "New inventory arrivals"], a: "Quality or process problems" },
+                { q: "Single piece flow helps to:", opts: ["Reduce WIP", "Increase inventory", "Slow down production", "Increase lead time"], a: "Reduce WIP" },
+                { q: "Which of the following is NOT a type of waste?", opts: ["Customer Satisfaction", "Motion", "Waiting", "Defects"], a: "Customer Satisfaction" },
+                { q: "The first step in 5S is:", opts: ["Seiri (Sort)", "Seiso (Shine)", "Seiton (Set)", "Shitsuke (Sustain)"], a: "Seiri (Sort)" },
+                { q: "Total Productive Maintenance (TPM) focuses on:", opts: ["Equipment uptime", "Human resource files", "Building security", "Software updates"], a: "Equipment uptime" },
+                { q: "Batch production often results in higher:", opts: ["Inventory and lead time", "Quality and speed", "Customer satisfaction", "Efficiency"], a: "Inventory and lead time" },
+                { q: "Just-In-Time (JIT) production means:", opts: ["Only what is needed, when needed", "Producing as much as possible", "Stockpiling for emergencies", "Ordering everything at once"], a: "Only what is needed, when needed" }
+            ],
+            Intermediate: [
+                { q: "In a VSM, the 'Information Flow' is typically drawn at the:", opts: ["Top of the map", "Bottom of the map", "Left side", "Right side"], a: "Top of the map" },
+                { q: "Which icon indicates a 'Push' arrow in VSM symbols?", opts: ["Striped arrow", "Dashed line", "Double circle", "Solid box"], a: "Striped arrow" },
+                { q: "What is the primary function of a Pacemaker process?", opts: ["The point that schedules the value stream", "The fastest machine", "The quality inspection station", "The final shipping dock"], a: "The point that schedules the value stream" },
+                { q: "Poka-Yoke techniques are designed for:", opts: ["Error proofing", "Fast tool changes", "Employee scheduling", "Inventory counting"], a: "Error proofing" },
+                { q: "SMED (Single Minute Exchange of Die) aims to reduce:", opts: ["Changeover time", "Machine cost", "Employee wages", "Lighting usage"], a: "Changeover time" },
+                { q: "Value-Added Ratio is calculated as:", opts: ["VA Time / Total Lead Time", "Total Lead Time / VA Time", "VA Time * Throughput", "Cycle Time / VA Time"], a: "VA Time / Total Lead Time" },
+                { q: "A Current State Map is primarily used to:", opts: ["Identify waste and bottlenecks", "Predict future stock prices", "Track employee attendance", "Design new factory buildings"], a: "Identify waste and bottlenecks" },
+                { q: "Mura refers to:", opts: ["Unevenness", "Waste", "Overburden", "Stability"], a: "Unevenness" },
+                { q: "The 'Theory of Constraints' identifies:", opts: ["The system bottleneck", "Total system cost", "Inventory location", "Staffing levels"], a: "The system bottleneck" },
+                { q: "Heijunka is the practice of:", opts: ["Leveling production by volume and mix", "Speeding up individual tasks", "Batching identical orders", "Stopping the line for errors"], a: "Leveling production by volume and mix" },
+                { q: "A U-shaped cell layout is used to:", opts: ["Increase operator flexibility", "Increase walking distance", "Separate processes", "Hide inventory"], a: "Increase operator flexibility" },
+                { q: "Internal setup tasks in SMED are those that:", opts: ["Must be done while the machine is stopped", "Can be done while the machine is running", "Are done by external contractors", "Are never necessary"], a: "Must be done while the machine is stopped" },
+                { q: "Which VSM symbol represents a 'Supermarket'?", opts: ["Open box with shelves", "Solid triangle", "Circle with an X", "Truck icon"], a: "Open box with shelves" },
+                { q: "The term 'Muri' means:", opts: ["Overburden", "Waste", "Flow", "Standard"], a: "Overburden" },
+                { q: "First Pass Yield (FPY) measures:", opts: ["Quality at the source", "Total daily output", "Shipping speed", "Raw material cost"], a: "Quality at the source" },
+                { q: "Takt Time is calculated as:", opts: ["Available Time / Customer Demand", "Work Content / Cycle Time", "Lead Time / Process Time", "Demand / Total Hours"], a: "Available Time / Customer Demand" },
+                { q: "What is the purpose of a 'FIFO' lane in VSM?", opts: ["Regulate flow between decoupled processes", "Store unlimited inventory", "Track employee overtime", "Mark the end of the line"], a: "Regulate flow between decoupled processes" },
+                { q: "Work-In-Process (WIP) reduction directly improves:", opts: ["Lead time", "Machine color", "Employee height", "Factory noise"], a: "Lead time" },
+                { q: "Visual Management allows someone to understand a process status within:", opts: ["Seconds", "Hours", "Days", "Weeks"], a: "Seconds" },
+                { q: "OEE (Overall Equipment Effectiveness) is a product of:", opts: ["Availability x Performance x Quality", "Time x Cost x Speed", "Input x Output x Waste", "Labor x Machine x Material"], a: "Availability x Performance x Quality" },
+                { q: "A 'Future State Map' represents:", opts: ["The blueprint for improvement", "A history of past failures", "Current market conditions", "The yearly budget"], a: "The blueprint for improvement" },
+                { q: "Which tool uses the '5 Whys'?", opts: ["Root Cause Analysis", "Level Loading", "Visual Workplace", "Takt Planning"], a: "Root Cause Analysis" },
+                { q: "Standardized Work consists of three elements: Takt Time, Work Sequence, and:", opts: ["Standard WIP", "Maximum Inventory", "Employee Salary", "Machine Cost"], a: "Standard WIP" },
+                { q: "In lean, 'Lead Time' is the time between:", opts: ["Order receipt and delivery", "Shift start and end", "Two machine cycles", "Raw material purchase and arrival"], a: "Order receipt and delivery" },
+                { q: "The 'Milk Run' concept in logistics refers to:", opts: ["Fixed route for frequent collections", "Delivering milk to workers", "One-time urgent delivery", "Large batch transport"], a: "Fixed route for frequent collections" }
+            ],
+            Advanced: [
+                { q: "Every Part Every Interval (EPEI) measures:", opts: ["Production flexibility/leveling", "Employee performance", "Total electrical usage", "Customer return rates"], a: "Production flexibility/leveling" },
+                { q: "The Pacemaker process is usually the process that:", opts: ["Is closest to the customer", "Is the most expensive", "Is the first in the sequence", "Is the bottleneck"], a: "Is closest to the customer" },
+                { q: "Autonomation (Jidoka) refers to:", opts: ["Machines with human intelligence to stop on errors", "Fully automated robots", "Standardized assembly lines", "Computerized payroll"], a: "Machines with human intelligence to stop on errors" },
+                { q: "The 'Pitch' in production leveling is:", opts: ["Takt Time multiplied by Pack Size", "The angle of the conveyor", "The speed of the forklift", "The volume of a batch"], a: "Takt Time multiplied by Pack Size" },
+                { q: "A 'Withdrawal Kanban' specifies:", opts: ["What the downstream process should pick up", "How much to produce", "When to go on break", "Which machine to repair"], a: "What the downstream process should pick up" },
+                { q: "Hoshin Kanri is a method for:", opts: ["Strategic Policy Deployment", "Cleaning machine parts", "Daily shift handovers", "Designing safety posters"], a: "Strategic Policy Deployment" },
+                { q: "In VSM, 'Processing Time' (PT) is strictly:", opts: ["The time the product is actually being worked on", "The total time in the plant", "The time spent in the warehouse", "The delivery time to customer"], a: "The time the product is actually being worked on" },
+                { q: "World Class OEE is generally considered to be:", opts: ["85% or higher", "100%", "50%", "75%"], a: "85% or higher" },
+                { q: "What is the primary benefit of 'Cross-Training' in Lean?", opts: ["Resource flexibility and load balancing", "Increasing specialized silos", "Reducing labor costs directly", "Increasing employee stress"], a: "Resource flexibility and load balancing" },
+                { q: "A 'Signal Kanban' is typically used at:", opts: ["Batch processes with changeovers", "The final assembly line only", "The shipping dock", "The office reception"], a: "Batch processes with changeovers" },
+                { q: "The 'A3' report is a tool for:", opts: ["Structured problem solving", "Printing large photos", "Storing financial data", "Writing legal contracts"], a: "Structured problem solving" },
+                { q: "Obeya (Big Room) is used for:", opts: ["Collaborative project management", "Large storage of raw materials", "Employee lunch breaks", "Storing old files"], a: "Collaborative project management" },
+                { q: "The 'Kaikaku' concept refers to:", opts: ["Radical or breakthrough change", "Small incremental steps", "Standard work", "Visual signals"], a: "Radical or breakthrough change" },
+                { q: "Cycle Time (CT) must be:", opts: ["Slightly less than Takt Time", "Equal to Takt Time", "Greater than Takt Time", "Exactly double Takt Time"], a: "Slightly less than Takt Time" },
+                { q: "The 'Spaghetti Diagram' is used to track:", opts: ["Motion and transportation waste", "Employee diet plans", "Software code structure", "Plant electricity lines"], a: "Motion and transportation waste" },
+                { q: "Total Lead Time in a VSM is the sum of:", opts: ["Inventory Days + Processing Times", "Only Inventory Days", "Only Processing Times", "Takt Time + Cycle Time"], a: "Inventory Days + Processing Times" },
+                { q: "An 'Andon' system promotes Jidoka by:", opts: ["Making problems visible immediately", "Speeding up the line", "Reducing machine maintenance", "Hiding defects from visitors"], a: "Making problems visible immediately" },
+                { q: "The 'Drum-Buffer-Rope' method belongs to:", opts: ["Theory of Constraints", "Six Sigma", "Total Quality Management", "Agile Software Development"], a: "Theory of Constraints" },
+                { q: "Standard WIP in a cell is calculated based on:", opts: ["Cycle time and Takt time", "Available floor space", "The weight of the product", "Employee seniority"], a: "Cycle time and Takt time" },
+                { q: "Kanban 'Circulation Time' includes:", opts: ["Processing, waiting, and transport time", "Only the time on the machine", "Only the time in the truck", "Only the employee break time"], a: "Processing, waiting, and transport time" },
+                { q: "Which metric tracks how long it takes to recover from a failure?", opts: ["MTTR (Mean Time To Repair)", "MTBF (Mean Time Between Failures)", "Takt Time", "OEE"], a: "MTTR (Mean Time To Repair)" },
+                { q: "The 'Value Stream Manager' is responsible for:", opts: ["The entire flow from cradle to grave", "A single machine only", "Hiring new staff", "Accounting and payroll"], a: "The entire flow from cradle to grave" },
+                { q: "A 'Buffer' is used to protect against:", opts: ["Internal process variability", "Customer demand changes", "Supplier delivery delays", "Factory power outages"], a: "Internal process variability" },
+                { q: "A 'Safety Stock' is used to protect against:", opts: ["External customer demand spikes", "Internal machine breakdowns", "Employee absenteeism", "Minor quality defects"], a: "External customer demand spikes" },
+                { q: "In lean, 'Continuous Flow' means:", opts: ["Moving one piece at a time", "Always keeping the machines on", "Having no breaks in the shift", "Producing the same product forever"], a: "Moving one piece at a time" }
+            ]
+        };
+
+        // UI HELPERS
+        const hideLoading = () => document.getElementById('loading-overlay').classList.add('hide');
+
+        // ADMIN ACCESS TRIGGER
+        const adminTrigger = document.getElementById('admin-trigger');
+        const holdProgress = document.getElementById('hold-progress');
+        const adminModal = document.getElementById('modal-admin-auth');
+        const adminInput = document.getElementById('admin-password-input');
+        let pressTimer;
+
+        const startPress = (e) => {
+            if (e.cancelable) e.preventDefault();
+            holdProgress.style.transition = 'width 3s linear';
+            holdProgress.style.width = '100%';
+            pressTimer = setTimeout(() => {
+                adminModal.classList.remove('hide');
+                adminInput.focus();
+                resetProgress();
+            }, 3000);
+        };
+        const resetProgress = () => {
+            clearTimeout(pressTimer);
+            holdProgress.style.transition = 'none';
+            holdProgress.style.width = '0%';
+        };
+
+        adminTrigger.addEventListener('mousedown', startPress);
+        adminTrigger.addEventListener('touchstart', startPress, { passive: false });
+        adminTrigger.addEventListener('mouseup', resetProgress);
+        adminTrigger.addEventListener('touchend', resetProgress);
+
+        document.getElementById('btn-admin-verify').onclick = () => {
+            if (adminInput.value.toUpperCase() === "MECTS2024") {
+                adminModal.classList.add('hide');
+                document.getElementById('view-login').classList.add('hide');
+                document.getElementById('view-admin').classList.remove('hide');
+                document.getElementById('admin-status').classList.remove('hide');
+                if(isFirebaseActive) startAdminMonitor();
+            } else {
+                document.getElementById('admin-auth-error').classList.remove('hide');
+            }
+        };
+
+        document.getElementById('btn-admin-cancel').onclick = () => adminModal.classList.add('hide');
+        document.getElementById('btn-exit-admin').onclick = () => location.reload();
+
+        // LEVEL SELECTION
+        document.querySelectorAll('.level-card').forEach(card => {
+            card.onclick = () => {
+                document.querySelectorAll('.level-card').forEach(c => c.classList.remove('level-selected'));
+                card.classList.add('level-selected');
+                selectedLevel = card.dataset.level;
+            };
+        });
+
+        // START TEST
+        document.getElementById('btn-start').onclick = () => {
+            const name = document.getElementById('input-name').value.trim();
+            const code = document.getElementById('input-code').value.trim();
+            if (!name || !code || !selectedLevel) {
+                alert("Complete credentials and select a level.");
+                return;
+            }
+
+            const pool = [...MASTER_BANK[selectedLevel]];
+            activeQuestions = pool.sort(() => 0.5 - Math.random()).slice(0, 25);
+
+            document.getElementById('display-user').innerText = name.toUpperCase();
+            document.getElementById('display-level').innerText = "Mode: " + selectedLevel.toUpperCase();
+            document.getElementById('view-login').classList.add('hide');
+            document.getElementById('view-test').classList.remove('hide');
+            renderQuestions();
+        };
+
+        const renderQuestions = () => {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = activeQuestions.map((q, idx) => `
+                <div class="app-card p-8">
+                    <p class="font-bold text-lg mb-6 leading-tight">${idx + 1}. ${q.q}</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${q.opts.map(opt => `
+                            <button class="ans-btn rounded-lg text-sm font-semibold" data-q="${idx}" data-val="${opt}">
+                                ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.ans-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const qIdx = e.currentTarget.dataset.q;
+                    userAnswers[qIdx] = e.currentTarget.dataset.val;
+                    document.querySelectorAll(`[data-q="${qIdx}"]`).forEach(b => b.classList.remove('ans-selected'));
+                    e.currentTarget.classList.add('ans-selected');
+                    document.getElementById('progress-text').innerText = `Question ${Object.keys(userAnswers).length} / 25`;
+                };
+            });
+        };
+
+        document.getElementById('btn-submit-main').onclick = async () => {
+            if (Object.keys(userAnswers).length < 25) {
+                document.getElementById('err-msg').classList.remove('hide');
+                return;
+            }
+            
+            let correct = 0;
+            activeQuestions.forEach((q, i) => { if (userAnswers[i] === q.a) correct++; });
+            const score = Math.round((correct / 25) * 100);
+            
+            document.getElementById('final-score-val').innerText = score + "%";
+            document.getElementById('pass-status').innerText = score >= 50 ? "RESULT: PASSED" : "RESULT: FAILED";
+            document.getElementById('modal-score').classList.remove('hide');
+
+            if (isFirebaseActive) {
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'submissions'), {
+                        name: document.getElementById('input-name').value.toUpperCase(),
+                        empCode: document.getElementById('input-code').value.toUpperCase(),
+                        dept: document.getElementById('input-dept').value.toUpperCase(),
+                        level: selectedLevel.toUpperCase(),
+                        score: score,
+                        timestamp: serverTimestamp()
+                    });
+                } catch (e) { console.error("Cloud Save Failed:", e); }
+            }
+        };
+
+        document.getElementById('btn-do-review').onclick = () => {
+            document.getElementById('modal-score').classList.add('hide');
+            activeQuestions.forEach((q, i) => {
+                document.querySelectorAll(`[data-q="${i}"]`).forEach(btn => {
+                    btn.onclick = null;
+                    if (btn.dataset.val === q.a) btn.classList.add('ans-correct');
+                    if (userAnswers[i] === btn.dataset.val && btn.dataset.val !== q.a) btn.classList.add('ans-wrong');
+                });
+            });
+            document.getElementById('submit-section').classList.add('hide');
+            document.getElementById('btn-final-home').classList.remove('hide');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const startAdminMonitor = () => {
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'submissions');
+            onSnapshot(colRef, (snap) => {
+                const body = document.getElementById('admin-log-body');
+                const docs = snap.docs.map(d => d.data());
+                docs.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                body.innerHTML = docs.map((d, i) => `
+                    <tr class="border-b text-sm">
+                        <td class="p-3 text-slate-400">${docs.length - i}</td>
+                        <td class="font-bold">${d.name || 'Anonymous'}</td>
+                        <td class="font-mono">${d.empCode || 'N/A'}</td>
+                        <td class="text-blue-700 font-bold">${d.level || 'Unknown'}</td>
+                        <td><span class="px-2 py-1 rounded font-bold ${d.score >= 50 ? 'score-green' : 'score-red'}">${d.score}%</span></td>
+                    </tr>
+                `).join('');
+            });
+        };
+
+        // APP INITIALIZATION
+        (async () => {
+            // Safety timeout: If Firebase takes too long, just show the app anyway
+            const safetyTimeout = setTimeout(hideLoading, 3500);
+
+            if (isFirebaseActive) {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    onAuthStateChanged(auth, u => { 
+                        currentUser = u; 
+                        clearTimeout(safetyTimeout);
+                        hideLoading();
+                    });
+                } catch(e) {
+                    console.error("Auth Failure:", e);
+                    clearTimeout(safetyTimeout);
+                    hideLoading();
+                }
+            } else {
+                // If no Firebase config, proceed immediately
+                clearTimeout(safetyTimeout);
+                hideLoading();
+            }
+        })();
+    </script>
+</body>
+</html>

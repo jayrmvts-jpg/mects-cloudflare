@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Pareto Analysis & DMAIC Engine</title>
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- Prop-Types -->
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+    <!-- Recharts -->
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- HTML2PDF for Direct PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;0,800;0,900;1,800;1,900&display=swap');
+
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #ffffff; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.4); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(250, 204, 21, 0.8); }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .text-glow-yellow { text-shadow: 0 0 15px rgba(250, 204, 21, 0.4); }
+        .text-glow-white { text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+        .text-glow-red { text-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+        .text-glow-green { text-shadow: 0 0 15px rgba(34, 197, 94, 0.6); }
+
+        .recharts-bar-rectangle { transition: all 0.3s ease; }
+        .recharts-bar-rectangle:hover { opacity: 0.8; }
+
+        /* Aggressive PDF Printing Utilities to Prevent Data Bleed */
+        .avoid-break { page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
+        .page-break-before { page-break-before: always !important; }
+        
+        @media print { 
+            .no-print { display: none !important; } 
+            body { background-color: white !important; color: black !important; } 
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback } = React;
+        const { Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, Cell } = Recharts;
+
+        // --- 1. DATA DICTIONARIES ---
+        const INDUSTRY_THEMES = {
+            'Manufacturing': ['Piston Gap > 0.5mm', 'Paint Scratch', 'Weld Porosity', 'Missing Bolt', 'Wrong Color', 'Bent Frame', 'Oil Leak', 'Torque Failure', 'Label Misalignment', 'Burr/Sharp Edge', 'Coolant Contamination', 'Packaging Seal Fail', 'Micro-crack Surface', 'Hydraulic Drift'],
+            'Call Center': ['Hold Time > 3m', 'Call Dropped', 'Wrong Script Used', 'Transfer Failure', 'Agent Tone', 'No Resolution', 'IVR Routing Loop', 'Audio Jitter', 'Verification Fail', 'Escalation Miss', 'Knowledge Base Gap', 'Language Barrier', 'Wait Time Spike', 'Background Noise'],
+            'IT Service': ['Password Reset', 'VPN Disconnect', 'Laptop Freeze', 'Printer Offline', 'Software Crash', 'Email Sync Delay', 'Wifi Signal Weak', 'Access Denied', 'Blue Screen (BSOD)', 'API Latency', 'Database Lock', 'Patch Update Fail'],
+            'Sales/Finance': ['Wrong Pricing Quote', 'Contract Draft Error', 'Missed Lead Follow-up', 'Unauthorized Discount', 'Proposal Late', 'Invoicing Delay', 'Billing Discrepancy', 'Lead Source Lost', 'CRM Sync Conflict'],
+            'Data Dept': ['Typo/Spelling', 'Missing Mandatory Field', 'Duplicate Customer ID', 'Wrong Date Format', 'Entry Lag Time', 'Validation Error', 'Phone Format Conflict', 'Address Logic Fail'],
+            'Healthcare': ['Medication Error', 'Patient Wait Time', 'Wrong Diagnosis Code', 'Equipment Failure', 'Lab Delay', 'Missing Chart', 'Billing Code Error', 'Bed Turnover Delay', 'Sanitation Miss', 'Discharge Delay', 'Staff Shortage', 'Vitals Entry Error'],
+            'Logistics': ['Late Delivery', 'Damaged Goods', 'Wrong Destination', 'Inventory Discrepancy', 'Route Deviation', 'Customs Delay', 'Missing Paperwork', 'Pallet Collapse', 'Vehicle Breakdown', 'Fuel Inefficiency', 'Overweight Cargo', 'Scanning Error'],
+            'E-Commerce': ['Cart Abandonment', 'Payment Gateway Fail', 'Out of Stock', 'Shipping Delay', 'Wrong Item Shipped', 'Return Processing Lag', 'Promo Code Error', 'UI Glitch', 'Load Time > 3s', 'Search Failure', 'Missing Image', 'Review Moderation Delay'],
+            'Construction': ['Material Shortage', 'Safety Violation', 'Blueprint Rework', 'Concrete Cure Failure', 'Permit Delay', 'Weather Delay', 'Equipment Breakdown', 'Dimension Mismatch', 'Subcontractor No-Show', 'Budget Overrun', 'Inspection Fail', 'Weld Defect'],
+            'Food & Beverage': ['Temperature Excursion', 'Spoiled Ingredient', 'Packaging Leak', 'Recipe Deviation', 'Underweight Yield', 'Cross-Contamination', 'Mislabeling', 'Equipment Jam', 'pH Level Out of Spec', 'Foreign Object', 'Texture Failure', 'Visual Defect'],
+            'Automotive': ['Paint Blemish', 'Panel Gap', 'Torque Fail', 'Missing Fastener', 'Electronic Glitch', 'Upholstery Tear', 'Glass Scratch', 'Engine Misfire', 'Transmission Fluid Leak', 'Sensor Malfunction', 'Alignment Issue', 'Battery Fault'],
+            'Aviation': ['Rivet Missing', 'Composite Delamination', 'Avionics Glitch', 'Hydraulics Leak', 'Engine Blade Wear', 'Cabin Pressure Drop', 'Landing Gear Fault', 'Fuel Line Blockage', 'Software Redundancy Fail', 'APU Restart Fail', 'Documentation Missing', 'Inspection Lapse'],
+            'Banking': ['Transaction Reversal', 'Loan Approval Delay', 'KYC Rejection', 'Fraud False Positive', 'ATM Downtime', 'Network Timeout', 'Data Breach Alert', 'Account Sync Error', 'Interest Calc Error', 'Card Issuance Delay', 'SWIFT Fail', 'Overdraft Anomaly'],
+            'Software Dev': ['Build Failure', 'Regression Bug', 'Syntax Error', 'Merge Conflict', 'Memory Leak', 'UI/UX Inconsistency', 'Dependency Missing', 'High Latency', 'Security Vulnerability', 'Unhandled Exception', 'Deployment Rollback', 'QA Test Fail'],
+            'Hospitality': ['Overbooking', 'Room Not Cleaned', 'Check-in Delay', 'Keycard Fail', 'Room Service Error', 'HVAC Malfunction', 'Noise Complaint', 'Wi-Fi Disconnect', 'Billing Dispute', 'Reservation Sync Lag', 'Concierge Miss', 'Maintenance Delay'],
+            'Telecomm': ['Dropped Connection', 'High Ping/Latency', 'SIM Activation Delay', 'Billing Glitch', 'Port-In Fail', 'Hardware Fault', 'Fiber Cut', 'Signal Interference', 'Router Reboot Loop', 'Bandwidth Throttling', 'Authentication Fail', 'Voicemail Error'],
+            'Energy': ['Pipeline Pressure Drop', 'Valve Leak', 'Pump Cavitation', 'Sensor Drift', 'Turbine Vibration', 'Grid Voltage Sag', 'Transformer Trip', 'Filter Clog', 'Flare Stack Anomaly', 'Material Fatigue', 'Seal Rupture', 'Emission Spike'],
+            'Education': ['Enrollment Glitch', 'Roster Mismatch', 'Grade Entry Error', 'LMS Server Crash', 'Course Material Missing', 'Assessment Auto-grade Fail', 'Credential Sync Delay', 'Payment Processing Fail', 'Video Stream Buffer', 'Attendance Log Missing', 'System Access Denied', 'Feedback Delay']
+        };
+
+        const KEYWORDS = {
+            time: ['wait', 'hold', 'delay', 'late', 'lag', 'spike', 'time', 'slow', 'downtime', 'buffer', 'turnover'],
+            physical: ['weld', 'gap', 'bent', 'scratch', 'leak', 'bolt', 'seal', 'crack', 'noise', 'jitter', 'warp', 'void', 'piston', 'pallet', 'concrete', 'temperature', 'rivet', 'blemish', 'valve', 'turbine', 'vibration', 'hardware', 'equipment', 'material'],
+            commercial: ['quote', 'price', 'pricing', 'discount', 'billing', 'invoice', 'contract', 'rebate', 'terms', 'loan', 'payment', 'overdraft', 'budget'],
+            digital: ['error', 'fail', 'crash', 'system', 'vpn', 'api', 'bug', 'db', 'login', 'sync', 'latency', 'timeout', 'glitch', 'software', 'network', 'router', 'gateway', 'server', 'code'],
+            human: ['tone', 'conduct', 'script', 'resolution', 'verification', 'typo', 'missing', 'language', 'violation', 'dispute', 'complaint', 'roster', 'patient', 'staff', 'subcontractor'],
+            locational: ['address', 'location', 'site', 'coordinate', 'territory', 'routing', 'dept', 'transfer', 'destination', 'route']
+        };
+
+        const UNIT_LABELS = {
+            'Manufacturing': { unit: 'Units Produced', opp: 'Opportunities per Unit' },
+            'Call Center': { unit: 'Calls Handled', opp: 'Opportunities per Call' },
+            'IT Service': { unit: 'Tickets Resolved', opp: 'Opportunities per Ticket' },
+            'Sales/Finance': { unit: 'Transactions/Quotes', opp: 'Opportunities per Transaction' },
+            'Data Dept': { unit: 'Records Processed', opp: 'Opportunities per Record' },
+            'Healthcare': { unit: 'Patient Encounters', opp: 'Opportunities per Encounter' },
+            'Logistics': { unit: 'Shipments Delivered', opp: 'Opportunities per Shipment' },
+            'E-Commerce': { unit: 'Orders Processed', opp: 'Opportunities per Order' },
+            'Construction': { unit: 'Tasks Completed', opp: 'Opportunities per Task' },
+            'Food & Beverage': { unit: 'Batches Produced', opp: 'Opportunities per Batch' },
+            'Automotive': { unit: 'Vehicles Assembled', opp: 'Opportunities per Vehicle' },
+            'Aviation': { unit: 'Flights/Inspections', opp: 'Opportunities per Inspection' },
+            'Banking': { unit: 'Transactions Processed', opp: 'Opportunities per Transaction' },
+            'Software Dev': { unit: 'Code Commits/Sprints', opp: 'Opportunities per Commit' },
+            'Hospitality': { unit: 'Room Nights Booked', opp: 'Opportunities per Room Night' },
+            'Telecomm': { unit: 'Network Sessions', opp: 'Opportunities per Session' },
+            'Energy': { unit: 'Megawatt Hours Generated', opp: 'Opportunities per MWh' },
+            'Education': { unit: 'Student Enrollments', opp: 'Opportunities per Enrollment' }
+        };
+
+        // --- 2. GLOBAL HELPERS ---
+        const safeRender = (val) => {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'number') return isNaN(val) ? 'Err' : (Number.isInteger(val) ? val.toString() : val.toFixed(2));
+            return String(val);
+        };
+
+        const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format(val);
+
+        const CustomizedAxisTickLight = (props) => {
+            const { x, y, payload, index } = props;
+            const verticalOffset = index % 2 === 0 ? 18 : 36; 
+            return (
+                <g transform={`translate(${x},${y})`}>
+                    <text x={0} y={0} dy={verticalOffset} textAnchor="middle" fill="#4b5563" fontSize={10} fontWeight={600} className="uppercase">
+                        {payload ? safeRender(payload.value) : ''}
+                    </text>
+                </g>
+            );
+        };
+
+        const CustomizedAxisTickDark = (props) => {
+            const { x, y, payload, index } = props;
+            const verticalOffset = index % 2 === 0 ? 18 : 36; 
+            return (
+                <g transform={`translate(${x},${y})`}>
+                    <text x={0} y={0} dy={verticalOffset} textAnchor="middle" fill="#9CA3AF" fontSize={10} fontWeight={600} className="uppercase">
+                        {payload ? safeRender(payload.value) : ''}
+                    </text>
+                </g>
+            );
+        };
+
+        // --- 3. HYPER-LOGIC DYNAMIC ENGINES ---
+        const getHyperRCA = (label) => {
+            const l = typeof label === 'string' ? label.toLowerCase() : "unspecified issue";
+            if (KEYWORDS.locational.some(k => l.includes(k))) return [`The system accepted an incorrect '${label}' entry.`, "The data was typed manually without checking if it exists.", "There is no tool connected to verify the location in real-time.", "Validation steps are skipped because they take too long to do manually.", `Root Cause: The process relies on human memory instead of a verified digital database for '${label}'.` ];
+            if (KEYWORDS.time.some(k => l.includes(k))) return [`People are waiting too long because of '${label}'.`, "The volume of work is higher than the number of people available.", "The staff schedule doesn't match the times when work spikes happen.", "We didn't have a plan to handle this specific busy period.", `Root Cause: The staffing model is fixed and cannot adjust to real-time spikes in '${label}'.` ];
+            if (KEYWORDS.physical.some(k => l.includes(k))) return [`The part failed the quality check for '${label}'.`, "The machine or tool moved out of place during work.", "A part became loose because of heat or vibration.", "The sensors didn't stop the machine when the problem started.", `Root Cause: Maintenance checks happen on a fixed schedule instead of checking for actual wear on '${label}'.` ];
+            if (KEYWORDS.commercial.some(k => l.includes(k))) return [`The client found a mistake in the '${label}'.`, "The staff member used an old price list or template.", "The new rules weren't updated on everyone's computer at the same time.", "There is no single place where all the correct prices are stored.", `Root Cause: We lack a shared digital 'Source of Truth' for accurate '${label}' data.` ];
+            if (KEYWORDS.digital.some(k => l.includes(k))) return [`The technology reported a critical '${label}'.`, "The infrastructure was overloaded by simultaneous requests.", "Redundancy protocols failed to failover smoothly.", "Testing phases missed this specific high-load edge case.", `Root Cause: The CI/CD or deployment pipeline for '${label}' lacks load-stress regression gates.` ];
+            return [`The work result for '${label}' was outside our quality limits.`, "The instructions for this step are not clear enough for everyone.", "Errors are not being caught until the very end of the process.", "We depend on people being 'careful' instead of building checks into the system.", `Root Cause: The '${label}' process lacks a simple, foolproof check (Poka-Yoke) to block mistakes.` ];
+        };
+
+        const getHyperSolutions = (label) => {
+            const l = typeof label === 'string' ? label.toLowerCase() : "";
+            if (KEYWORDS.locational.some(k => l.includes(k))) return [`Auto-Lookup: Link the entry form to a verified address database.`, `Smart Fields: Use dropdown menus instead of letting people type '${label}'.`, `Validation Gate: Block the 'Submit' button if the '${label}' is not verified.`, `Fuzzy Matching: Use software to suggest the correct '${label}' as they type.`, `Map Verification: Show a visual map to the user to confirm '${label}' accuracy.` ];
+            if (KEYWORDS.time.some(k => l.includes(k))) return [`Demand Matching: Change staff shifts to match when '${label}' spikes happen.`, `RPA Bot: Use a software bot to handle simple '${label}' tasks instantly.`, `Cross-Training: Teach other teams how to help when '${label}' gets busy.`, `Real-time Tracker: Install a simple dashboard showing the current '${label}' wait time.`, `Backlog Trigger: Create a 'Code Red' plan to pull in extra help for '${label}'.` ];
+            if (KEYWORDS.physical.some(k => l.includes(k))) return [`Auto-Stop: Install a sensor that stops the tool if '${label}' is detected.`, `Daily Micro-Check: Make a 2-minute check part of every operator's morning.`, `Fixed Jigs: Use a mechanical guide so '${label}' can only go in one way.`, `Visual Alarms: Use a red light to show when '${label}' is moving out of spec.`, `Condition Alerts: Send an alert to maintenance based on machine hours for '${label}'.` ];
+            if (KEYWORDS.commercial.some(k => l.includes(k))) return [`Central Cloud: Move all pricing to one shared folder that updates for everyone.`, `Two-Set of Eyes: Require a manager's sign-off for any big '${label}' changes.`, `Locked Templates: Password-protect the templates so old math isn't used for '${label}'.`, `Error Audit: Review the last 10 '${label}' errors to see exactly where we failed.`, `Form Masking: Only allow numbers in the '${label}' field to stop typing errors.` ];
+            if (KEYWORDS.digital.some(k => l.includes(k))) return [`Auto-Scaling: Set cloud servers to automatically add power during '${label}' spikes.`, `Fail-over Protocols: Build a backup system that kicks in instantly when '${label}' occurs.`, `Unit Testing: Force developers to write automated tests preventing '${label}'.`, `Monitoring Dashboards: Install Datadog/NewRelic alerts specifically for '${label}'.`, `Rate Limiting: Slow down incoming traffic automatically to prevent a full '${label}'.` ];
+            return [`Visual Aids: Put a picture of a 'good' vs 'bad' result at the '${label}' station.`, `Step-by-Step: Update the SOP to be a simple checklist for '${label}'.`, `System Block: Add a digital step that prevents moving on if '${label}' is wrong.`, `Training Camp: Hold a short 'huddle' to train everyone on the new '${label}' rule.`, `Audit Cycle: Check 5 random samples of '${label}' every single day.` ];
+        };
+
+        // --- 4. ICON & TOOLTIP HELPER ---
+        const Icon = ({ name, size = 16, className = "" }) => {
+            const icons = {
+                target: "M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17Z",
+                arrowLeft: "M19 12H5M12 19l-7-7 7-7",
+                printer: "M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z",
+                gitMerge: "M7 15a3 3 0 100-6 3 3 0 000 6z M17 9a3 3 0 100-6 3 3 0 000 6z M7 9V5a3 3 0 013-3h4M7 15v4a3 3 0 003 3h4",
+                checkCircle: "M22 11.08V12a10 10 0 11-5.93-9.14 M22 4L12 14.01l-3-3",
+                lightbulb: "M9 21h6M12 2v3M5 9h1M18 9h1M6.3 4.3l.7.7M17 17l.7.7",
+                trash: "M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2",
+                refresh: "M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15",
+                fileText: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6",
+                chart: "M18 20V10M12 20V4M6 20v-6",
+                settings: "M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z M12 15a3 3 0 100-6 3 3 0 000 6z",
+                table: "M3 3h18v18H3z M3 9h18 M3 15h18 M9 3v18 M15 3v18",
+                activity: "M22 12h-4l-3 9L9 3l-3 9H2",
+                globe: "M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z M2 12H22 M12 2C14.5013 4.73835 15.9228 8.29203 16 12C15.9228 15.708 14.5013 19.2616 12 22C9.49872 19.2616 8.07725 15.708 8 12C8.07725 8.29203 9.49872 4.73835 12 2Z",
+                upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12",
+                dollar: "M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+                sigma: "M18 4H6l6 8-6 8h12",
+                download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3",
+                info: "M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z M12 16V12 M12 8H12.01"
+            };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    <path d={icons[name] || ""} />
+                </svg>
+            );
+        };
+
+        const InfoTooltip = ({ text }) => (
+            <div className="relative flex items-center group ml-1 inline-block no-print z-[100]">
+                <Icon name="info" size={12} className="text-gray-500 hover:text-yellow-400 cursor-help transition-colors" />
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2.5 bg-gray-800 border border-gray-700 text-white text-[10px] rounded-lg shadow-2xl normal-case tracking-normal z-[100] font-medium leading-relaxed">
+                    {text}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+                </div>
+            </div>
+        );
+
+        const PremiumHeader = () => (
+            <div className="w-full bg-[#0a0a0a] border-b border-yellow-500/30 shadow-[0_4px_30px_rgba(250,204,21,0.1)] py-8 px-10 flex flex-col md:flex-row justify-between items-center relative overflow-hidden no-print">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+                <div className="flex flex-col items-start gap-1 z-10 w-full md:w-auto">
+                    <h1 className="flex items-baseline italic uppercase font-black text-yellow-400 tracking-tighter transform -skew-x-12 text-glow-yellow">
+                        <span className="text-5xl md:text-6xl mr-3">MECTS</span>
+                        <span className="text-4xl md:text-5xl mr-3 text-yellow-50">SET</span>
+                        <span className="text-3xl md:text-4xl mr-3 tracking-widest text-yellow-500/60">....</span>
+                        <span className="text-4xl md:text-5xl text-white text-glow-white">GO</span>
+                        <span className="text-2xl tracking-widest text-yellow-500/60 ml-1">....</span>
+                    </h1>
+                    <h2 className="text-[11px] md:text-[13px] font-bold text-white uppercase tracking-[0.25em] mt-3 opacity-90 border-l-2 border-yellow-500 pl-3">
+                        Managing Effective Corporate Training Solutions
+                    </h2>
+                </div>
+                
+                <div className="flex flex-col items-end gap-2 mt-6 md:mt-0 z-10">
+                    <div className="bg-[#111] border border-yellow-500/20 px-6 py-3 rounded-lg shadow-lg flex flex-col items-end">
+                        <span className="text-yellow-400 font-black tracking-[0.3em] uppercase text-sm mb-1">Pareto Analysis Engine</span>
+                        <a href="https://www.mects.in" target="_blank" rel="noopener noreferrer" className="text-white font-bold tracking-widest hover:text-yellow-400 transition-colors text-[11px] uppercase flex items-center gap-2">
+                            <Icon name="globe" size={12} /> WWW.MECTS.IN
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // --- ISOLATED REPORT SUB-COMPONENTS (PREVENTS RECHARTS CRASH) ---
+        const CustomTooltip = ({ active, payload, label, costPerDefect, targetReduction }) => {
+            if (active && payload && payload.length) {
+                return (
+                    <div className="bg-gray-900 border border-gray-700 p-4 rounded-lg shadow-2xl backdrop-blur-md bg-opacity-95 z-50">
+                        <p className="text-white font-bold text-xs uppercase mb-2 border-b border-gray-700 pb-2">{label}</p>
+                        <p className="text-gray-300 text-xs mb-1">Current Freq: <span className="text-white font-bold">{payload[0].value}</span></p>
+                        {payload[1] && <p className="text-green-400 text-xs mb-1">Target Freq: <span className="font-bold">{payload[1].value.toFixed(0)}</span></p>}
+                        <p className="text-yellow-400 text-xs font-bold">Cumulative: {payload[2] ? payload[2].value.toFixed(1) : (payload[1] && payload[1].dataKey === 'cumulativePercentage' ? payload[1].value.toFixed(1) : 0)}%</p>
+                        <p className="text-red-400 text-xs font-bold mt-2 pt-2 border-t border-gray-700">COPQ Loss: {formatCurrency(payload[0].value * costPerDefect)}</p>
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        const ReportHeaderBlock = ({ title, selectedTheme }) => (
+            <div className="border-b-4 border-black pb-4 mb-6 bg-white no-print">
+                <div className="flex justify-between items-start mb-4">
+                    <div>
+                        <h1 className="text-3xl font-black uppercase tracking-tighter text-gray-900">{title}</h1>
+                        <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest mt-1">MECTS • Six Sigma Strategic Initiative</p>
+                    </div>
+                    <div className="text-right">
+                        <img 
+                            src="mects shield logo.jpeg" 
+                            alt="MECTS" 
+                            className="h-12 w-auto object-contain" 
+                            onError={(e) => { 
+                                e.target.onerror = null; 
+                                e.target.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='; 
+                                e.target.style.display = 'none'; 
+                            }} 
+                        />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 p-4 rounded mb-2">
+                    <div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Process Sector</div>
+                        <div className="text-xs font-black uppercase text-gray-800">{selectedTheme}</div>
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Project Lead</div>
+                        <div id="project-lead-input" className="text-xs font-black uppercase min-h-[16px] text-gray-800 outline-none" contentEditable="true" suppressContentEditableWarning={true}>Enter Name</div>
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Project Sponsor</div>
+                        <div id="project-sponsor-input" className="text-xs font-black uppercase min-h-[16px] text-gray-800 outline-none" contentEditable="true" suppressContentEditableWarning={true}>Enter Name</div>
+                    </div>
+                    <div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Date Prepared</div>
+                        <div className="text-xs font-black uppercase text-gray-800">{new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const ReportKPIBlock = ({ dpmoData, analysis, chartData, implementationCost }) => (
+            <div className="grid grid-cols-5 gap-3 mb-6 avoid-break">
+                <div className="bg-gray-100 border-2 border-gray-300 p-3 rounded-lg flex flex-col justify-center text-center shadow-sm avoid-break">
+                    <div className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                        <span className="truncate">Process Sigma</span>
+                        <InfoTooltip text="The statistical capability of your process. A higher Sigma means fewer defects. The goal is moving towards 6.0 (perfection)." />
+                    </div>
+                    <div className="text-lg font-black text-black truncate">{dpmoData.sigma}</div>
+                    <div className="text-[9px] text-gray-500 mt-1 truncate">DPMO: {dpmoData.dpmo}</div>
+                </div>
+                <div className="bg-yellow-50 border-2 border-yellow-400 p-3 rounded-lg flex flex-col justify-center text-center shadow-sm avoid-break">
+                    <div className="text-[9px] text-yellow-700 font-bold uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                        <span className="truncate">Vital Few Nodes</span>
+                        <InfoTooltip text="The Pareto Principle states that ~80% of problems come from ~20% of causes. This indicates how many specific issues are driving the vast majority of your variance." />
+                    </div>
+                    <div className="text-lg font-black text-yellow-600 truncate">{analysis?.vitalFew?.length} <span className="text-[10px] text-yellow-600/70 font-medium">/ {chartData.length}</span></div>
+                    <div className="text-[9px] text-yellow-600 mt-1 truncate">Drives 80% Variance</div>
+                </div>
+                <div className="bg-gray-100 border-2 border-gray-300 p-3 rounded-lg flex flex-col justify-center text-center shadow-sm avoid-break">
+                    <div className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                        <span className="truncate">Total COPQ</span>
+                        <InfoTooltip text="Total Cost of Poor Quality. The overall financial loss generated by all defects combined within the measured timeframe." />
+                    </div>
+                    <div className="text-lg font-black text-black truncate" title={formatCurrency(dpmoData.totalCopq)}>{formatCurrency(dpmoData.totalCopq)}</div>
+                    <div className="text-[9px] text-gray-500 mt-1 truncate">{safeRender(analysis?.total)} Defects</div>
+                </div>
+                <div className="bg-red-50 border-[3px] border-red-500 p-3 rounded-lg flex flex-col justify-center text-center shadow-sm avoid-break">
+                    <div className="text-[9px] text-red-700 font-bold uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                        <span className="truncate">Vital COPQ Bleed</span>
+                        <InfoTooltip text="The specific financial loss driven ONLY by the top 'Vital Few' defect categories. This is where your team should focus their effort for max return." />
+                    </div>
+                    <div className="text-lg font-black text-red-600 truncate" title={formatCurrency(dpmoData.vitalCopq)}>{formatCurrency(dpmoData.vitalCopq)}</div>
+                    <div className="text-[9px] text-red-600 font-bold mt-1 truncate">Primary Target</div>
+                </div>
+                <div className="bg-green-50 border-2 border-green-500 p-3 rounded-lg flex flex-col justify-center text-center shadow-sm avoid-break">
+                    <div className="text-[9px] text-green-700 font-bold uppercase tracking-widest mb-1 flex items-center justify-center gap-1">
+                        <span className="truncate">Projected Net ROI</span>
+                        <InfoTooltip text={`ROI (${dpmoData.roiPercent?.toFixed(0)}%) = (Net ROI ${formatCurrency(dpmoData.netRoi)} ÷ Imp. Cost ${formatCurrency(implementationCost || 0)}) × 100. Represents pure financial gain vs initial investment.`} />
+                    </div>
+                    <div className="text-lg font-black text-green-600 truncate" title={formatCurrency(dpmoData.netRoi)}>{formatCurrency(dpmoData.netRoi)}</div>
+                    <div className="text-[9px] text-green-600 font-bold mt-1 truncate">ROI: {dpmoData.roiPercent?.toFixed(0)}%</div>
+                </div>
+            </div>
+        );
+
+        const ReportChartBlock = ({ chartData, targetReduction, costPerDefect }) => (
+            <div className="mb-6 avoid-break border-2 border-gray-200 p-4 rounded-lg bg-white">
+                <div className="flex justify-between items-center mb-2 border-b border-gray-100 pb-2">
+                    <h2 className="text-sm font-black uppercase text-gray-800">Pareto Distribution (Before vs Target)</h2>
+                    <div className="flex gap-4">
+                        <div className="flex items-center gap-1 text-[8px] font-bold uppercase text-gray-500"><div className="w-2 h-2 bg-gray-800"></div> Current</div>
+                        <div className="flex items-center gap-1 text-[8px] font-bold uppercase text-green-600"><div className="w-2 h-2 bg-green-500"></div> Target ({targetReduction}% Reduction)</div>
+                    </div>
+                </div>
+                <div className="h-[300px] min-h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 40 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                            <XAxis dataKey="label" tick={<CustomizedAxisTickLight />} interval={0} axisLine={{stroke: '#9ca3af'}} tickLine={false} />
+                            <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{fill: '#4b5563', fontSize: 9, fontWeight: 600}} />
+                            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" axisLine={false} tickLine={false} tick={{fill: '#ca8a04', fontSize: 9, fontWeight: 900}} />
+                            <ReferenceLine y={80} yAxisId="right" stroke="#ca8a04" strokeDasharray="4 4" opacity={0.8} />
+                            
+                            {/* Dual Bars for ROI visualization */}
+                            <Bar yAxisId="left" dataKey="value" radius={[2, 2, 0, 0]} barSize={20} fill="#111827" isAnimationActive={false} />
+                            <Bar yAxisId="left" dataKey="targetValue" radius={[2, 2, 0, 0]} barSize={20} fill="#22c55e" isAnimationActive={false} />
+                            
+                            <Line yAxisId="right" type="monotone" dataKey="cumulativePercentage" stroke="#eab308" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2, stroke: '#eab308' }} isAnimationActive={false} />
+                            <Tooltip content={(props) => <CustomTooltip {...props} costPerDefect={costPerDefect} targetReduction={targetReduction} />} cursor={{fill: '#111827', opacity: 0.4}} />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        );
+
+        const ReportTableBlock = ({ chartData, costPerDefect }) => (
+            <div className="mb-8 avoid-break">
+                <table className="w-full table-fixed text-[10px] text-left border-2 border-gray-200">
+                    <thead className="bg-gray-100 border-b-2 border-gray-300">
+                        <tr className="text-gray-700 font-bold uppercase tracking-widest">
+                            <th className="w-[40%] py-3 px-4">Category Node</th>
+                            <th className="w-[15%] py-3 px-4 text-right">Current Freq</th>
+                            <th className="w-[15%] py-3 px-4 text-right text-green-600">Target Freq</th>
+                            <th className="w-[15%] py-3 px-4 text-right text-red-600">COPQ Loss (₹)</th>
+                            <th className="w-[15%] py-3 px-4 text-right text-yellow-600">Cumulative %</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                        {chartData.map((d, i) => (
+                            <tr key={i} className={`${d.isVital ? 'bg-yellow-50/50' : 'bg-white'}`}>
+                                <td className="py-3 px-4 font-bold text-gray-800 uppercase truncate">{safeRender(d.label)}</td>
+                                <td className="py-3 px-4 text-right text-gray-700 font-mono truncate">{safeRender(d.value)}</td>
+                                <td className="py-3 px-4 text-right font-bold text-green-600 font-mono truncate">{safeRender(d.targetValue.toFixed(0))}</td>
+                                <td className="py-3 px-4 text-right font-bold text-red-600 truncate">{formatCurrency(d.value * costPerDefect)}</td>
+                                <td className="py-3 px-4 text-right font-black text-yellow-600 truncate">{safeRender(d.cumulativePercentage)}%</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+
+        // --- 5. MAIN COMPONENT ---
+        function App() {
+            const [inputText, setInputText] = useState('');
+            const [chartData, setChartData] = useState([]);
+            const [analysis, setAnalysis] = useState(null);
+            const [activeTab, setActiveTab] = useState('dashboard'); 
+            const [selectedTheme, setSelectedTheme] = useState('Manufacturing');
+            const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+            
+            const [totalUnits, setTotalUnits] = useState(10000);
+            const [oppsPerUnit, setOppsPerUnit] = useState(5);
+            const [costPerDefect, setCostPerDefect] = useState(150);
+            const [implementationCost, setImplementationCost] = useState(25000); 
+            const [targetReduction, setTargetReduction] = useState(80); // Default 80% Reduction
+
+            const [dpmoData, setDpmoData] = useState({ dpmo: 0, sigma: 0, totalCopq: 0, vitalCopq: 0, projectedSavings: 0, netRoi: 0, roiPercent: 0 });
+
+            const processAndSetChartData = useCallback((text, units, opps, cost, impCost, targetRed) => {
+                if (!text) { setChartData([]); setAnalysis(null); return; }
+                const lines = text.trim().split(/\r?\n/);
+                const rawData = [];
+                lines.forEach((line, idx) => {
+                    const parts = line.split(/[,\t\s]+/).map(p => p.trim()).filter(p => p !== '');
+                    if (parts.length < 2) return;
+                    if (idx === 0 && isNaN(Number(parts[parts.length - 1]))) return;
+                    // God Mode Audit: Force Absolute/Max Values to prevent negative numbers crashing Pareto Logic
+                    const val = Math.max(0, Number(parts[parts.length - 1]));
+                    const label = parts.slice(0, parts.length - 1).join(' ');
+                    const lowerLabel = label.toLowerCase();
+                    if (['total', 'sum', 'count', 'result'].some(k => lowerLabel === k || lowerLabel.includes('grand total'))) return;
+                    if (!isNaN(val) && val > 0) rawData.push({ label, value: val });
+                });
+
+                if (rawData.length === 0) { setChartData([]); setAnalysis(null); return; }
+
+                const sorted = [...rawData].sort((a, b) => b.value - a.value);
+                const total = sorted.reduce((sum, item) => sum + item.value, 0);
+                let cumulativeCount = 0;
+                
+                const processed = sorted.map((item, index) => {
+                    cumulativeCount += item.value;
+                    const cumPercent = (cumulativeCount / total) * 100;
+                    
+                    // Identify if vital few (up to 80% cutoff - standard Pareto threshold)
+                    const isVital = cumPercent <= 80 || (index > 0 && ((cumulativeCount - item.value) / total) * 100 <= 80);
+                    
+                    // Calculate Target value based on the user's dynamic reduction target
+                    const targetValue = isVital ? item.value * (1 - (targetRed / 100)) : item.value;
+                    
+                    return { ...item, cumulativeCount, cumulativePercentage: cumPercent, isVital, targetValue };
+                });
+
+                const vitalFew = processed.filter(p => p.isVital);
+
+                const totalOpps = units * opps;
+                let dpmo = 0;
+                let sigma = 0;
+
+                // God Mode Audit: Math Crash / Divide by Zero Logic Guards
+                if (total === 0) {
+                    dpmo = 0;
+                    sigma = 6.0;
+                } else if (totalOpps === 0) {
+                    dpmo = 1000000;
+                    sigma = 0.0;
+                } else {
+                    dpmo = (total / totalOpps) * 1000000;
+                    if (dpmo > 1000000) dpmo = 1000000;
+
+                    let innerMath = 29.37 - 2.221 * Math.log(dpmo);
+                    if (innerMath < 0) {
+                        sigma = 0.0;
+                    } else {
+                        sigma = 0.8406 + Math.sqrt(innerMath);
+                        sigma = Math.max(0, Math.min(6.0, sigma));
+                    }
+                }
+
+                const totalCopq = total * cost;
+                const vitalCopq = vitalFew.reduce((sum, item) => sum + item.value, 0) * cost;
+                
+                // Financial ROI Engine using Dynamic Target Reduction
+                const projectedSavings = vitalCopq * (targetRed / 100); 
+                const netRoi = projectedSavings - impCost;
+                // God Mode Audit: Zero Cost Implementation Output Logic Guard
+                const roiPercent = impCost > 0 ? (netRoi / impCost) * 100 : (projectedSavings > 0 ? Infinity : 0);
+
+                setChartData(processed);
+                setAnalysis({ total, vitalFew });
+                setDpmoData({ dpmo: Math.round(dpmo), sigma: sigma.toFixed(2), totalCopq, vitalCopq, projectedSavings, netRoi, roiPercent });
+            }, []);
+
+            useEffect(() => {
+                const timer = setTimeout(() => processAndSetChartData(inputText, Number(totalUnits) || 0, Number(oppsPerUnit) || 0, Number(costPerDefect) || 0, Number(implementationCost) || 0, Number(targetReduction) || 0), 100);
+                return () => clearTimeout(timer);
+            }, [inputText, totalUnits, oppsPerUnit, costPerDefect, implementationCost, targetReduction, processAndSetChartData]);
+
+            const generateRandomData = () => {
+                const labels = INDUSTRY_THEMES[selectedTheme] || INDUSTRY_THEMES['Manufacturing'];
+                const count = 7 + Math.floor(Math.random() * 4); 
+                const selection = [...labels].sort(() => 0.5 - Math.random()).slice(0, count);
+                const dataString = selection.map(label => `${label} ${Math.floor(Math.pow(Math.random(), 2.8) * 200) + 5}`).join('\n');
+                setInputText(dataString);
+            };
+
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => { setInputText(evt.target.result); };
+                reader.readAsText(file);
+            };
+
+            const handleDownloadPDF = async (elementId, filename, reportTitle) => {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                setIsGeneratingPDF(true);
+
+                // Extract Dynamic Header Data from DOM
+                const leadInput = document.getElementById('project-lead-input');
+                const sponsorInput = document.getElementById('project-sponsor-input');
+                const leadText = leadInput ? leadInput.innerText : 'Not Specified';
+                const sponsorText = sponsorInput ? sponsorInput.innerText : 'Not Specified';
+                
+                const originalBg = element.style.backgroundColor;
+                const originalColor = element.style.color;
+                element.style.backgroundColor = '#ffffff';
+                element.style.color = '#000000';
+                
+                // Aggressive Margins: 1.6in Top margin leaves perfectly blank space for our injected jsPDF Header
+                const opt = {
+                    margin:       [1.6, 0.4, 0.6, 0.4], 
+                    filename:     `${filename}_MECTS.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['css', 'legacy'] }
+                };
+
+                try {
+                    await html2pdf().set(opt).from(element).toPdf().get('pdf').then((pdf) => {
+                        const totalPages = pdf.internal.getNumberOfPages();
+                        const pageWidth = pdf.internal.pageSize.getWidth();
+                        const pageHeight = pdf.internal.pageSize.getHeight();
+
+                        // Native Page Injection Loop (Guarantees Header/Footer on EVERY PAGE)
+                        for (let i = 1; i <= totalPages; i++) {
+                            pdf.setPage(i);
+
+                            // --- NATIVE HEADER INJECTION ---
+                            // Title
+                            pdf.setFont("helvetica", "bold");
+                            pdf.setFontSize(22);
+                            pdf.setTextColor(17, 24, 39);
+                            pdf.text(reportTitle.toUpperCase(), 0.4, 0.6);
+
+                            // Subtitle
+                            pdf.setFont("helvetica", "bold");
+                            pdf.setFontSize(10);
+                            pdf.setTextColor(202, 138, 4);
+                            pdf.text("MECTS • SIX SIGMA STRATEGIC INITIATIVE", 0.4, 0.8);
+
+                            // Meta Data Box (Background only, no border/stroke)
+                            pdf.setFillColor(249, 250, 251); 
+                            pdf.roundedRect(0.4, 0.95, pageWidth - 0.8, 0.45, 0.05, 0.05, 'F');
+
+                            // Meta Data Labels
+                            pdf.setFontSize(7);
+                            pdf.setTextColor(107, 114, 128);
+                            pdf.text("PROCESS SECTOR", 0.5, 1.12);
+                            pdf.text("PROJECT LEAD", 2.3, 1.12);
+                            pdf.text("PROJECT SPONSOR", 4.1, 1.12);
+                            pdf.text("DATE PREPARED", 5.9, 1.12);
+
+                            // Meta Data Values (Dynamically pulled from screen)
+                            pdf.setFontSize(9);
+                            pdf.setTextColor(31, 41, 55);
+                            pdf.text(selectedTheme.toUpperCase(), 0.5, 1.27);
+                            pdf.text(leadText.toUpperCase(), 2.3, 1.27);
+                            pdf.text(sponsorText.toUpperCase(), 4.1, 1.27);
+                            pdf.text(new Date().toLocaleDateString(), 5.9, 1.27);
+
+                            // --- NATIVE FOOTER INJECTION ---
+                            pdf.setFont("helvetica", "normal");
+                            pdf.setFontSize(9);
+                            pdf.setTextColor(156, 163, 175);
+                            pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 0.3, { align: 'center' });
+                        }
+                    }).save();
+                } catch (err) {
+                    console.error("PDF generation failed:", err);
+                } finally {
+                    element.style.backgroundColor = originalBg;
+                    element.style.color = originalColor;
+                    setIsGeneratingPDF(false);
+                }
+            };
+
+            const currentLabels = UNIT_LABELS[selectedTheme] || { unit: 'Total Units', opp: 'Opps per Unit' };
+
+            // Dynamic Styling Logic
+            const sigmaColor = dpmoData.sigma >= 4.5 ? 'text-green-400 text-glow-green' : (dpmoData.sigma >= 3.0 ? 'text-yellow-400 text-glow-yellow' : 'text-red-500 text-glow-red');
+            const sigmaIconColor = dpmoData.sigma >= 4.5 ? 'text-green-500' : (dpmoData.sigma >= 3.0 ? 'text-yellow-500' : 'text-red-500');
+
+            // --- MERGED REPORT VIEW ---
+            if (activeTab === 'report' && analysis) {
+                return (
+                    <div className="min-h-screen bg-[#050505] font-sans pb-24 text-gray-200">
+                        <PremiumHeader />
+                        <div className="max-w-5xl mx-auto px-8 md:px-12 mt-8">
+                            <div className="flex justify-between items-center mb-6 bg-[#111] p-4 rounded-xl shadow-lg border border-gray-800 no-print">
+                                <button onClick={() => setActiveTab('dashboard')} className="flex items-center gap-2 text-yellow-400 hover:text-white transition-colors font-bold uppercase text-xs tracking-widest"><Icon name="arrowLeft" size={16} /> Dashboard</button>
+                                <button onClick={() => handleDownloadPDF('full-report-export', 'Comprehensive_SixSigma_Report', 'Comprehensive Six Sigma Report')} disabled={isGeneratingPDF} className="bg-yellow-500 text-black px-6 py-2 rounded font-black text-[10px] hover:bg-yellow-400 transition-all uppercase tracking-widest flex items-center gap-2 shadow-[0_0_15px_rgba(250,204,21,0.3)] disabled:opacity-50">
+                                    <Icon name="download" size={14} /> {isGeneratingPDF ? 'Generating PDF...' : 'Download Full PDF Report'}
+                                </button>
+                            </div>
+
+                            <div className="bg-white text-black p-8 rounded shadow-2xl">
+                                {/* Interactive screen header (Skipped in PDF to avoid double printing) */}
+                                <ReportHeaderBlock title="Comprehensive Six Sigma Report" selectedTheme={selectedTheme} />
+
+                                {/* Strict PDF Export Container Starts Here */}
+                                <div id="full-report-export">
+                                    
+                                    {/* Page 1: Project Charter & ROI */}
+                                    <div className="page-break-after">
+                                        <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-900 border-b-2 border-black pb-2 mb-6">DMAIC Project Charter</h2>
+                                        <div className="space-y-6 avoid-break">
+                                            <section className="avoid-break">
+                                                <h2 className="text-sm font-black uppercase bg-gray-200 p-2 border-l-4 border-black mb-3">1. Business Case</h2>
+                                                <p className="text-xs leading-relaxed text-gray-800 font-medium">
+                                                    The {selectedTheme} operation is currently experiencing <strong>{safeRender(analysis.total)} total defect events</strong>. Based on operational volume, this translates to a <strong>DPMO of {dpmoData.dpmo}</strong>, operating at approximately a <strong>{dpmoData.sigma} Sigma Level</strong>. This variance represents a Total Cost of Poor Quality (COPQ) estimated at <strong>{formatCurrency(dpmoData.totalCopq)}</strong>, significantly impacting profitability and operations.
+                                                </p>
+                                            </section>
+                                            <section className="avoid-break">
+                                                <h2 className="text-sm font-black uppercase bg-gray-200 p-2 border-l-4 border-yellow-500 mb-3">2. Problem Statement</h2>
+                                                <p className="text-xs leading-relaxed text-gray-800 font-medium">
+                                                    Pareto analysis confirms that out of {chartData.length} identified defect categories, a "Vital Few" of just <strong>{analysis.vitalFew.length} nodes</strong> are responsible for ~80% of all process failures. These critical nodes are: 
+                                                    <span className="text-red-600 font-bold"> {analysis.vitalFew.map(f => f.label).join(", ")}.</span> Failure to control these specific inputs is causing a targeted COPQ bleed of <strong>{formatCurrency(dpmoData.vitalCopq)}</strong>.
+                                                </p>
+                                            </section>
+                                            <section className="avoid-break">
+                                                <h2 className="text-sm font-black uppercase bg-gray-200 p-2 border-l-4 border-green-500 mb-3">3. Goal Statement</h2>
+                                                <p className="text-xs leading-relaxed text-gray-800 font-medium">
+                                                    Implement targeted corrective actions on the identified Vital Few nodes to achieve a <strong>{targetReduction}% reduction</strong> in frequency within the next 90 days. This intervention will elevate the process Sigma Level and salvage up to <strong>{formatCurrency(dpmoData.projectedSavings)}</strong> in operational costs.
+                                                </p>
+                                            </section>
+                                            <section className="avoid-break">
+                                                <h2 className="text-sm font-black uppercase bg-gray-200 p-2 border-l-4 border-blue-500 mb-3">4. Project Scope</h2>
+                                                <ul className="list-disc list-inside text-xs leading-relaxed text-gray-800 font-medium ml-4">
+                                                    <li><strong>In-Scope:</strong> Immediate root-cause resolution for the top {analysis.vitalFew.length} Pareto categories within the {selectedTheme} vertical.</li>
+                                                    <li><strong>Out-of-Scope:</strong> Process redesign for the remaining {chartData.length - analysis.vitalFew.length} "Trivial Many" categories.</li>
+                                                </ul>
+                                            </section>
+                                            <section className="avoid-break bg-gray-50 border border-gray-200 p-4 rounded mt-4">
+                                                <h2 className="text-sm font-black uppercase text-gray-900 border-b border-gray-300 pb-2 mb-3">5. Financial Justification & ROI</h2>
+                                                <div className="grid grid-cols-3 gap-4 mb-4">
+                                                    <div>
+                                                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Est. Implementation Cost</div>
+                                                        <div className="text-lg font-black text-gray-800">{formatCurrency(implementationCost)}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Projected Savings</div>
+                                                        <div className="text-lg font-black text-green-600">{formatCurrency(dpmoData.projectedSavings)}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Net ROI</div>
+                                                        <div className="text-lg font-black text-blue-600">{formatCurrency(dpmoData.netRoi)} <span className="text-sm">({isFinite(dpmoData.roiPercent) ? dpmoData.roiPercent.toFixed(0) + '%' : '∞'})</span></div>
+                                                    </div>
+                                                </div>
+                                                <div className={`p-3 rounded border-l-4 ${dpmoData.netRoi >= 0 ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'}`}>
+                                                    <p className={`text-[10px] leading-relaxed ${dpmoData.netRoi >= 0 ? 'text-green-900' : 'text-red-900'}`}>
+                                                        <strong className="uppercase tracking-widest block mb-1 text-[9px]">{dpmoData.netRoi >= 0 ? 'Executive Summary : Positive ROI' : 'Executive Warning : Negative ROI'}</strong>
+                                                        {dpmoData.netRoi >= 0 
+                                                            ? `This initiative is financially viable. It projects a net profit of ${formatCurrency(dpmoData.netRoi)} after fully recovering the ${formatCurrency(implementationCost || 0)} investment, achieving a ${isFinite(dpmoData.roiPercent) ? dpmoData.roiPercent.toFixed(0) + '%' : 'Infinite'} return.`
+                                                            : `The implementation cost (${formatCurrency(implementationCost || 0)}) exceeds projected savings, causing a ${formatCurrency(Math.abs(dpmoData.netRoi))} deficit. Re-evaluate solution costs.`
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </section>
+                                        </div>
+                                    </div>
+
+                                    {/* Page 2: Exec Summary & Chart */}
+                                    <div className="page-break-before page-break-after mt-8">
+                                        <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-900 border-b-2 border-black pb-2 mb-6">Executive Summary & Target State</h2>
+                                        <div className="avoid-break">
+                                            <ReportKPIBlock dpmoData={dpmoData} analysis={analysis} chartData={chartData} implementationCost={implementationCost} />
+                                        </div>
+                                        <div className="avoid-break">
+                                            <ReportChartBlock chartData={chartData} targetReduction={targetReduction} costPerDefect={costPerDefect} />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Page 3: Full Data Ledger */}
+                                    <div className="page-break-before page-break-after mt-8 avoid-break">
+                                        <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-900 border-b-2 border-black pb-2 mb-6">Analytical Ledger</h2>
+                                        <ReportTableBlock chartData={chartData} costPerDefect={costPerDefect} />
+                                    </div>
+
+                                    {/* Page 4+: Dynamic Roadmaps */}
+                                    <div className="page-break-before mt-8">
+                                        <h2 className="text-2xl font-black uppercase tracking-tighter text-gray-900 border-b-2 border-black pb-2 mb-6 avoid-break">Targeted Corrective Actions (The Vital Few)</h2>
+                                        <div className="space-y-6">
+                                            {/* Dynamic scaling for however many nodes exist */}
+                                            {analysis.vitalFew.map((item, idx) => (
+                                                <div key={idx} className="border-2 border-gray-300 rounded-lg p-6 mb-6 avoid-break bg-white shadow-sm">
+                                                    <div className="flex justify-between items-center border-b-2 border-gray-200 pb-3 mb-4">
+                                                        <h3 className="text-xl font-black uppercase italic text-gray-900">{safeRender(item.label)}</h3>
+                                                        <div className="text-right bg-red-50 px-4 py-2 rounded border border-red-200">
+                                                            <div className="text-[9px] font-black text-red-600 uppercase tracking-widest">COPQ Mitigation Target</div>
+                                                            <div className="text-xl font-black text-red-600">{formatCurrency(item.value * costPerDefect * (targetReduction/100))}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-8">
+                                                        <div>
+                                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Root Cause Logic (5 Whys)</h4>
+                                                            <div className="space-y-3">
+                                                                {getHyperRCA(item.label).map((why, wIdx) => (
+                                                                    <div key={wIdx} className="flex gap-3">
+                                                                        <div className={`flex-shrink-0 w-5 h-5 rounded flex items-center justify-center text-[8px] font-black ${wIdx === 4 ? 'bg-yellow-500 text-black border border-yellow-600' : 'bg-gray-100 text-gray-600 border border-gray-300'}`}>{wIdx === 4 ? 'RC' : wIdx + 1}</div>
+                                                                        <p className={`text-[11px] leading-snug ${wIdx === 4 ? 'font-bold text-black' : 'text-gray-700'}`}>{safeRender(why)}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-gray-50 p-5 rounded-lg border-2 border-gray-200">
+                                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Actionable Kanban Checklist</h4>
+                                                            <ul className="space-y-4">
+                                                                {getHyperSolutions(item.label).map((sol, sIdx) => (
+                                                                    <li key={sIdx} className="flex gap-3 items-start bg-white p-2 rounded border border-gray-200 shadow-sm">
+                                                                        <input type="checkbox" className="mt-0.5 w-4 h-4 border-gray-300 rounded cursor-pointer" />
+                                                                        <span className="text-[11px] font-bold text-gray-800 leading-snug">{safeRender(sol)}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-[#050505] font-sans text-gray-200 pb-24">
+                    <PremiumHeader />
+                    
+                    <main className="max-w-[1400px] mx-auto px-6 md:px-12 mt-8">
+                        {/* EXECUTIVE KPI DASHBOARD */}
+                        {chartData.length > 0 && (
+                            <div className="mb-8 relative z-20 space-y-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                                    <div className="bg-[#0a0a0a] border border-gray-800 p-4 rounded-2xl flex flex-col justify-center relative">
+                                        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            <span className="truncate">Process Sigma</span>
+                                            <InfoTooltip text={`DPMO (${dpmoData.dpmo}) = (${analysis?.total || 0} Defects ÷ ${(Number(totalUnits) || 0) * (Number(oppsPerUnit) || 0)} Total Opps) × 1,000,000. Sigma converts this to a 0-6 score.`} />
+                                        </div>
+                                        <div className={`text-xl xl:text-2xl font-black flex items-center gap-2 truncate ${sigmaColor}`}>
+                                            <Icon name="sigma" size={20} className={`flex-shrink-0 ${sigmaIconColor}`} /> {dpmoData.sigma}
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 mt-1 truncate">DPMO: {dpmoData.dpmo}</div>
+                                    </div>
+                                    <div className="bg-[#0a0a0a] border border-gray-800 p-4 rounded-2xl flex flex-col justify-center border-l-4 border-l-yellow-500 relative">
+                                        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            <span className="truncate">Vital Few Nodes</span>
+                                            <InfoTooltip text="The Pareto Principle states that ~80% of problems come from ~20% of causes. This indicates how many specific issues are driving the vast majority of your variance." />
+                                        </div>
+                                        <div className="text-xl xl:text-2xl font-black text-yellow-400 text-glow-yellow truncate">{analysis?.vitalFew?.length} <span className="text-[10px] text-gray-600 font-medium">/ {chartData.length}</span></div>
+                                        <div className="text-[10px] text-yellow-500 mt-1 truncate">Drives 80% Variance</div>
+                                    </div>
+                                    <div className="bg-[#0a0a0a] border border-gray-800 p-4 rounded-2xl flex flex-col justify-center relative">
+                                        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            <span className="truncate">Total COPQ Exposure</span>
+                                            <InfoTooltip text="Total Cost of Poor Quality. The overall financial loss (₹) generated by ALL defects combined within the measured timeframe." />
+                                        </div>
+                                        <div className="text-xl xl:text-2xl font-black text-white truncate" title={formatCurrency(dpmoData.totalCopq)}>{formatCurrency(dpmoData.totalCopq)}</div>
+                                        <div className="text-[10px] text-gray-400 mt-1 truncate">{safeRender(analysis?.total)} Total Defects</div>
+                                    </div>
+                                    <div className="bg-[#0a0a0a] border border-gray-800 p-4 rounded-2xl flex flex-col justify-center border-l-4 border-l-red-500 relative">
+                                        <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                                            <span className="truncate">Vital Few COPQ Bleed</span>
+                                            <InfoTooltip text="The specific financial loss driven ONLY by the top 'Vital Few' defect categories. Fixing these yields the highest ROI." />
+                                        </div>
+                                        <div className="text-xl xl:text-2xl font-black text-red-500 text-glow-red truncate" title={formatCurrency(dpmoData.vitalCopq)}>{formatCurrency(dpmoData.vitalCopq)}</div>
+                                        <div className="text-[10px] text-red-400 mt-1 truncate">Primary Target</div>
+                                    </div>
+                                    <div className="bg-[#111] border border-green-500/50 p-4 rounded-2xl flex flex-col justify-center relative">
+                                        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none z-0">
+                                            <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 rounded-full blur-[20px]"></div>
+                                        </div>
+                                        <div className="text-[9px] text-green-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1 relative z-10">
+                                            <span className="truncate">Projected Net ROI</span>
+                                            <InfoTooltip text={`ROI (${isFinite(dpmoData.roiPercent) ? dpmoData.roiPercent.toFixed(0) + '%' : '∞'}) = (Net ROI ${formatCurrency(dpmoData.netRoi)} ÷ Imp. Cost ${formatCurrency(implementationCost || 0)}) × 100. Represents pure financial gain vs initial investment.`} />
+                                        </div>
+                                        <div className={`text-xl xl:text-2xl font-black truncate relative z-10 ${dpmoData.netRoi >= 0 ? 'text-green-400 text-glow-green' : 'text-red-500 text-glow-red'}`} title={formatCurrency(dpmoData.netRoi)}>{formatCurrency(dpmoData.netRoi)}</div>
+                                        <div className={`text-[10px] mt-1 truncate relative z-10 ${dpmoData.netRoi >= 0 ? 'text-green-500' : 'text-red-500'}`}>ROI: {isFinite(dpmoData.roiPercent) ? dpmoData.roiPercent.toFixed(0) + '%' : '∞'}</div>
+                                    </div>
+                                </div>
+
+                                {/* Dynamic ROI Interpretation Box */}
+                                <div className={`p-4 rounded-2xl border border-gray-800 shadow-inner flex items-start gap-4 ${dpmoData.netRoi >= 0 ? 'bg-green-900/10' : 'bg-red-900/10'}`}>
+                                    <div className={`p-2 rounded-full flex-shrink-0 mt-0.5 ${dpmoData.netRoi >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                        <Icon name="lightbulb" size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className={`text-xs font-black uppercase tracking-widest mb-1 ${dpmoData.netRoi >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                            {dpmoData.netRoi >= 0 ? 'Positive Financial Outlook' : 'Negative ROI Warning'}
+                                        </h4>
+                                        <p className="text-[11px] text-gray-300 leading-relaxed">
+                                            {dpmoData.netRoi >= 0 
+                                                ? <>Implementing these targeted solutions is projected to yield a net profit of <strong className="text-green-400">{formatCurrency(dpmoData.netRoi)}</strong> after fully recovering the <strong className="text-white">{formatCurrency(implementationCost || 0)}</strong> initial investment. This represents a highly efficient <strong className="text-green-400">{isFinite(dpmoData.roiPercent) ? dpmoData.roiPercent.toFixed(0) + '%' : 'Infinite'} return on investment</strong>.</>
+                                                : <>The estimated implementation cost of <strong className="text-white">{formatCurrency(implementationCost || 0)}</strong> exceeds the projected savings, resulting in a net loss of <strong className="text-red-400">{formatCurrency(Math.abs(dpmoData.netRoi))}</strong>. Consider exploring more cost-effective solutions or expanding the target reduction percentage.</>
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative z-10">
+                            <aside className="xl:col-span-3 space-y-6">
+                                <div className="bg-[#0a0a0a] p-6 rounded-2xl border border-gray-800 shadow-2xl relative">
+                                    <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none z-0">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-[50px]"></div>
+                                    </div>
+                                    <h3 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white mb-6 flex items-center gap-2 border-b border-gray-800 pb-4 relative z-10">
+                                        <Icon name="settings" size={16} className="text-yellow-500" /> System Configuration
+                                    </h3>
+                                    
+                                    <div className="space-y-5 relative z-10">
+                                        <div>
+                                            <label className="text-[9px] font-bold text-gray-400 uppercase flex items-center mb-2 tracking-widest">
+                                                Industry Segment
+                                                <InfoTooltip text="Select the industry to load standard defect terminology and baseline operational units." />
+                                            </label>
+                                            <select 
+                                                className="w-full bg-[#111] border border-gray-700 text-white rounded p-3 text-xs font-bold outline-none focus:border-yellow-500 transition-colors uppercase tracking-wide cursor-pointer appearance-none" 
+                                                value={selectedTheme} 
+                                                onChange={(e) => setSelectedTheme(e.target.value)}
+                                            >
+                                                {Object.keys(INDUSTRY_THEMES).map(t => <option key={t} value={t}>{t}</option>)}
+                                            </select>
+                                        </div>
+                                        
+                                        <div className="border-t border-gray-800 pt-4 space-y-4">
+                                            <div className="text-[9px] font-black text-yellow-500 uppercase flex items-center tracking-widest">
+                                                DPMO Metrics
+                                                <InfoTooltip text="Defects Per Million Opportunities. The core Six Sigma metric calculating your process capacity for error vs your actual errors." />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-gray-400 uppercase block mb-1 tracking-widest">{currentLabels.unit}</label>
+                                                <input type="number" className="w-full bg-[#111] border border-gray-700 text-white rounded p-2 text-xs font-mono outline-none focus:border-yellow-500" value={totalUnits} onChange={e => setTotalUnits(e.target.value === '' ? '' : Number(e.target.value))} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-yellow-500 uppercase flex items-center mb-1 tracking-widest">
+                                                    {currentLabels.opp}
+                                                    <InfoTooltip text="The total number of specific steps, criteria, or chances for an error to occur during a single transaction or unit of work." />
+                                                </label>
+                                                <input type="number" className="w-full bg-[#111] border border-yellow-500/50 text-white rounded p-2 text-xs font-mono outline-none focus:border-yellow-500" value={oppsPerUnit} onChange={e => setOppsPerUnit(e.target.value === '' ? '' : Number(e.target.value))} />
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-gray-800 pt-4 space-y-4">
+                                            <div className="text-[9px] font-black text-yellow-500 uppercase flex items-center tracking-widest">
+                                                Financials & ROI
+                                                <InfoTooltip text="Cost of Poor Quality (COPQ) tracking. The engine contrasts how much errors cost vs how much it costs to fix them." />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-gray-400 uppercase flex items-center mb-1 tracking-widest">
+                                                    Avg Cost Per Defect (₹)
+                                                </label>
+                                                <input type="number" className="w-full bg-[#111] border border-gray-700 text-white rounded p-2 text-xs font-mono outline-none focus:border-yellow-500" value={costPerDefect} onChange={e => setCostPerDefect(e.target.value === '' ? '' : Number(e.target.value))} />
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-gray-400 uppercase flex items-center mb-1 tracking-widest">
+                                                    Est. Implementation Cost (₹)
+                                                    <InfoTooltip text="The estimated budget needed to implement your solutions (e.g., buying software, training, new tools)." />
+                                                </label>
+                                                <input type="number" className="w-full bg-[#111] border border-gray-700 text-white rounded p-2 text-xs font-mono outline-none focus:border-yellow-500" value={implementationCost} onChange={e => setImplementationCost(e.target.value === '' ? '' : Number(e.target.value))} />
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-gray-800 pt-4 space-y-4">
+                                            <div className="text-[9px] font-black text-yellow-500 uppercase flex items-center tracking-widest">
+                                                Future State Targeting
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-gray-400 uppercase flex items-center mb-2 tracking-widest">
+                                                    Target Reduction %
+                                                    <InfoTooltip text="Slide to set your expected success rate. A 100% reduction means totally eliminating the Vital Few defects." />
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                    <input 
+                                                        type="range" min="10" max="100" step="10" 
+                                                        value={targetReduction} 
+                                                        onChange={e => setTargetReduction(Number(e.target.value))} 
+                                                        className="w-full accent-yellow-500 cursor-pointer"
+                                                    />
+                                                    <span className="text-xs font-black text-green-500 w-10 text-right bg-green-500/10 px-2 py-1 rounded">{targetReduction}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 pt-2">
+                                            <button onClick={generateRandomData} className="flex-1 bg-white text-black py-2 rounded text-[9px] font-black hover:bg-yellow-400 transition-all flex items-center justify-center gap-1 uppercase tracking-widest"><Icon name="refresh" size={12} /> Gen</button>
+                                            <button onClick={() => setInputText('')} className="flex-1 bg-transparent border border-gray-700 text-gray-400 py-2 rounded text-[9px] font-bold hover:border-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-1 uppercase tracking-widest"><Icon name="trash" size={12} /> Clear</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#0a0a0a] p-6 rounded-2xl border border-gray-800 shadow-2xl relative z-10">
+                                    <h3 className="font-bold text-[10px] uppercase tracking-[0.2em] text-white mb-4 flex items-center justify-between border-b border-gray-800 pb-4">
+                                        <span className="flex items-center">Prioritized Tasks <InfoTooltip text="Paste your raw defect data here (Format: Name Value). The engine will automatically sort, analyze, and prioritize them using the 80/20 rule." /></span>
+                                        <label className="cursor-pointer text-yellow-500 hover:text-white transition-colors" title="Upload CSV/TXT">
+                                            <Icon name="upload" size={14} />
+                                            <input type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+                                        </label>
+                                    </h3>
+                                    <textarea 
+                                        className="w-full h-32 p-3 text-[10px] font-mono bg-[#111] border border-gray-700 text-gray-300 rounded outline-none focus:border-yellow-500 transition-all placeholder:text-gray-600 custom-scrollbar leading-relaxed" 
+                                        placeholder={"Defect_Name Value\nEx: Fault_Pump 45"} 
+                                        value={inputText} 
+                                        onChange={(e) => setInputText(e.target.value)} 
+                                    />
+                                </div>
+                            </aside>
+
+                            <section className="xl:col-span-9 space-y-6">
+                                <div className="bg-[#0a0a0a] p-8 rounded-3xl border border-gray-800 shadow-2xl relative z-10">
+                                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 border-b border-gray-800 pb-6">
+                                        <h2 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-3">
+                                            <Icon name="chart" size={24} className="text-yellow-500" /> Pareto Visualization
+                                        </h2>
+                                        
+                                        <div className="flex gap-3">
+                                            <button onClick={() => setActiveTab('report')} disabled={chartData.length === 0} className={`px-8 py-3 rounded font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all ${chartData.length > 0 ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-gray-800 text-gray-600 cursor-not-allowed border-none'}`}>
+                                                <Icon name="fileText" size={14} /> Generate Full Report
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-6 mb-4">
+                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-gray-400"><div className="w-3 h-3 bg-gray-800 rounded-sm"></div> Current</div>
+                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-green-500"><div className="w-3 h-3 bg-green-500 rounded-sm"></div> Target ({targetReduction}% Reduction)</div>
+                                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-yellow-500"><div className="w-3 h-3 bg-yellow-500 rounded-full"></div> Cumulative</div>
+                                    </div>
+
+                                    <div className="h-[450px] min-h-[450px] w-full">
+                                        {chartData.length > 0 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 60 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1f2937" />
+                                                    <XAxis dataKey="label" tick={<CustomizedAxisTickDark />} interval={0} axisLine={{stroke: '#374151'}} tickLine={false} />
+                                                    <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 10, fontWeight: 600}} />
+                                                    <YAxis yAxisId="right" orientation="right" domain={[0, 100]} unit="%" axisLine={false} tickLine={false} tick={{fill: '#FACC15', fontSize: 10, fontWeight: 900}} />
+                                                    <ReferenceLine y={80} yAxisId="right" stroke="#FACC15" strokeDasharray="4 4" opacity={0.5} />
+                                                    <Tooltip content={(props) => <CustomTooltip {...props} costPerDefect={costPerDefect} targetReduction={targetReduction} />} cursor={{fill: '#111827', opacity: 0.4}} />
+                                                    
+                                                    <Bar yAxisId="left" dataKey="value" radius={[2, 2, 0, 0]} barSize={20} fill="#1f2937" />
+                                                    <Bar yAxisId="left" dataKey="targetValue" radius={[2, 2, 0, 0]} barSize={20} fill="#22c55e" />
+                                                    
+                                                    <Line yAxisId="right" type="monotone" dataKey="cumulativePercentage" stroke="#FACC15" strokeWidth={4} dot={{ r: 5, fill: '#050505', strokeWidth: 3, stroke: '#FACC15' }} activeDot={{ r: 8, fill: '#FACC15', stroke: '#fff', strokeWidth: 2 }} />
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="h-full flex flex-col items-center justify-center text-gray-600 gap-6 border-2 border-dashed border-gray-800 rounded-2xl">
+                                                <Icon name="activity" size={48} className="opacity-20" />
+                                                <p className="font-bold uppercase tracking-[0.5em] text-[10px] opacity-40">System Idle - Awaiting Data</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

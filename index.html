@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS SET GO PLATFORM</title>
+    <!-- Netlify Identity Widget for Security & Tracking -->
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            border-bottom: 2px solid #facc15; /* Industrial Yellow */
+            background-color: #0a0a0a;
+        }
+        header h1 {
+            color: #facc15;
+            margin: 0;
+            font-size: 2.8rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        header a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+        header a:hover { opacity: 1; color: #facc15; }
+
+        /* Login Status Bar */
+        .auth-status {
+            padding: 10px;
+            text-align: right;
+            background: #111;
+            font-size: 0.9rem;
+        }
+
+        /* 3-Column Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 40px;
+            max-width: 1200px;
+            margin: auto;
+            flex-grow: 1;
+        }
+        .button {
+            background-color: #facc15; /* High-Contrast Yellow */
+            color: black;
+            text-align: center;
+            padding: 25px 15px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.05rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .button:hover {
+            background-color: white;
+            transform: translateY(-3px);
+            border: 2px solid #facc15;
+            box-shadow: 0 6px 12px rgba(250, 204, 21, 0.2);
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 900px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+<div class="auth-status">
+    <div data-netlify-identity-menu></div>
+</div>
+
+<header>
+    <h1>MECTS SET GO PLATFORM</h1>
+    <a href="https://www.mects.in" target="_blank">www.mects.in</a>
+</header>
+
+<div class="grid-container">
+    <!-- Row 1 -->
+    <a href="activities-vsm.html" class="button">Activities VSM</a>
+    <a href="annova-ver-3.5.html" class="button">ANOVA Analysis Ver 3.5</a>
+    <a href="assessments-portal.html" class="button">Assessments Portal</a>
+    
+    <!-- Row 2 -->
+    <a href="box-whisker-plot-ver-2.5.html" class="button">Box & Whisker Plot Ver 2.5</a>
+    <a href="cronbach-platform-ver-9.0.html" class="button">Cronbach Platform Ver 9.0</a>
+    <a href="current-state-and-future-state.html" class="button">Current & Future State Platform</a>
+    
+    <!-- Row 3 -->
+    <a href="cusum-ver-1.50.html" class="button">CUSUM Ver 1.50</a>
+    <a href="fmea-risk-dmaic.html" class="button">FMEA Risk DMAIC Integration</a>
+    <a href="fmea-gold-std-2.0.html" class="button">FMEA Analysis Gold Std Ver 2.0</a>
+    
+    <!-- Row 4 -->
+    <a href="gemba-walk-ver-11.0.html" class="button">Gemba Walk Ver 11.0</a>
+    <a href="histogram-ver-11.0.html" class="button">Histogram Ver 11.0</a>
+    <a href="mttf-mtbf-ver-11.0.html" class="button">MTTF & MTBF Ver 11.0</a>
+    
+    <!-- Row 5 -->
+    <a href="normal-distribution-ver-2.0.html" class="button">Normal Distribution Ver 2.0</a>
+    <a href="pareto-ver-7.0.html" class="button">Pareto Analysis Ver 7.0</a>
+    <a href="process-capabilities-ver-9.0.html" class="button">Process Capabilities Ver 9.0</a>
+    
+    <!-- Row 6 -->
+    <a href="sensitivity-analysis.html" class="button">Sensitivity Analysis Platform</a>
+    <a href="taguchi-analysis.html" class="button">Taguchi Analysis</a>
+    <a href="pareto-secondary.html" class="button">Pareto Analysis (Secondary)</a>
+    
+    <!-- Row 7 -->
+    <a href="unified-spc.html" class="button">Unified SPC</a>
+    <a href="vsm-assessment.html" class="button">VSM Assessment Platform</a>
+    <a href="vsm-concepts-crm.html" class="button">VSM Concepts & CRM</a>
+    
+    <!-- Row 8 -->
+    <a href="vsm-concepts.html" class="button">VSM Concepts</a>
+</div>
+
+<script>
+  // Poka-Yoke: Ensure user is logged in to see the platform
+  netlifyIdentity.on('init', user => {
+    if (!user) {
+      netlifyIdentity.open(); // Force login popup
+    }
+  });
+  
+  // Refresh page on logout to secure the view
+  netlifyIdentity.on('logout', () => location.reload());
+</script>
+
+</body>
+</html>

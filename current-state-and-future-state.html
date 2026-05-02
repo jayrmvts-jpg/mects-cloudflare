@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS SET....GO | Value Stream Platform</title>
+    <!-- Core Infrastructure -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; color: #0f172a; background-color: #f8fafc; }
+        .font-black { font-weight: 900; }
+        .font-bold { font-weight: 800; }
+        button:active { transform: scale(0.98); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .print-no-break { page-break-inside: avoid !important; break-inside: avoid !important; }
+    </style>
+</head>
+<body class="overflow-x-hidden font-black">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+
+        const EXTERNAL_LOGIC = {
+            'Supplier Failure': { root: "Upstream supply chain disruption causing material starvation.", action: "Establish Vendor Managed Inventory (VMI) & direct-to-cell daily milk runs." },
+            'Workforce Turnover': { root: "Loss of tribal knowledge and process expertise.", action: "Digitize standard work with AR/Video. Shift to highly modular cross-training matrices." },
+            'Environmental Variability': { root: "External conditions impacting process parameters and yield.", action: "Implement closed-loop automated parameter adjustment via IoT sensors." },
+            'Supply Chain Shock': { root: "Macro-logistical constraints forcing erratic replenishment scheduling.", action: "Design flexible Heijunka (level-loading) with localized buffer supermarkets." },
+            'Regulatory Shift': { root: "New compliance mandates or safety standards requiring process reconfiguration.", action: "Integrate automated inline quality checks to guarantee 100% compliance at source." }
+        };
+
+        const INDUSTRY_TEMPLATES = {
+            'user_defined': { label: 'User Defined (Blank Canvas)', supplier: '', customer: '', demand: 0, unit: 'sec', steps: [
+                { id: 1, name: 'Process 1', inventoryPieces: 0, manualCT: 0, machineCT: 0, vatSec: 0, changeoverMin: 0, uptimePct: 100, defectPct: 0, operators: 1 }
+            ]},
+            'call_center': { label: 'Call Center Support', supplier: 'Incoming Queue', customer: 'Resolved Callers', demand: 1200, unit: 'sec', steps: [
+                { id: 1, name: 'IVR Triage', inventoryPieces: 100, manualCT: 0, machineCT: 30, vatSec: 30, changeoverMin: 0, uptimePct: 100, defectPct: 2, operators: 0 },
+                { id: 2, name: 'L1 Support', inventoryPieces: 50, manualCT: 180, machineCT: 0, vatSec: 150, changeoverMin: 0, uptimePct: 98, defectPct: 15, operators: 12 },
+                { id: 3, name: 'L2 Escalation', inventoryPieces: 15, manualCT: 420, machineCT: 0, vatSec: 360, changeoverMin: 0, uptimePct: 99, defectPct: 5, operators: 4 },
+                { id: 4, name: 'QA & Wrap-up', inventoryPieces: 5, manualCT: 60, machineCT: 30, vatSec: 60, changeoverMin: 0, uptimePct: 100, defectPct: 1, operators: 2 }
+            ]},
+            'pen_mfg': { label: 'Pen Manufacturing', supplier: 'Plastic Granules', customer: 'Stationery Dist.', demand: 50000, unit: 'sec', steps: [
+                { id: 1, name: 'Injection Molding', inventoryPieces: 10000, manualCT: 1, machineCT: 5, vatSec: 5, changeoverMin: 45, uptimePct: 92, defectPct: 2, operators: 2 },
+                { id: 2, name: 'Ink Filling', inventoryPieces: 5000, manualCT: 0, machineCT: 2, vatSec: 2, changeoverMin: 15, uptimePct: 95, defectPct: 1, operators: 1 },
+                { id: 3, name: 'Tip Assembly', inventoryPieces: 2500, manualCT: 1, machineCT: 3, vatSec: 3, changeoverMin: 10, uptimePct: 90, defectPct: 1.5, operators: 3 },
+                { id: 4, name: 'Blister Packaging', inventoryPieces: 8000, manualCT: 2, machineCT: 4, vatSec: 4, changeoverMin: 30, uptimePct: 98, defectPct: 0.5, operators: 4 }
+            ]},
+            'production': { label: 'General Production', supplier: 'Components Hub', customer: 'Final Assembly', demand: 800, unit: 'sec', steps: [
+                { id: 1, name: 'Kitting & Prep', inventoryPieces: 400, manualCT: 120, machineCT: 0, vatSec: 90, changeoverMin: 15, uptimePct: 100, defectPct: 2, operators: 3 },
+                { id: 2, name: 'Sub-Assembly', inventoryPieces: 200, manualCT: 240, machineCT: 60, vatSec: 280, changeoverMin: 20, uptimePct: 95, defectPct: 3, operators: 5 },
+                { id: 3, name: 'Final Assembly', inventoryPieces: 150, manualCT: 300, machineCT: 0, vatSec: 250, changeoverMin: 10, uptimePct: 98, defectPct: 1, operators: 4 },
+                { id: 4, name: 'Testing', inventoryPieces: 50, manualCT: 60, machineCT: 180, vatSec: 200, changeoverMin: 5, uptimePct: 99, defectPct: 5, operators: 2 }
+            ]},
+            'manufacturing': { label: 'Heavy Manufacturing', supplier: 'Raw Steel', customer: 'Assembly Line', demand: 250, unit: 'min', steps: [
+                { id: 1, name: 'CNC Machining', inventoryPieces: 500, manualCT: 10, machineCT: 45, vatSec: 45, changeoverMin: 90, uptimePct: 85, defectPct: 4, operators: 2 },
+                { id: 2, name: 'Heat Treatment', inventoryPieces: 200, manualCT: 5, machineCT: 120, vatSec: 120, changeoverMin: 30, uptimePct: 98, defectPct: 1, operators: 1 },
+                { id: 3, name: 'Precision Grinding', inventoryPieces: 150, manualCT: 15, machineCT: 30, vatSec: 35, changeoverMin: 45, uptimePct: 90, defectPct: 3, operators: 2 },
+                { id: 4, name: 'QC Inspection', inventoryPieces: 40, manualCT: 20, machineCT: 5, vatSec: 20, changeoverMin: 0, uptimePct: 100, defectPct: 0.5, operators: 3 }
+            ]},
+            'it_support': { label: 'I.T. & Software Support', supplier: 'Ticket Queue', customer: 'Internal Staff', demand: 150, unit: 'min', steps: [
+                { id: 1, name: 'Ticket Logging', inventoryPieces: 80, manualCT: 10, machineCT: 2, vatSec: 10, changeoverMin: 0, uptimePct: 100, defectPct: 2, operators: 2 },
+                { id: 2, name: 'Remote Diagnostic', inventoryPieces: 40, manualCT: 45, machineCT: 0, vatSec: 30, changeoverMin: 0, uptimePct: 99, defectPct: 15, operators: 5 },
+                { id: 3, name: 'Patch / Fix Execution', inventoryPieces: 15, manualCT: 90, machineCT: 30, vatSec: 100, changeoverMin: 0, uptimePct: 95, defectPct: 5, operators: 3 },
+                { id: 4, name: 'User Verification', inventoryPieces: 5, manualCT: 15, machineCT: 0, vatSec: 10, changeoverMin: 0, uptimePct: 100, defectPct: 1, operators: 2 }
+            ]},
+            'networking': { label: 'Network Provisioning', supplier: 'Hardware Vendor', customer: 'Enterprise Client', demand: 10, unit: 'day', steps: [
+                { id: 1, name: 'Topology Design', inventoryPieces: 5, manualCT: 2, machineCT: 0, vatSec: 1.5, changeoverMin: 0, uptimePct: 100, defectPct: 5, operators: 2 },
+                { id: 2, name: 'Switch/Router Config', inventoryPieces: 3, manualCT: 1, machineCT: 0.5, vatSec: 1, changeoverMin: 0, uptimePct: 98, defectPct: 10, operators: 3 },
+                { id: 3, name: 'Rack Installation', inventoryPieces: 2, manualCT: 3, machineCT: 0, vatSec: 2.5, changeoverMin: 0, uptimePct: 100, defectPct: 2, operators: 4 },
+                { id: 4, name: 'Network Testing', inventoryPieces: 4, manualCT: 1, machineCT: 1, vatSec: 1.5, changeoverMin: 0, uptimePct: 99, defectPct: 1, operators: 2 }
+            ]},
+            'fmcg': { label: 'FMCG Packaging', supplier: 'Raw Ingredients', customer: 'Retail Distributors', demand: 20000, unit: 'sec', steps: [
+                { id: 1, name: 'High-Speed Mixing', inventoryPieces: 5000, manualCT: 2, machineCT: 30, vatSec: 30, changeoverMin: 60, uptimePct: 92, defectPct: 1, operators: 1 },
+                { id: 2, name: 'Bottling & Filling', inventoryPieces: 2000, manualCT: 1, machineCT: 5, vatSec: 5, changeoverMin: 45, uptimePct: 88, defectPct: 3, operators: 2 },
+                { id: 3, name: 'Labeling & Sealing', inventoryPieces: 1500, manualCT: 0.5, machineCT: 3, vatSec: 3, changeoverMin: 20, uptimePct: 95, defectPct: 1.5, operators: 1 },
+                { id: 4, name: 'Case Palletizing', inventoryPieces: 800, manualCT: 5, machineCT: 10, vatSec: 10, changeoverMin: 10, uptimePct: 97, defectPct: 0.5, operators: 3 }
+            ]},
+            'sales_marketing': { label: 'Sales & Marketing Forecast', supplier: 'Raw Leads', customer: 'Signed Clients', demand: 20, unit: 'day', steps: [
+                { id: 1, name: 'Lead Scoring', inventoryPieces: 200, manualCT: 0.2, machineCT: 0.1, vatSec: 0.2, changeoverMin: 0, uptimePct: 100, defectPct: 30, operators: 2 },
+                { id: 2, name: 'Discovery Pitch', inventoryPieces: 50, manualCT: 1.5, machineCT: 0, vatSec: 1, changeoverMin: 0, uptimePct: 100, defectPct: 50, operators: 5 },
+                { id: 3, name: 'Forecasting/Proposal', inventoryPieces: 15, manualCT: 2, machineCT: 0.5, vatSec: 2, changeoverMin: 0, uptimePct: 100, defectPct: 15, operators: 3 },
+                { id: 4, name: 'Contract Negotiation', inventoryPieces: 5, manualCT: 4, machineCT: 0, vatSec: 3, changeoverMin: 0, uptimePct: 100, defectPct: 5, operators: 2 }
+            ]},
+            'logistics': { label: 'Logistics & SCM', supplier: 'Cargo Port', customer: 'Last Mile Hub', demand: 3000, unit: 'min', steps: [
+                { id: 1, name: 'Container Unload', inventoryPieces: 500, manualCT: 15, machineCT: 20, vatSec: 20, changeoverMin: 15, uptimePct: 90, defectPct: 2, operators: 6 },
+                { id: 2, name: 'Auto Sortation', inventoryPieces: 800, manualCT: 2, machineCT: 5, vatSec: 5, changeoverMin: 5, uptimePct: 95, defectPct: 1, operators: 2 },
+                { id: 3, name: 'Staging/Consolidation', inventoryPieces: 300, manualCT: 10, machineCT: 0, vatSec: 8, changeoverMin: 0, uptimePct: 100, defectPct: 0.5, operators: 4 },
+                { id: 4, name: 'Dispatch Loading', inventoryPieces: 150, manualCT: 12, machineCT: 5, vatSec: 15, changeoverMin: 10, uptimePct: 98, defectPct: 0.2, operators: 5 }
+            ]},
+            'healthcare': { label: 'Healthcare & ER Triage', supplier: 'Walk-In / EMS', customer: 'Discharged/Admitted', demand: 180, unit: 'min', steps: [
+                { id: 1, name: 'Vitals & Triage', inventoryPieces: 25, manualCT: 10, machineCT: 2, vatSec: 10, changeoverMin: 0, uptimePct: 100, defectPct: 1, operators: 4 },
+                { id: 2, name: 'Physician Consult', inventoryPieces: 40, manualCT: 25, machineCT: 0, vatSec: 20, changeoverMin: 0, uptimePct: 100, defectPct: 5, operators: 6 },
+                { id: 3, name: 'Diagnostics & Lab', inventoryPieces: 15, manualCT: 10, machineCT: 40, vatSec: 40, changeoverMin: 5, uptimePct: 95, defectPct: 2, operators: 3 },
+                { id: 4, name: 'Discharge Planning', inventoryPieces: 10, manualCT: 15, machineCT: 0, vatSec: 10, changeoverMin: 0, uptimePct: 100, defectPct: 0.5, operators: 2 }
+            ]},
+            'banking': { label: 'Banking / Loan Process', supplier: 'Loan Applications', customer: 'Funded Accounts', demand: 120, unit: 'day', steps: [
+                { id: 1, name: 'App Intake & OCR', inventoryPieces: 300, manualCT: 0.1, machineCT: 0.2, vatSec: 0.2, changeoverMin: 0, uptimePct: 99, defectPct: 5, operators: 1 },
+                { id: 2, name: 'Credit Underwriting', inventoryPieces: 150, manualCT: 1.5, machineCT: 0.5, vatSec: 1.5, changeoverMin: 0, uptimePct: 100, defectPct: 15, operators: 8 },
+                { id: 3, name: 'Compliance Audit', inventoryPieces: 50, manualCT: 1, machineCT: 0, vatSec: 0.8, changeoverMin: 0, uptimePct: 100, defectPct: 2, operators: 4 },
+                { id: 4, name: 'Fund Disbursement', inventoryPieces: 20, manualCT: 0.2, machineCT: 0.1, vatSec: 0.2, changeoverMin: 0, uptimePct: 100, defectPct: 0.1, operators: 2 }
+            ]},
+            'retail': { label: 'Retail Replenishment', supplier: 'Distribution Ctr', customer: 'Shoppers', demand: 5000, unit: 'sec', steps: [
+                { id: 1, name: 'Dock Unloading', inventoryPieces: 2000, manualCT: 30, machineCT: 10, vatSec: 25, changeoverMin: 5, uptimePct: 98, defectPct: 2, operators: 4 },
+                { id: 2, name: 'Backroom Sort', inventoryPieces: 800, manualCT: 45, machineCT: 0, vatSec: 30, changeoverMin: 0, uptimePct: 100, defectPct: 3, operators: 5 },
+                { id: 3, name: 'Shelf Restocking', inventoryPieces: 500, manualCT: 60, machineCT: 0, vatSec: 45, changeoverMin: 0, uptimePct: 100, defectPct: 1, operators: 8 },
+                { id: 4, name: 'POS Checkout', inventoryPieces: 150, manualCT: 40, machineCT: 20, vatSec: 50, changeoverMin: 0, uptimePct: 99, defectPct: 0.5, operators: 6 }
+            ]},
+            'ecommerce': { label: 'E-Commerce Fulfillment', supplier: 'Vendor Inventory', customer: 'Courier Dispatch', demand: 8000, unit: 'sec', steps: [
+                { id: 1, name: 'Inbound Scan & Stow', inventoryPieces: 3000, manualCT: 15, machineCT: 5, vatSec: 15, changeoverMin: 0, uptimePct: 98, defectPct: 1, operators: 8 },
+                { id: 2, name: 'Pick to Tote', inventoryPieces: 1500, manualCT: 35, machineCT: 10, vatSec: 30, changeoverMin: 0, uptimePct: 95, defectPct: 2, operators: 15 },
+                { id: 3, name: 'Pack & Box', inventoryPieces: 400, manualCT: 25, machineCT: 5, vatSec: 25, changeoverMin: 2, uptimePct: 99, defectPct: 0.5, operators: 10 },
+                { id: 4, name: 'Shipping Sort', inventoryPieces: 100, manualCT: 5, machineCT: 15, vatSec: 15, changeoverMin: 0, uptimePct: 97, defectPct: 0.1, operators: 3 }
+            ]},
+            'automotive': { label: 'Automotive Assembly', supplier: 'Tier 1 Parts', customer: 'Dealership Network', demand: 800, unit: 'min', steps: [
+                { id: 1, name: 'Body Welding', inventoryPieces: 150, manualCT: 15, machineCT: 60, vatSec: 60, changeoverMin: 120, uptimePct: 88, defectPct: 2, operators: 3 },
+                { id: 2, name: 'Paint Shop', inventoryPieces: 80, manualCT: 10, machineCT: 180, vatSec: 180, changeoverMin: 240, uptimePct: 85, defectPct: 5, operators: 2 },
+                { id: 3, name: 'General Assembly', inventoryPieces: 45, manualCT: 90, machineCT: 30, vatSec: 110, changeoverMin: 30, uptimePct: 95, defectPct: 3, operators: 15 },
+                { id: 4, name: 'End-of-Line Test', inventoryPieces: 15, manualCT: 25, machineCT: 15, vatSec: 35, changeoverMin: 5, uptimePct: 99, defectPct: 1, operators: 4 }
+            ]},
+            'pharma': { label: 'Pharmaceutical Batching', supplier: 'Active Ingredients', customer: 'Wholesalers', demand: 50, unit: 'day', steps: [
+                { id: 1, name: 'Weighing/Dispense', inventoryPieces: 10, manualCT: 0.2, machineCT: 0.1, vatSec: 0.2, changeoverMin: 180, uptimePct: 99, defectPct: 0.5, operators: 2 },
+                { id: 2, name: 'Granulation', inventoryPieces: 8, manualCT: 0.1, machineCT: 1.5, vatSec: 1.5, changeoverMin: 240, uptimePct: 92, defectPct: 2, operators: 1 },
+                { id: 3, name: 'Compressing', inventoryPieces: 5, manualCT: 0.1, machineCT: 1.0, vatSec: 1.0, changeoverMin: 120, uptimePct: 95, defectPct: 1, operators: 1 },
+                { id: 4, name: 'Coating & Pack', inventoryPieces: 12, manualCT: 0.5, machineCT: 0.5, vatSec: 0.8, changeoverMin: 90, uptimePct: 90, defectPct: 1.5, operators: 4 }
+            ]},
+            'food_bev': { label: 'Food & Beverage', supplier: 'Raw Farms', customer: 'Supermarkets', demand: 12000, unit: 'sec', steps: [
+                { id: 1, name: 'Raw Processing', inventoryPieces: 8000, manualCT: 5, machineCT: 40, vatSec: 40, changeoverMin: 120, uptimePct: 90, defectPct: 3, operators: 3 },
+                { id: 2, name: 'Pasteurization', inventoryPieces: 2000, manualCT: 2, machineCT: 60, vatSec: 60, changeoverMin: 60, uptimePct: 98, defectPct: 0.5, operators: 1 },
+                { id: 3, name: 'Canning/Bottling', inventoryPieces: 1500, manualCT: 5, machineCT: 20, vatSec: 20, changeoverMin: 45, uptimePct: 85, defectPct: 2, operators: 4 },
+                { id: 4, name: 'QA & Palletize', inventoryPieces: 500, manualCT: 15, machineCT: 10, vatSec: 20, changeoverMin: 10, uptimePct: 99, defectPct: 0.1, operators: 2 }
+            ]},
+            'hospitality': { label: 'Hospitality Services', supplier: 'Reservations', customer: 'Checked-Out Guests', demand: 400, unit: 'min', steps: [
+                { id: 1, name: 'Pre-Arrival Alloc', inventoryPieces: 150, manualCT: 3, machineCT: 2, vatSec: 4, changeoverMin: 0, uptimePct: 100, defectPct: 1, operators: 2 },
+                { id: 2, name: 'Front Desk Check-In', inventoryPieces: 45, manualCT: 8, machineCT: 1, vatSec: 8, changeoverMin: 0, uptimePct: 99, defectPct: 2, operators: 4 },
+                { id: 3, name: 'Room Turnaround', inventoryPieces: 60, manualCT: 35, machineCT: 0, vatSec: 30, changeoverMin: 0, uptimePct: 100, defectPct: 5, operators: 10 },
+                { id: 4, name: 'Check-Out Process', inventoryPieces: 20, manualCT: 4, machineCT: 1, vatSec: 4, changeoverMin: 0, uptimePct: 100, defectPct: 0.5, operators: 3 }
+            ]},
+            'construction': { label: 'Construction Prep', supplier: 'Raw Materials', customer: 'Job Site', demand: 15, unit: 'day', steps: [
+                { id: 1, name: 'Blueprint Drafting', inventoryPieces: 8, manualCT: 2, machineCT: 0.5, vatSec: 2, changeoverMin: 0, uptimePct: 100, defectPct: 10, operators: 3 },
+                { id: 2, name: 'Beam Fabrication', inventoryPieces: 5, manualCT: 1, machineCT: 2, vatSec: 2.5, changeoverMin: 60, uptimePct: 90, defectPct: 5, operators: 4 },
+                { id: 3, name: 'Welding & Curing', inventoryPieces: 4, manualCT: 3, machineCT: 1, vatSec: 3.5, changeoverMin: 30, uptimePct: 95, defectPct: 2, operators: 5 },
+                { id: 4, name: 'Site Delivery', inventoryPieces: 2, manualCT: 1.5, machineCT: 0.5, vatSec: 1.5, changeoverMin: 0, uptimePct: 98, defectPct: 1, operators: 2 }
+            ]},
+            'finance_ops': { label: 'Corporate Finance', supplier: 'Expense Reports', customer: 'Audit Ledgers', demand: 600, unit: 'min', steps: [
+                { id: 1, name: 'Receipt Intake/OCR', inventoryPieces: 250, manualCT: 1, machineCT: 2, vatSec: 2, changeoverMin: 0, uptimePct: 99, defectPct: 8, operators: 1 },
+                { id: 2, name: 'Policy Verification', inventoryPieces: 100, manualCT: 10, machineCT: 0, vatSec: 8, changeoverMin: 0, uptimePct: 100, defectPct: 12, operators: 5 },
+                { id: 3, name: 'Manager Approval', inventoryPieces: 80, manualCT: 5, machineCT: 0, vatSec: 4, changeoverMin: 0, uptimePct: 100, defectPct: 2, operators: 8 },
+                { id: 4, name: 'ACH Processing', inventoryPieces: 20, manualCT: 2, machineCT: 3, vatSec: 4, changeoverMin: 0, uptimePct: 100, defectPct: 0.1, operators: 2 }
+            ]},
+            'textile': { label: 'Textile & Apparel', supplier: 'Cotton Bales', customer: 'Fashion Retail', demand: 10000, unit: 'min', steps: [
+                { id: 1, name: 'Spinning & Carding', inventoryPieces: 3000, manualCT: 5, machineCT: 40, vatSec: 40, changeoverMin: 120, uptimePct: 88, defectPct: 4, operators: 4 },
+                { id: 2, name: 'Weaving', inventoryPieces: 1500, manualCT: 2, machineCT: 60, vatSec: 60, changeoverMin: 90, uptimePct: 90, defectPct: 5, operators: 3 },
+                { id: 3, name: 'Dyeing / Wash', inventoryPieces: 800, manualCT: 10, machineCT: 120, vatSec: 120, changeoverMin: 180, uptimePct: 85, defectPct: 2, operators: 5 },
+                { id: 4, name: 'Garment Sewing', inventoryPieces: 400, manualCT: 45, machineCT: 10, vatSec: 50, changeoverMin: 15, uptimePct: 95, defectPct: 3, operators: 20 }
+            ]}
+        };
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => { if (window.lucide && iconRef.current) window.lucide.createIcons(); }, [name]);
+            return <i ref={iconRef} data-lucide={name} style={{width: size, height: size, display: 'inline-flex', alignItems: 'center', justifyContent: 'center'}} className={className}></i>;
+        };
+
+        const FormulaHover = ({ formula }) => (
+            <div className="relative group inline-flex items-center ml-1.5 align-middle print:hidden">
+                <button className="text-slate-400 hover:text-slate-700 transition-colors focus:outline-none" title="Formula Detail"><Icon name="info" size={12} /></button>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block w-64 p-3 bg-black text-white text-[10px] rounded-lg shadow-xl z-[100] font-mono text-center pointer-events-none border border-slate-700 leading-tight whitespace-normal">
+                    {formula}<div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-black"></div>
+                </div>
+            </div>
+        );
+
+        const KpiBox = ({ label, value, sub, iconName, health = 'neutral', formula }) => {
+            const healthConfig = {
+                optimal: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-600', icon: 'text-emerald-500' },
+                warning: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-600', icon: 'text-amber-500' },
+                critical: { bg: 'bg-rose-50 border-rose-200', text: 'text-rose-600', icon: 'text-rose-500' },
+                neutral: { bg: 'bg-slate-50 border-slate-200', text: 'text-slate-900', icon: 'text-slate-500' }
+            };
+            const activeTheme = healthConfig[health];
+            return (
+                <div className={`p-4 md:p-5 rounded-2xl border ${activeTheme.bg} flex flex-col justify-between hover:shadow-md transition-all h-[110px] flex-1 min-w-[130px]`}>
+                    <div className="flex justify-between items-start"><div className="text-[9px] text-slate-500 uppercase tracking-widest flex items-center leading-tight">{label} {formula && <FormulaHover formula={formula} />}</div><div className={`p-1.5 rounded-lg bg-white shadow-sm ${activeTheme.icon} shrink-0`}><Icon name={iconName} size={16} /></div></div>
+                    <div><div className={`text-xl font-black tracking-tight ${activeTheme.text}`}>{value}</div><div className="text-[8px] text-slate-500 uppercase mt-0.5 leading-tight font-bold">{sub}</div></div>
+                </div>
+            );
+        };
+
+        const SummaryTile = ({ label, count, color, iconName, desc }) => {
+            const themes = { 
+                red: 'border-red-500 text-red-600 bg-red-50', 
+                yellow: 'border-amber-500 text-amber-600 bg-amber-50', 
+                black: 'border-slate-800 text-slate-800 bg-slate-50' 
+            };
+            return (
+                <div className={`p-5 rounded-2xl border-l-4 shadow-sm ${themes[color]} transition-transform hover:-translate-y-1 font-black`} title={desc}>
+                    <div className="flex justify-between items-center mb-2 opacity-70"><span className="text-[10px] uppercase tracking-widest">{label}</span><Icon name={iconName} size={20} /></div>
+                    <h3 className="text-3xl font-black tracking-tighter mb-1">{count}</h3>
+                    <div className="text-[9px] uppercase tracking-widest opacity-70">{desc}</div>
+                </div>
+            );
+        };
+
+        const WasteCard = ({ waste }) => (
+            <div className="bg-white border-l-[6px] border-black p-4 rounded-xl shadow-sm flex gap-4 items-center transition-all hover:translate-x-2" title={`Constraint: ${waste.type}`}>
+                <div className="p-2 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-600"><Icon name="target" size={20} /></div>
+                <div className="flex-1">
+                    <div className="flex items-center gap-3"><span className="text-[9px] px-2 py-1 rounded-md text-yellow-400 bg-black uppercase tracking-wider">{waste.category}</span><h4 className="text-slate-900 uppercase tracking-tight text-sm">{waste.type}</h4></div>
+                    <div className="text-[9px] text-slate-500 mt-1.5 uppercase tracking-widest flex items-center gap-2"><Icon name="arrow-right" size={10}/> {waste.step}</div>
+                    <div className="text-xs text-slate-600 mt-2 font-bold bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">{waste.desc}</div>
+                </div>
+            </div>
+        );
+
+        const MacroVSMTimeline = ({ steps, metrics, activeUnit, supplierName, customerName, theme, mapMode, printMode = false }) => {
+            const segmentWidth = 280; const startOffset = 220; const endOffset = 220; const height = 550;
+            const totalWidth = startOffset + (steps.length * segmentWidth) + endOffset;
+            const unitSuffix = activeUnit === 'sec' ? 's' : (activeUnit === 'min' ? 'm' : 'd');
+            const mrpX = totalWidth / 2; const mrpY = 40; const factoryY = 120; const processY = 260; const dataBoxY = 330; const ladderY = 480;
+            const elements = [];
+
+            const drawFactory = (x, y, label) => (
+                <g key={`factory-${label}`} transform={`translate(${x}, ${y})`}>
+                    <polygon points="0,50 0,0 25,25 25,0 50,25 50,0 75,25 75,0 100,25 100,50" fill="white" stroke="#000" strokeWidth="3" />
+                    <rect x="0" y="50" width="100" height="35" fill="white" stroke="#000" strokeWidth="3" />
+                    <text x="50" y="72" style={{fontSize: '12px', fontWeight: '900', fill: '#000'}} textAnchor="middle">{label.toUpperCase()}</text>
+                </g>
+            );
+
+            elements.push(<text key="lbl-sup" x={90} y={factoryY - 10} style={{fontSize: '10px', fontWeight: '900', fill: '#64748b'}} textAnchor="middle">SUPPLIER</text>);
+            elements.push(<text key="lbl-cus" x={totalWidth - 90} y={factoryY - 10} style={{fontSize: '10px', fontWeight: '900', fill: '#64748b'}} textAnchor="middle">CUSTOMER</text>);
+            
+            elements.push(
+                <g key="mrp" transform={`translate(${mrpX - 70}, ${mrpY})`}>
+                    <rect width="140" height="50" fill={theme.hex} stroke="#000" strokeWidth="3" />
+                    <text x="70" y="22" style={{fontSize: '12px', fontWeight: '900', fill: theme.isFsm ? '#000' : '#fff'}} textAnchor="middle">{theme.isFsm ? 'FLOW CONTROL' : 'MRP / ERP'}</text>
+                    <text x="70" y="38" style={{fontSize: '11px', fontWeight: '900', fill: theme.isFsm ? '#000' : '#fff'}} textAnchor="middle">{theme.isFsm ? '(HEIJUNKA)' : '(PUSH)'}</text>
+                </g>
+            );
+
+            elements.push(<path key="info-cust" d={`M ${totalWidth - 90} ${factoryY} Q ${(totalWidth - 90 + mrpX + 70)/2} 10 ${mrpX + 70} ${mrpY + 25}`} fill="none" stroke={theme.hex} strokeWidth="2" strokeDasharray="6,6" markerStart={`url(#arrowhead-${mapMode})`}/>);
+            elements.push(<path key="info-sup" d={`M ${mrpX - 70} ${mrpY + 25} Q ${(mrpX - 70 + 90)/2} 10 90 ${factoryY}`} fill="none" stroke={theme.hex} strokeWidth="2" strokeDasharray="6,6" markerEnd={`url(#arrowhead-${mapMode})`}/>);
+
+            elements.push(drawFactory(40, factoryY, supplierName || 'Supplier'));
+            elements.push(drawFactory(totalWidth - 140, factoryY, customerName || 'Customer'));
+
+            elements.push(<g key="push-start" transform={`translate(90, ${factoryY + 80}) rotate(35)`}><polygon points="0,15 40,15 40,5 60,25 40,45 40,35 0,35" fill="white" stroke="#000" strokeWidth="2" /></g>);
+
+            let ladderPath = `M ${startOffset - 50} ${ladderY - 30}`;
+            let currentX = startOffset;
+
+            steps.forEach((step, index) => {
+                const nextX = currentX + segmentWidth;
+
+                if (!theme.isFsm || index === steps.length - 1) {
+                    const dropX = currentX + 20; 
+                    elements.push(<path key={`info-down-${index}`} d={`M ${mrpX} ${mrpY + 50} L ${mrpX} 140 L ${dropX} 140 L ${dropX} ${processY - 5}`} fill="none" stroke={theme.hex} strokeWidth="2" strokeDasharray="4,4" markerEnd={`url(#arrowhead-${mapMode})`}/>);
+                }
+
+                elements.push(
+                    <g key={`inv-${index}`} transform={`translate(${currentX - 50}, ${processY + 20})`}>
+                        <text x="0" y="-38" style={{fontSize: '10px', fontWeight: '900', fill: '#64748b'}} textAnchor="middle">{theme.prefix} WIP</text>
+                        <polygon points="-20,-20 20,-20 0,20" fill="white" stroke="#000" strokeWidth="2"/>
+                        <text x="0" y="-8" style={{fontSize: '14px', fontWeight: '900', fill: '#000'}} textAnchor="middle">I</text>
+                        <text x="0" y="38" style={{fontSize: '11px', fontWeight: '900', fill: theme.hex}} textAnchor="middle">{step.inventoryPieces}</text>
+                    </g>
+                );
+
+                elements.push(
+                    <g key={`box-${index}`} transform={`translate(${currentX}, ${processY})`}>
+                        <text x="60" y="-42" style={{fontSize: '16px', fontWeight: '900', fill: '#000'}} textAnchor="middle">{step.operators}</text>
+                        <text x="60" y="-26" style={{fontSize: '10px', fontWeight: '900', fill: '#64748b'}} textAnchor="middle">STAFF</text>
+                        <text x="60" y="-12" style={{fontSize: '10px', fontWeight: '900', fill: '#64748b'}} textAnchor="middle">{theme.prefix.toUpperCase()} PROCESS</text>
+                        <rect width="120" height="50" fill="white" stroke="#000" strokeWidth="3" />
+                        <text x="60" y="30" style={{fontSize: '12px', fontWeight: '900', fill: '#000'}} textAnchor="middle">{(step.name || "PROCESS").toUpperCase().substring(0, 15)}</text>
+                    </g>
+                );
+
+                elements.push(
+                    <g key={`data-${index}`} transform={`translate(${currentX}, ${dataBoxY})`}>
+                        <rect width="120" height="85" fill="white" stroke="#000" strokeWidth="2" />
+                        <line x1="0" y1="21" x2="120" y2="21" stroke="#000" strokeWidth="1" />
+                        <line x1="0" y1="42" x2="120" y2="42" stroke="#000" strokeWidth="1" />
+                        <line x1="0" y1="63" x2="120" y2="63" stroke="#000" strokeWidth="1" />
+                        <text x="6" y="15" style={{fontSize: '10px', fontWeight: '700', fill: '#000'}}>C/T: {metrics.convertValue(step.totalCT)}{unitSuffix}</text>
+                        <text x="6" y="36" style={{fontSize: '10px', fontWeight: '700', fill: '#000'}}>C/O: {metrics.convertValue(step.changeoverSec)}{unitSuffix}</text>
+                        <text x="6" y="57" style={{fontSize: '10px', fontWeight: '700', fill: '#000'}}>Uptime: {step.uptimePct}%</text>
+                        <text x="6" y="78" style={{fontSize: '10px', fontWeight: '700', fill: '#000'}}>Defect: {step.defectPct}%</text>
+                    </g>
+                );
+
+                if (index < steps.length - 1) {
+                    if (theme.isFsm) {
+                        elements.push(<g key={`pull-${index}`} transform={`translate(${currentX + 135}, ${processY + 15})`}><polygon points="0,5 35,5 35,-3 50,10 35,23 35,15 0,15" fill="#fef08a" stroke="#000" strokeWidth="2" strokeDasharray="2,2"/><text x="25" y="-10" style={{fontSize: '9px', fontWeight: '900', fill: '#854d0e'}} textAnchor="middle">PULL</text></g>);
+                    } else {
+                        elements.push(<g key={`push-${index}`} transform={`translate(${currentX + 135}, ${processY + 15})`}><polygon points="0,0 35,0 35,-8 50,10 35,28 35,20 0,20" fill="white" stroke="#000" strokeWidth="2" /></g>);
+                    }
+                } else {
+                    elements.push(<g key={`push-end`} transform={`translate(${currentX + 135}, ${processY + 25}) rotate(-35)`}><polygon points="0,0 55,0 55,-8 70,10 55,28 55,20 0,20" fill="white" stroke="#000" strokeWidth="2" /></g>);
+                }
+
+                ladderPath += ` L ${currentX} ${ladderY - 30}`;
+                elements.push(<text key={`tw-${index}`} x={currentX - 50} y={ladderY - 40} style={{fontSize: '11px', fontWeight: '900', fill: theme.hex}} textAnchor="middle">{parseFloat(Number(step.calculatedWaitDays).toFixed(2))}d</text>);
+                ladderPath += ` L ${currentX} ${ladderY} L ${currentX + 120} ${ladderY}`;
+                elements.push(<text key={`tc-${index}`} x={currentX + 60} y={ladderY + 20} style={{fontSize: '11px', fontWeight: '900', fill: '#000'}} textAnchor="middle">{metrics.convertValue(step.totalCT)}{unitSuffix}</text>);
+                ladderPath += ` L ${currentX + 120} ${ladderY - 30}`;
+                currentX = nextX;
+            });
+            ladderPath += ` L ${currentX - 50} ${ladderY - 30}`;
+
+            return (
+                <div className={`${printMode ? '' : 'bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-6'} overflow-hidden relative`}>
+                    {!printMode && <h3 className="text-sm text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><Icon name="fast-forward" className={theme.textDark} size={18} /> {theme.prefix} Architecture Map</h3>}
+                    <div className={`relative w-full ${printMode ? '' : 'overflow-x-auto shadow-inner bg-slate-50/50 rounded-xl p-4'}`}>
+                        <svg viewBox={`0 0 ${totalWidth} ${height}`} className="block mx-auto" style={{width: '100%', height: printMode ? 'auto' : 'auto', minWidth: printMode ? '0' : `${Math.max(900, totalWidth)}px`}}>
+                            <defs><marker id={`arrowhead-${mapMode}`} markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill={theme.hex} /></marker></defs>
+                            <path d={ladderPath} fill="none" stroke="#000" strokeWidth="3" strokeLinejoin="round" />
+                            {elements}
+                            <g transform={`translate(${totalWidth - 140}, ${ladderY - 30})`}>
+                                <rect x="0" y="-25" width="120" height="50" rx="4" fill="white" stroke="#000" strokeWidth="2" />
+                                <text x="60" y="-8" style={{fontSize: '10px', fontWeight: '900', fill: theme.hex}} textAnchor="middle">{theme.prefix.toUpperCase()} PLT: {metrics.totalWaitDays}d</text>
+                                <text x="60" y="12" style={{fontSize: '10px', fontWeight: '900', fill: '#000'}} textAnchor="middle">{theme.prefix.toUpperCase()} VAT: {metrics.displayVA}{unitSuffix}</text>
+                            </g>
+                        </svg>
+                    </div>
+
+                    {/* VSM ARCHITECTURE MAP LEGEND */}
+                    {!printMode && (
+                    <div className="mt-5 pt-4 border-t border-slate-200 flex flex-wrap gap-4 md:gap-6 text-[8px] font-black uppercase tracking-widest text-slate-500 justify-center">
+                        <div className="flex items-center gap-1.5"><Icon name="building" size={12}/> External Entity</div>
+                        <div className="flex items-center gap-1.5"><div className={`w-3 h-3 ${theme.bg} border border-black`}></div> {theme.isFsm ? 'Heijunka Control' : 'MRP / Push Control'}</div>
+                        <div className="flex items-center gap-1.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="currentColor" strokeWidth="2" style={{transform: 'rotate(180deg)'}}><polygon points="12 2 22 20 2 20 12 2"/></svg> WIP Queue
+                        </div>
+                        <div className="flex items-center gap-1.5"><div className={`w-4 border-t-2 ${theme.border} border-dashed`}></div> Info Flow</div>
+                        <div className="flex items-center gap-1.5">
+                             <div className={`w-4 h-2 border border-black ${theme.isFsm ? 'bg-yellow-200' : 'bg-white'}`}></div> {theme.isFsm ? 'Pull Loop' : 'Push Arrow'}
+                        </div>
+                        <div className="flex items-center gap-1.5"><span className={theme.textDark}>#.#d</span> Wait Time (Peak)</div>
+                        <div className="flex items-center gap-1.5"><span className="text-black">#.#s</span> Cycle Time (Trough)</div>
+                    </div>
+                    )}
+                </div>
+            );
+        };
+
+        const YamazumiChart = ({ steps, metrics, activeUnit, theme, printMode = false }) => {
+            const unitSuffix = activeUnit === 'sec' ? 's' : (activeUnit === 'min' ? 'm' : 'd');
+            const maxCT = steps.length > 0 ? Math.max(...steps.map(s => s.totalCT)) : 0;
+            const yMax = Math.max(metrics.taktTimeSec, maxCT) * 1.25 || 100; 
+
+            return (
+                <div className={`${printMode ? '' : 'bg-white p-6 md:p-10 rounded-[2rem] shadow-sm border border-slate-200 mt-6'} overflow-hidden relative`}>
+                    {!printMode && (
+                        <div className="flex justify-between items-end mb-6">
+                            <h3 className="text-sm text-slate-800 font-black uppercase tracking-widest flex items-center gap-2"><Icon name="bar-chart-2" className={theme.textDark} size={18} /> {theme.prefix} Yamazumi (CT)</h3>
+                            <div className="flex gap-4 text-[9px] uppercase font-black text-slate-500 tracking-widest">
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 bg-black rounded-sm"></div> Manual CT</span>
+                                <span className="flex items-center gap-1"><div className={`w-2 h-2 ${theme.bg} rounded-sm`}></div> Machine CT</span>
+                            </div>
+                        </div>
+                    )}
+                    {printMode && (
+                        <div className="flex justify-between items-end mb-2 border-b border-slate-300 pb-1">
+                            <h3 className="text-[10px] font-black uppercase text-slate-500">{theme.prefix} Yamazumi Balance</h3>
+                            <div className="flex gap-2 text-[8px] uppercase font-black text-slate-500">
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 bg-black rounded-sm"></div> Manual CT</span>
+                                <span className="flex items-center gap-1"><div className={`w-2 h-2 ${theme.bg} rounded-sm`}></div> Machine CT</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`w-full flex items-end justify-around relative border-b-2 border-l-2 border-slate-200 pb-0 pl-2 pr-6 ${printMode ? 'h-56 pt-10' : 'h-64 pt-6'}`}>
+                        <div className="absolute left-1 top-0 bottom-0 w-8 flex flex-col justify-between text-[8px] font-mono font-black text-slate-400 -ml-10 items-end py-2"><span>{metrics.convertValue(yMax)}</span><span>{metrics.convertValue(yMax * 0.5)}</span><span>0</span></div>
+                        <div className="absolute left-0 right-0 border-t-2 border-dashed border-red-500 z-10 transition-all duration-500 flex items-center" style={{bottom: `${(metrics.taktTimeSec / yMax) * 100}%`}}>
+                            <div className="absolute right-0 translate-x-full ml-2 text-red-600 text-[10px] font-black uppercase tracking-widest whitespace-nowrap bg-red-50 px-2 py-0.5 rounded border border-red-200 shadow-sm">{theme.prefix.toUpperCase()} TAKT: {metrics.displayTakt}{unitSuffix}</div>
+                        </div>
+                        {steps.map((step, idx) => {
+                            const manualPct = (step.manualCT / yMax) * 100; const machinePct = (step.machineCT / yMax) * 100; const isOverTakt = step.totalCT > metrics.taktTimeSec && metrics.taktTimeSec > 0;
+                            return (
+                                <div key={`yamazumi-bar-${idx}`} className="flex flex-col items-center w-16 md:w-24 group relative h-full justify-end z-20">
+                                    {!printMode && (
+                                        <div className={`absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-[9px] p-2 rounded shadow-lg pointer-events-none whitespace-nowrap z-30 text-center font-mono font-black border ${theme.border}`}>
+                                            Total: {metrics.convertValue(step.totalCT)}{unitSuffix}<br/>
+                                            <span className={theme.isFsm ? 'text-white' : 'text-blue-400'}>Man: {metrics.convertValue(step.manualCT)}</span> | <span className={theme.isFsm ? 'text-yellow-400' : 'text-emerald-400'}>Mach: {metrics.convertValue(step.machineCT)}</span>
+                                        </div>
+                                    )}
+                                    {printMode && (
+                                        <div className="absolute bottom-full mb-1 text-center w-full z-30 pointer-events-none whitespace-nowrap">
+                                            <div className="text-[10px] font-black text-black leading-none">{metrics.convertValue(step.totalCT)}{unitSuffix}</div>
+                                        </div>
+                                    )}
+                                    <div className={`w-full ${theme.isFsm ? 'bg-yellow-400 border border-yellow-500' : 'bg-emerald-400 border border-emerald-500'} transition-all duration-500`} style={{height: `${machinePct}%`}}></div>
+                                    <div className={`w-full ${theme.isFsm ? 'bg-black' : 'bg-blue-600'} transition-all duration-500 rounded-t-none rounded-sm`} style={{height: `${manualPct}%`}}></div>
+                                    {isOverTakt && !printMode && <div className="absolute -top-6 text-red-500 animate-bounce"><Icon name="alert-triangle" size={16} /></div>}
+                                    <div className="absolute top-full mt-2 text-[8px] font-black uppercase tracking-widest text-slate-500 text-center truncate w-full px-1">{step.name}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {!printMode && <div className="mt-8 text-[9px] font-black text-slate-400 text-center w-full uppercase tracking-widest">Target Line Balance Efficiency (LBE): {metrics.lbe}%</div>}
+                </div>
+            );
+        };
+
+        function App() {
+            // UNIFIED STATE MANAGEMENT
+            const [mapMode, setMapMode] = useState('csm'); 
+            const [activeTab, setActiveTab] = useState('map');
+            const [selectedIndustry, setSelectedIndustry] = useState('user_defined');
+            const [activeUnit, setActiveUnit] = useState('sec');
+            const unitSuffix = activeUnit === 'sec' ? 's' : (activeUnit === 'min' ? 'm' : 'd');
+
+            const [customerDemand, setCustomerDemand] = useState("");
+            const [workingHours, setWorkingHours] = useState("");
+            const [plannedDowntimeMin, setPlannedDowntimeMin] = useState("");
+            const [supplierName, setSupplierName] = useState("");
+            const [customerName, setCustomerName] = useState("");
+            const [capaRecords, setCapaRecords] = useState([]);
+            const [isExportingExcel, setIsExportingExcel] = useState(false);
+            const [isExportingPDF, setIsExportingPDF] = useState(false);
+            
+            // SYSTEM ALERT STATE (Threshold Pop-Ups & Errors)
+            const [systemAlert, setSystemAlert] = useState(null);
+            
+            const [activeParamKey, setActiveParamKey] = useState('takt');
+            const reportRef = useRef(null);
+
+            // UNIFIED THEME CONFIGURATION
+            const theme = useMemo(() => ({
+                isFsm: mapMode === 'fsm',
+                prefix: mapMode === 'fsm' ? 'Target' : 'Current',
+                bg: mapMode === 'fsm' ? 'bg-yellow-500' : 'bg-emerald-500',
+                textMain: mapMode === 'fsm' ? 'text-yellow-400' : 'text-emerald-400',
+                textDark: mapMode === 'fsm' ? 'text-yellow-600' : 'text-emerald-600',
+                border: mapMode === 'fsm' ? 'border-yellow-500' : 'border-emerald-500',
+                hex: mapMode === 'fsm' ? '#eab308' : '#10b981',
+                btnClass: mapMode === 'fsm' ? 'bg-yellow-500 text-black hover:bg-yellow-400' : 'bg-emerald-500 text-white hover:bg-emerald-400',
+                headerBg: mapMode === 'fsm' ? 'bg-black text-white' : 'bg-slate-900 text-white',
+                waitWarn: mapMode === 'fsm' ? 0.5 : 1.5,
+                waitCrit: mapMode === 'fsm' ? 1.5 : 3.0,
+                coWarn: mapMode === 'fsm' ? 300 : 900,
+                coCrit: mapMode === 'fsm' ? 600 : 1800,
+                lbeOpt: mapMode === 'fsm' ? 90 : 85,
+                oeeOpt: mapMode === 'fsm' ? 95 : 90
+            }), [mapMode]);
+
+            const triggerAlert = (type, msg) => { 
+                setSystemAlert({type, msg}); 
+                setTimeout(() => setSystemAlert(null), 5000); 
+            };
+
+            const upgradeSteps = (data, demand) => data.map(s => {
+                const mCt = Number(s.manualCT) || 0, aCt = Number(s.machineCT) || 0;
+                const coSec = s.changeoverSec !== undefined ? Number(s.changeoverSec) : (Number(s.changeoverMin) || 0) * 60;
+                const avail = Number(s.uptimePct !== undefined ? s.uptimePct : 100) / 100;
+                const qual = (100 - Number(s.defectPct !== undefined ? s.defectPct : 0)) / 100;
+                return { ...s, manualCT: mCt, machineCT: aCt, totalCT: mCt + aCt, changeoverSec: coSec, calculatedWaitDays: demand > 0 ? (Number(s.inventoryPieces) / demand) : 0, operators: Number(s.operators) || 1, stepOEE: parseFloat((avail * qual * 100).toFixed(1)).toString() };
+            });
+
+            const [steps, setSteps] = useState(() => upgradeSteps(INDUSTRY_TEMPLATES['user_defined'].steps, 0));
+
+            // Initialize explicitly to blank state
+            useEffect(() => {
+                setWorkingHours("8");
+                setPlannedDowntimeMin("0");
+                setCustomerDemand("0");
+                setSteps(upgradeSteps(INDUSTRY_TEMPLATES['user_defined'].steps, 0));
+            }, []);
+
+            // CORE DYNAMIC CALCULATION ENGINE
+            const metrics = useMemo(() => {
+                const numD = Number(customerDemand) || 0, numH = Number(workingHours) || 0, numDown = Number(plannedDowntimeMin) || 0;
+                const nat = Math.max(1, (numH * 3600) - (numDown * 60));
+                const takt = numD > 0 ? nat / numD : 0;
+                let totalInv = 0, totalMan = 0, totalOee = 0, totalVA = 0, totalCT = 0;
+
+                const auditedSteps = steps.map(s => {
+                    const stepCT = (Number(s.manualCT) || 0) + (Number(s.machineCT) || 0);
+                    const wait = numD > 0 ? (Number(s.inventoryPieces) || 0) / numD : 0;
+                    totalInv += Number(s.inventoryPieces || 0);
+                    totalMan += (Number(s.manualCT) || 0) * (Number(s.operators) || 1);
+                    totalCT += stepCT;
+                    totalVA += Math.min(Number(s.vatSec || 0), stepCT);
+                    const avail = Number(s.uptimePct || 100) / 100, qual = (100 - Number(s.defectPct || 0)) / 100;
+                    totalOee += (avail * qual);
+                    return { ...s, totalCT: stepCT, calculatedWaitDays: wait, stepOEE: parseFloat((avail * qual * 100).toFixed(1)).toString() };
+                });
+
+                const leadTimeSec = (numD > 0 ? (totalInv / numD) * nat : 0) + totalCT;
+                const convert = (sec) => {
+                    if (sec === undefined || sec === null || Number.isNaN(Number(sec))) return "0";
+                    let val = Number(sec);
+                    if (activeUnit === 'min') val /= 60;
+                    if (activeUnit === 'day') val /= nat;
+                    return parseFloat(val.toFixed(activeUnit === 'day' ? 4 : 2)).toString();
+                };
+                const getEditValue = (sec) => {
+                    if (sec === "" || sec === undefined || sec === null || Number.isNaN(Number(sec))) return "";
+                    let val = Number(sec);
+                    if (activeUnit === 'min') val /= 60;
+                    if (activeUnit === 'day') val /= nat;
+                    return parseFloat(val.toFixed(4)).toString(); 
+                };
+
+                const rty = auditedSteps.reduce((acc, step) => acc * ((100 - Number(step.defectPct || 0)) / 100), 1) * 100;
+                const maxCT = Math.max(0, ...auditedSteps.map(s => s.totalCT));
+                const lbe = (maxCT > 0 && auditedSteps.length > 0) ? (totalCT / (maxCT * auditedSteps.length)) * 100 : 0;
+
+                return {
+                    takt, displayTakt: convert(takt), displayLead: convert(leadTimeSec), displayVA: convert(totalVA), displayManual: convert(totalMan),
+                    streamOEE: auditedSteps.length > 0 ? parseFloat(((totalOee / auditedSteps.length) * 100).toFixed(1)).toString() : "0",
+                    avgUptime: auditedSteps.length > 0 ? parseFloat((auditedSteps.reduce((a,c)=>a+Number(c.uptimePct),0)/auditedSteps.length).toFixed(1)).toString() : "0",
+                    avgQuality: auditedSteps.length > 0 ? parseFloat((auditedSteps.reduce((a,c)=>a+(100-Number(c.defectPct)),0)/auditedSteps.length).toFixed(1)).toString() : "0",
+                    varPercentage: leadTimeSec > 0 ? parseFloat(((totalVA / leadTimeSec) * 100).toFixed(2)).toString() : "0",
+                    rty: parseFloat(rty.toFixed(1)).toString(), lbe: parseFloat(lbe.toFixed(1)).toString(),
+                    totalInv, auditedSteps, convertValue: convert, getEditValue, nat,
+                    totalWaitDays: numD > 0 ? parseFloat((totalInv / numD).toFixed(2)).toString() : "0",
+                    taktTimeSec: takt, maxCT
+                };
+            }, [steps, workingHours, plannedDowntimeMin, customerDemand, activeUnit]);
+
+            const wastes = useMemo(() => {
+                const list = [];
+                const numD = Number(customerDemand) || 0;
+                metrics.auditedSteps.forEach((step) => {
+                    if (step.totalCT > metrics.takt && metrics.takt > 0 && numD > 0) list.push({ category: 'Muri', type: 'Flow Constraint', severity: 'High', step: step.name, desc: `${theme.prefix} CT (${metrics.convertValue(step.totalCT)}${unitSuffix}) > Takt limit.` });
+                    if (step.calculatedWaitDays > theme.waitCrit) list.push({ category: 'Muda', type: 'Inventory Queue', severity: 'High', step: step.name, desc: `Buffer of ${parseFloat(step.calculatedWaitDays.toFixed(2))} days creates systemic risk.` });
+                    if (step.changeoverSec > theme.coCrit) list.push({ category: 'Mura', type: 'Unevenness', severity: 'Medium', step: step.name, desc: `${theme.prefix} C/O (${metrics.convertValue(step.changeoverSec)}${unitSuffix}) strictly limits agility.`});
+                });
+                return list;
+            }, [metrics, customerDemand, theme, unitSuffix]);
+
+            const wasteSummary = useMemo(() => ({ muda: wastes.filter(w => w.category === 'Muda').length, mura: wastes.filter(w => w.category === 'Mura').length, muri: wastes.filter(w => w.category === 'Muri').length }), [wastes]);
+
+            // SMART THRESHOLD POPUP ENGINE
+            const prevWastesRef = useRef(0);
+            useEffect(() => {
+                if (wastes.length > prevWastesRef.current && (Number(customerDemand)||0) > 0) {
+                    const latestWaste = wastes[wastes.length - 1];
+                    triggerAlert('warning', `THRESHOLD ALERT: ${latestWaste.category} (${latestWaste.type}) detected at ${latestWaste.step}. Limits exceeded.`);
+                }
+                prevWastesRef.current = wastes.length;
+            }, [wastes, customerDemand]);
+
+            const capaSuggestions = useMemo(() => {
+                const list = [];
+                const numD = Number(customerDemand) || 0;
+                metrics.auditedSteps.forEach(s => {
+                    if (Number(s.defectPct) > (theme.isFsm ? 2 : 5)) list.push({ id: `q-${s.id}`, step: s.name, type: 'Poka-Yoke Need', issue: `${theme.prefix} yield loss at ${s.defectPct}%.`, rootCause: "Automated inspection missing in standard work.", correctiveAction: "Design in-line Poka-Yoke vision system." });
+                    if (s.totalCT > metrics.takt && metrics.takt > 0 && numD > 0) list.push({ id: `c-${s.id}`, step: s.name, type: 'Line Balance', issue: `${theme.prefix} CT > Takt.`, rootCause: s.manualCT > s.machineCT ? "Labor load exceeds takt." : "Machine speed constraint.", correctiveAction: s.manualCT > s.machineCT ? "Redistribute standard work elements via Yamazumi." : "Parallelize equipment / apply SMED." });
+                });
+                return list;
+            }, [metrics, customerDemand, theme]);
+
+            const handleSimulation = (type) => {
+                if (!type) return;
+                const template = INDUSTRY_TEMPLATES[selectedIndustry];
+                const baseDemand = template.demand || 500;
+                let currentD = Number(customerDemand);
+                if (currentD <= 0) {
+                    currentD = baseDemand;
+                    setCustomerDemand(currentD.toString());
+                }
+                
+                const numH = Number(workingHours) || 8;
+                const numDown = Number(plannedDowntimeMin) || 0;
+                const nat = Math.max(1, (numH * 3600) - (numDown * 60));
+                const currentTakt = nat / currentD;
+
+                if (type === 'baseline') {
+                    setCustomerDemand(baseDemand.toString());
+                    setSteps(upgradeSteps(template.steps, baseDemand));
+                    triggerAlert('warning', 'Simulation: Reset to Industry Baseline');
+                } else if (type === 'perfect') {
+                    setSteps(steps.map(s => ({ ...s, manualCT: currentTakt * 0.4, machineCT: currentTakt * 0.4, uptimePct: 100, defectPct: 0, inventoryPieces: Math.max(1, Math.round(currentD * 0.1)), manualCT_raw: undefined, machineCT_raw: undefined, inventoryPieces_raw: undefined, uptimePct_raw: undefined, defectPct_raw: undefined })));
+                    triggerAlert('warning', 'Simulation: Perfect Robust Flow Applied');
+                } else if (type === 'breakeven') {
+                    setSteps(steps.map(s => ({ ...s, manualCT: currentTakt * 0.5, machineCT: currentTakt * 0.5, uptimePct: 90, defectPct: 2, inventoryPieces: Math.max(1, Math.round(currentD * 1.0)), manualCT_raw: undefined, machineCT_raw: undefined, inventoryPieces_raw: undefined, uptimePct_raw: undefined, defectPct_raw: undefined })));
+                    triggerAlert('warning', 'Simulation: Break Even Point (At Takt) Applied');
+                } else if (type === 'pathetic') {
+                    setSteps(steps.map((s, i) => ({ ...s, manualCT: currentTakt * 0.9, machineCT: i === Math.floor(steps.length/2) ? currentTakt * 0.8 : currentTakt * 0.4, uptimePct: 70, defectPct: 15, inventoryPieces: Math.max(1, Math.round(currentD * 4.5)), manualCT_raw: undefined, machineCT_raw: undefined, inventoryPieces_raw: undefined, uptimePct_raw: undefined, defectPct_raw: undefined })));
+                    triggerAlert('warning', 'Simulation: Pathetic Chaos Scenario Applied. Review Waste & CAPA.');
+                }
+            };
+
+            // FULLY COMPREHENSIVE LEAN DICTIONARY (14 PARAMETERS) WITH WORLD-CLASS SIMPLE ANALOGIES
+            const dynamicDictionary = useMemo(() => {
+                const formatList = (arr) => { if(arr.length===0)return'0'; if(arr.length<=4)return arr.join(' + '); return `${arr.slice(0,3).join(' + ')} + ... + ${arr[arr.length-1]}`; };
+                const numD = Number(customerDemand) || 0;
+                return {
+                    takt: { name: `${theme.prefix} Takt Time`, formula: "Net Available Time (NAT) ÷ Customer Demand", applied: `${metrics.convertValue(metrics.nat)}${unitSuffix} ÷ ${numD} units`, result: `${metrics.displayTakt}${unitSuffix} / unit`, purpose: "Sets the required pace of production to perfectly match customer demand.", analogy: "A heartbeat. If the heart beats too fast or too slow, the body fails. It must perfectly match demand.", optimization: "Engineer all cycle times to operate slightly below this exact pulse." },
+                    cycleTime: { name: `${theme.prefix} Cycle Time (CT)`, formula: "Σ (Manual CT + Machine CT)", applied: `Manual + Machine per process`, result: `${metrics.convertValue(metrics.totalCT)}${unitSuffix} Total`, purpose: "Measures the projected processing time for one unit through a specific step.", analogy: "A stopwatch timing a single lap. It measures exact processing time.", optimization: "Engineer out all motion waste, eliminate micro-stops, and parallelize steps." },
+                    leadTime: { name: `${theme.prefix} Lead Time (PLT)`, formula: "(Σ WIP ÷ Demand) × NAT + Σ Target CT", applied: `(${metrics.totalWaitDays} days queue) + Process CT`, result: `${metrics.displayLead}${unitSuffix}`, purpose: "The total velocity of value flowing from raw material to the customer.", analogy: "Ordering a pizza. The time from the moment you call until it hits your dining table.", optimization: "Drastically slash PLT by eliminating all systemic inventory queues." },
+                    lbe: { name: "Line Balance Efficiency (LBE)", formula: "Total Cycle Time ÷ (Max Cycle Time × Number of Steps)", applied: `${metrics.convertValue(metrics.totalCT)}${unitSuffix} ÷ (${metrics.convertValue(metrics.maxCT)}${unitSuffix} × ${metrics.auditedSteps.length}) × 100`, result: `${metrics.lbe}%`, purpose: "Measures how evenly labor and machine work is distributed across the flow.", analogy: "A tug-of-war team. If one runner is too slow, the whole team’s balance and efficiency drops.", optimization: "Redistribute standard work elements to flatten the Yamazumi chart." },
+                    yamazumi: { name: `${theme.prefix} Yamazumi Balance`, formula: "Visual Stack of Manual & Machine CT vs Takt", applied: `Max Bar Height vs ${theme.prefix} Takt`, result: metrics.maxCT > metrics.taktTimeSec ? `Unbalanced` : "Balanced System", purpose: "Visually maps work distribution to guarantee no cell exceeds the Takt heartbeat.", analogy: "Packing moving boxes. You want every box filled evenly so no single box is too heavy to lift.", optimization: "Move tasks from overloaded operators (above Redline) to underloaded ones." },
+                    oee: { name: "Overall Equipment Effectiveness (OEE)", formula: "Availability × Performance × Quality", applied: `${metrics.avgUptime}% Uptime × ${metrics.avgQuality}% Yield`, result: `${metrics.streamOEE}%`, purpose: "Calculates the true productive and healthy capability of the equipment.", analogy: "A Formula 1 car. Availability is avoiding the garage. Performance is top speed. Quality is no crashes.", optimization: "Implement TPM (Total Productive Maintenance) and SMED." },
+                    varRatio: { name: "Value-Added Ratio (VAR)", formula: "(Total Value-Added Time ÷ Total Lead Time) × 100", applied: `(${metrics.displayVA}${unitSuffix} ÷ ${metrics.displayLead}${unitSuffix}) × 100`, result: `${metrics.varPercentage}%`, purpose: "Highlights the percentage of time actually spent transforming the product.", analogy: "A movie's runtime versus the commercial breaks. You only want to pay for the movie.", optimization: "Destroy non-value-added waiting and queueing times." },
+                    rty: { name: "Rolled Throughput Yield (RTY)", formula: "Step 1 Yield × Step 2 Yield × ... Step N Yield", applied: `${formatList(metrics.auditedSteps.map(s => (100 - s.defectPct) + '%'))}`, result: `${metrics.rty}%`, purpose: "Mathematical probability that a unit passes through the entire system defect-free.", analogy: "Passing a baton in a relay race without anyone dropping it from start to finish.", optimization: "Deploy Jidoka and Poka-Yoke (mistake-proofing) directly at the source." },
+                    nat: { name: "Net Available Time (NAT)", formula: "Gross Shift Time - Planned Downtime", applied: `(${workingHours||0}h × 3600) - (${plannedDowntimeMin||0}m × 60)`, result: `${metrics.convertValue(metrics.nat)}${unitSuffix}`, purpose: "The absolute actual time available for value-creation production.", analogy: "A store's true operating hours after locking the doors for lunch breaks.", optimization: "Stagger operator breaks and conduct maintenance off-shift." },
+                    manualLoad: { name: `${theme.prefix} Manual Load`, formula: "Σ (Manual CT × Headcount per process)", applied: `Σ Manual CT across all operators`, result: `${metrics.displayManual}${unitSuffix}`, purpose: "Calculates the total human effort required in the system.", analogy: "The total physical calories or sweat required to build the product from start to finish.", optimization: "Optimize ergonomics and selectively automate bottleneck tasks." },
+                    muda: { name: "Muda (Inventory Waste)", formula: "Wait Days > Threshold Limit", applied: `Checking all queues against ${theme.waitCrit} days limit`, result: `${wasteSummary.muda} Critical Queues`, purpose: "Identifies areas of flow stagnation and tied-up working capital.", analogy: "Hoarding groceries that sit in the pantry and eventually expire. Unnecessary inventory.", optimization: "Implement precise Kanban loops and move toward one-piece flow." },
+                    muri: { name: "Muri (Overburden)", formula: "Process Cycle Time > Takt Time", applied: `Checking CTs against ${metrics.displayTakt}${unitSuffix} Takt`, result: `${wasteSummary.muri} Bottlenecks`, purpose: "Highlights processes that will inevitably fail or burn out due to excessive load.", analogy: "Forcing a donkey to pull a semi-truck. Severe overburden that guarantees failure.", optimization: "Parallelize constraints or comprehensively re-balance standard work." },
+                    mura: { name: "Mura (Unevenness)", formula: "Changeover Time > Threshold Limit", applied: `Checking C/O against ${metrics.convertValue(theme.coCrit)}${unitSuffix} limit`, result: `${wasteSummary.mura} Agility Blockers`, purpose: "Detects processes incapable of swift mixed-model flow.", analogy: "Stop-and-go highway traffic. Uneven flow that destroys momentum.", optimization: "Relentless application of SMED (Single Minute Exchange of Die)." },
+                    heijunka: { name: "Heijunka (Level Loading)", formula: "Smoothing Customer Demand Volume & Mix over NAT", applied: `Leveling ${numD} units evenly`, result: `Pitch = ${metrics.displayTakt}${unitSuffix} / unit`, purpose: "Eliminates production spikes and dips by releasing work in small, consistent increments.", analogy: "A sushi chef serving a 10-course meal at a steady pace, rather than dumping all 10 plates on the table at once.", optimization: "Use a Heijunka Box to stabilize upstream pull." }
+                };
+            }, [metrics, customerDemand, activeUnit, theme, unitSuffix, workingHours, plannedDowntimeMin, wasteSummary]);
+
+            // Form Handlers (Bulletproof Empty String Logic)
+            const handleGlobalChange = (type, val) => {
+                if (val === "") {
+                    if (type === 'Demand') setCustomerDemand("");
+                    else if (type === 'Shift Hours') setWorkingHours("");
+                    else if (type === 'Downtime') setPlannedDowntimeMin("");
+                    return;
+                }
+                let num = Number(val); 
+                if (Number.isNaN(num)) return;
+                
+                if (num < 0) { 
+                    triggerAlert('error', `${type} cannot be negative. Automatically adjusted to 0.`); 
+                    val = "0"; 
+                }
+                
+                if (type === 'Demand') setCustomerDemand(val); 
+                else if (type === 'Shift Hours') setWorkingHours(val); 
+                else if (type === 'Downtime') { 
+                    const ch = Number(workingHours) || 0; 
+                    if (num >= ch * 60 && ch > 0) { 
+                        triggerAlert('error', `Downtime cannot exceed Shift Time.`); 
+                        val = ((ch * 60) - 1).toString(); 
+                    }
+                    setPlannedDowntimeMin(val); 
+                }
+            };
+
+            const setActiveUnitAndClearRaw = (u) => { setActiveUnit(u); setSteps(prev => prev.map(s => { const ns = {...s}; delete ns.manualCT_raw; delete ns.machineCT_raw; delete ns.vatSec_raw; delete ns.changeoverSec_raw; return ns; })); };
+
+            const handleIndustryChange = (e) => {
+                const key = e.target.value; const template = INDUSTRY_TEMPLATES[key]; setSelectedIndustry(key); setSupplierName(template.supplier || ""); setCustomerName(template.customer || "");
+                const newD = template.demand || 0; setCustomerDemand(newD.toString()); if (template.unit) setActiveUnitAndClearRaw(template.unit);
+                if (key === 'user_defined') { setWorkingHours("8"); setPlannedDowntimeMin("0"); }
+                setSteps(upgradeSteps(template.steps, newD));
+            };
+
+            const handleStepChange = (id, field, value) => {
+                setSteps(prev => prev.map(s => {
+                    if (s.id !== id) return s; let val = value; const rawField = `${field}_raw`;
+                    if (['manualCT', 'machineCT', 'vatSec', 'inventoryPieces', 'changeoverSec', 'operators', 'defectPct', 'uptimePct'].includes(field)) {
+                        let updatedStep = { ...s, [rawField]: val };
+                        if (val === "") { updatedStep[field] = ""; if (field === 'manualCT' || field === 'machineCT') { const nmCt = field === 'manualCT' ? 0 : (Number(s.manualCT)||0); const naCt = field === 'machineCT' ? 0 : (Number(s.machineCT)||0); updatedStep.vatSec = s.vatSec === "" ? "" : Math.min(Number(s.vatSec)||0, nmCt+naCt); updatedStep.vatSec_raw = undefined; } return updatedStep; }
+                        let nVal = Number(val); if (Number.isNaN(nVal)) return updatedStep; 
+                        if (nVal < 0) { triggerAlert('error', `Input cannot be negative.`); nVal = 0; updatedStep[rawField] = "0"; }
+                        if (['uptimePct', 'defectPct'].includes(field) && nVal > 100) { triggerAlert('error', `Percentages cannot exceed 100%.`); nVal = 100; updatedStep[rawField] = "100"; }
+                        if (['manualCT', 'machineCT', 'vatSec', 'changeoverSec'].includes(field)) { if (activeUnit === 'min') nVal *= 60; if (activeUnit === 'day') nVal *= metrics.nat; }
+                        if (field === 'vatSec') { const curCT = (Number(s.manualCT)||0) + (Number(s.machineCT)||0); if (nVal > curCT) { triggerAlert('error', "VAT cannot mathematically exceed Cycle Time."); nVal = curCT; updatedStep[rawField] = metrics.getEditValue(curCT); } updatedStep.vatSec = nVal; return updatedStep; }
+                        if (field === 'manualCT' || field === 'machineCT') { const nmCt = field === 'manualCT' ? nVal : (Number(s.manualCT)||0); const naCt = field === 'machineCT' ? nVal : (Number(s.machineCT)||0); updatedStep[field] = nVal; updatedStep.vatSec = s.vatSec === "" ? "" : Math.min(Number(s.vatSec)||0, nmCt+naCt); updatedStep.vatSec_raw = undefined; return updatedStep; }
+                        updatedStep[field] = nVal; return updatedStep;
+                    }
+                    return { ...s, [field]: val };
+                }));
+            };
+
+            const addStep = () => { setSteps([...steps, { id: Date.now(), name: `${theme.prefix} Process ${steps.length + 1}`, inventoryPieces: 0, manualCT: 0, machineCT: 0, vatSec: 0, changeoverSec: 0, uptimePct: 100, defectPct: 0, operators: 1, stepOEE: "100.0" }]); };
+            const removeStep = (id) => steps.length > 1 && setSteps(steps.filter(st=>st.id!==id));
+            const createCapa = (s) => setCapaRecords([{ id: Date.now(), step: s.step, type: s.type, problem: s.issue, rootCause: s.rootCause, correctiveAction: s.correctiveAction, owner: "", status: "Planned" }, ...capaRecords]);
+            const triggerExt = (f) => setCapaRecords([{ id: Date.now(), step: f.toUpperCase(), type: "SYSTEM RESILIENCY", problem: `Alert: ${f}`, rootCause: EXTERNAL_LOGIC[f].root, correctiveAction: EXTERNAL_LOGIC[f].action, owner: "Lean Architect", status: "Planned" }, ...capaRecords]);
+
+            const exportToExcel = async () => {
+                setIsExportingExcel(true);
+                try {
+                    if (!window.ExcelJS) await new Promise(res => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js'; s.onload = res; document.head.appendChild(s); });
+                    const ExcelJS = window.ExcelJS; const workbook = new ExcelJS.Workbook();
+                    const wsDash = workbook.addWorksheet('Dashboard');
+                    wsDash.columns = [{ width: 35 }, { width: 20 }, { width: 20 }];
+                    wsDash.addRow(['MECTS SET....GO']).font = { bold: true, size: 16, color: { argb: theme.isFsm ? 'FF000000' : 'FFFFFFFF' } };
+                    wsDash.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.isFsm ? 'FFEAB308' : 'FF10B981' } };
+                    wsDash.addRow([`${theme.isFsm ? 'Future State' : 'Current State'} Design Report`]).font = { italic: true };
+                    wsDash.addRow([]);
+                    
+                    wsDash.addRow([`${theme.prefix} SYSTEM CONTEXT`]).font = { bold: true };
+                    wsDash.addRow(['Segment', INDUSTRY_TEMPLATES[selectedIndustry]?.label || 'Custom']);
+                    wsDash.addRow(['Demand', Number(customerDemand)]);
+                    wsDash.addRow(['Shift Hrs', Number(workingHours)]);
+                    
+                    const wsMatrix = workbook.addWorksheet('Engineering Matrix');
+                    wsMatrix.columns = [{ header: 'SEQ', key: 'seq', width: 8 }, { header: 'PROCESS', key: 'name', width: 30 }, { header: 'INV', key: 'inv', width: 12 }, { header: 'MAN CT', key: 'mct', width: 18 }, { header: 'MACH CT', key: 'act', width: 18 }, { header: 'OEE', key: 'oee', width: 10 }, { header: 'HC', key: 'hc', width: 8 }];
+                    wsMatrix.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: theme.isFsm ? 'FFEAB308' : 'FF10B981' } };
+                    metrics.auditedSteps.forEach((s, i) => { wsMatrix.addRow({ seq: i+1, name: s.name, inv: s.inventoryPieces, mct: metrics.convertValue(s.manualCT), act: metrics.convertValue(s.machineCT), oee: s.stepOEE, hc: s.operators }); });
+
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${theme.isFsm ? 'FSM' : 'CSM'}_Report_${Date.now()}.xlsx`; a.click();
+                } catch (e) { console.error(e); } finally { setIsExportingExcel(false); }
+            };
+
+            const exportToPDF = async () => {
+                setIsExportingPDF(true);
+                try {
+                    if (!window.html2pdf) await new Promise(res => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = res; document.head.appendChild(s); });
+                    const mainUi = document.getElementById('main-app-content'); const wrapper = reportRef.current;
+                    if (mainUi) mainUi.style.display = 'none';
+                    wrapper.classList.remove('hidden'); wrapper.style.display = 'block'; wrapper.style.width = `800px`; wrapper.style.margin = '0 auto'; wrapper.style.backgroundColor = 'white';
+                    window.scrollTo(0, 0);
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    const opt = { margin: 0.5, filename: `${theme.isFsm ? 'FSM' : 'CSM'}_Diagnostic_${Date.now()}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true, windowWidth: 800 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'], avoid: '.print-no-break' } };
+                    await window.html2pdf().set(opt).from(wrapper).save();
+                } catch (error) { triggerAlert('error', "PDF Engine failed."); } 
+                finally { const mainUi = document.getElementById('main-app-content'); const wrapper = reportRef.current; if (mainUi) mainUi.style.display = ''; if (wrapper) { wrapper.classList.add('hidden'); wrapper.style.display = ''; wrapper.style.width = ''; wrapper.style.margin = ''; wrapper.style.backgroundColor = ''; } window.scrollTo(0, 0); setIsExportingPDF(false); }
+            };
+
+            const lbeNum = Number(metrics.lbe), oeeNum = Number(metrics.streamOEE), vaNum = Number(metrics.varPercentage), rtyNum = Number(metrics.rty);
+            const lbeHealth = lbeNum >= theme.lbeOpt ? 'optimal' : (lbeNum >= theme.lbeOpt - 15 ? 'warning' : 'critical');
+            const oeeHealth = oeeNum >= theme.oeeOpt ? 'optimal' : (oeeNum >= theme.oeeOpt - 10 ? 'warning' : 'critical');
+            const vaHealth = vaNum >= 25 ? 'optimal' : (vaNum >= 10 ? 'warning' : 'critical');
+            const rtyHealth = rtyNum >= 95 ? 'optimal' : (rtyNum >= 85 ? 'warning' : 'critical');
+            const pltHealth = wasteSummary.muda === 0 ? 'optimal' : (wasteSummary.muda < 3 ? 'warning' : 'critical');
+            const bottleneckStep = metrics.auditedSteps.reduce((prev, curr) => prev.totalCT > curr.totalCT ? prev : curr, {name: 'None', totalCT: 0});
+            const isTaktMet = (Number(customerDemand)||0) > 0 ? metrics.maxCT <= metrics.taktTimeSec : true;
+
+            return (
+                <React.Fragment>
+                    <div id="main-app-content" className="min-h-screen bg-slate-50 relative font-bold text-slate-900 transition-colors duration-500 pb-12">
+                        {systemAlert && (
+                            <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] ${systemAlert.type === 'error' ? 'bg-red-600 border-red-400' : 'bg-amber-500 border-amber-300'} text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-top font-black border`}>
+                                <Icon name="alert-triangle" size={28} />
+                                <div className="flex flex-col"><span className={`text-xs ${systemAlert.type === 'error' ? 'text-red-200' : 'text-amber-100'} uppercase tracking-widest`}>System Override</span><span>{systemAlert.msg}</span></div>
+                                <button onClick={() => setSystemAlert(null)} className="ml-4 p-1 hover:bg-black/20 rounded-lg transition-colors"><Icon name="x" size={20}/></button>
+                            </div>
+                        )}
+
+                        <header className={`${theme.headerBg} sticky top-0 z-50 shadow-md border-b-4 ${theme.border} transition-colors duration-500 print:hidden`}>
+                            <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center px-6 gap-4">
+                                <div className="flex items-center gap-4 w-full md:w-auto">
+                                    <div className={`${theme.bg} ${theme.isFsm ? 'text-black' : 'text-white'} p-3 rounded-xl shadow-lg transition-colors`}><Icon name="fast-forward" size={28}/></div>
+                                    <div>
+                                        <h1 className={`text-2xl font-black ${theme.textMain} leading-none tracking-tight mb-1`}>MECTS SET....GO</h1>
+                                        <div className="text-[9px] text-slate-400 tracking-widest uppercase font-bold mb-1">managing excellence thru continuous transformative solutions</div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-sm font-black tracking-widest uppercase">Value Stream Architecture</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-slate-800 p-1 rounded-xl flex shadow-inner border border-slate-700">
+                                        <button onClick={() => setMapMode('csm')} className={`px-4 py-2 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${!theme.isFsm ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}>CSM (Current)</button>
+                                        <button onClick={() => setMapMode('fsm')} className={`px-4 py-2 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${theme.isFsm ? 'bg-yellow-500 text-black shadow-md' : 'text-slate-400 hover:text-white'}`}>FSM (Target)</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-black/20 p-3 flex justify-between items-center px-6 border-t border-white/10">
+                                 <nav className="flex gap-2 overflow-x-auto">
+                                    {['map', 'insights', 'capa', 'learn'].map(tab => (
+                                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-1.5 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all whitespace-nowrap ${activeTab === tab ? theme.bg + (theme.isFsm ? ' text-black' : ' text-white') : 'text-slate-400 hover:bg-white/10'}`}>
+                                            {tab === 'insights' ? `${theme.prefix} WASTE` : tab === 'capa' ? 'KAIZEN ENGINE' : tab === 'learn' ? 'DICTIONARY' : 'ARCHITECTURE'}
+                                        </button>
+                                    ))}
+                                </nav>
+                                <div className="flex items-center gap-3">
+                                     <div className="flex bg-black/50 p-1 rounded-lg border border-white/10 mr-2">
+                                        {['sec', 'min', 'day'].map(u => <button key={u} onClick={() => setActiveUnitAndClearRaw(u)} className={`px-3 py-1 rounded text-[8px] font-black tracking-widest uppercase ${activeUnit === u ? theme.bg + (theme.isFsm ? ' text-black' : ' text-white') : 'text-slate-400'}`}>{u}</button>)}
+                                     </div>
+                                     <button onClick={exportToPDF} disabled={isExportingPDF} className="bg-red-600 hover:bg-red-500 text-white font-black text-[9px] px-4 py-2 rounded-md flex items-center gap-2 active:bg-red-700 transition-all">
+                                        <Icon name={isExportingPDF ? "loader-2" : "file-text"} size={12} className={isExportingPDF ? "animate-spin" : ""} /> PDF
+                                     </button>
+                                     <button onClick={exportToExcel} disabled={isExportingExcel} className={`${theme.btnClass} font-black text-[9px] px-4 py-2 rounded-md flex items-center gap-2 transition-all`}>
+                                        <Icon name={isExportingExcel ? "loader-2" : "download"} size={12} className={isExportingExcel ? "animate-spin" : ""} /> EXCEL
+                                     </button>
+                                     <select value="" onChange={(e) => handleSimulation(e.target.value)} className={`bg-slate-900 ${theme.textMain} font-black border ${theme.border} rounded-md px-4 py-2 text-[9px] uppercase outline-none cursor-pointer shadow-inner`} title="Simulate different system states">
+                                        <option value="" disabled className="bg-slate-900 text-white">Simulation Mode...</option>
+                                        <option value="baseline" className="bg-slate-900 text-white">Baseline Reset</option>
+                                        <option value="perfect" className="bg-slate-900 text-white">Perfect Math (Robust)</option>
+                                        <option value="breakeven" className="bg-slate-900 text-white">Break Even Point (At Takt)</option>
+                                        <option value="pathetic" className="bg-slate-900 text-white">Pathetic (Chaos)</option>
+                                     </select>
+                                 </div>
+                            </div>
+                        </header>
+
+                        <main className="max-w-[1400px] mx-auto p-4 space-y-6">
+                            {activeTab === 'map' && (
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    <div className={`${theme.headerBg} p-4 rounded-2xl border ${theme.border} flex flex-col md:flex-row items-center justify-between gap-4 transition-colors`}>
+                                        <div className="flex items-center gap-4"><Icon name="layout-template" className={`${theme.textMain} animate-pulse`} size={24} /><div><div className={`text-sm font-black uppercase tracking-tight ${theme.textMain}`}>{theme.prefix} Architecture</div><div className="text-[8px] font-black tracking-[0.2em] uppercase opacity-70">Unified Mode</div></div></div>
+                                        <select className="bg-slate-900 border border-slate-700 text-white rounded-xl px-6 py-2 text-sm font-black outline-none w-full md:w-72 shadow-inner cursor-pointer" value={selectedIndustry} onChange={handleIndustryChange}>
+                                            {Object.entries(INDUSTRY_TEMPLATES).map(([k, v]) => <option key={k} value={k} className="bg-slate-900 text-white">{v.label}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-5 gap-4">
+                                        <div className="col-span-1 md:col-span-2"><label className="text-[9px] text-slate-400 font-black uppercase tracking-widest block mb-2" title="Define the starting and ending points of this value stream">{theme.prefix} Boundary Control</label><div className="flex items-center gap-2"><input value={supplierName} onChange={e=>setSupplierName(e.target.value)} placeholder="Supplier Name" className={`w-full bg-slate-50 p-2 text-xs border font-black rounded-lg outline-none focus:${theme.border} placeholder:text-slate-300`} title="Raw Material Origin" /><Icon name="arrow-right" size={14} className="text-slate-300 shrink-0" /><input value={customerName} onChange={e=>setCustomerName(e.target.value)} placeholder="Customer Name" className={`w-full bg-slate-50 p-2 text-xs font-black border rounded-lg outline-none focus:${theme.border} placeholder:text-slate-300`} title="Final Delivery Point" /></div></div>
+                                        <div className="text-center md:text-left"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-center md:justify-start">{theme.prefix} Demand <FormulaHover formula="Customer Requirement per Shift" /></label><input type="number" value={customerDemand} onChange={e=>handleGlobalChange('Demand', e.target.value)} onFocus={e => e.target.select()} className={`w-full font-black text-lg p-1.5 bg-slate-50 border-slate-200 border-2 rounded-xl text-slate-800 text-center outline-none focus:${theme.border}`} title="Total units required by the customer" /></div>
+                                        <div className="text-center md:text-left"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-center md:justify-start">Shift Hours <FormulaHover formula="Gross Shift Time" /></label><input type="number" value={workingHours} onChange={e=>handleGlobalChange('Shift Hours', e.target.value)} onFocus={e => e.target.select()} className={`w-full font-black text-lg p-1.5 bg-slate-50 border rounded-xl text-center outline-none focus:${theme.border}`} title="Gross operating hours" /></div>
+                                        <div className="text-center md:text-left"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-center md:justify-start">Downtime (min) <FormulaHover formula="Planned Breaks + Meetings" /></label><input type="number" value={plannedDowntimeMin} onChange={e=>handleGlobalChange('Downtime', e.target.value)} onFocus={e => e.target.select()} className={`w-full font-black text-lg p-1.5 bg-slate-50 border rounded-xl text-center outline-none focus:${theme.border}`} title="Planned non-production minutes" /></div>
+                                    </div>
+                                    
+                                    <div className="bg-slate-900 rounded-xl p-3 flex justify-between items-center text-white shadow-inner border border-slate-800" title={`Calculated as: (${workingHours || 0} hours * 60) - ${plannedDowntimeMin || 0} mins`}>
+                                        <div className="flex items-center gap-3">
+                                           <Icon name="clock" size={16} className={theme.textMain} />
+                                           <span className="text-xs uppercase tracking-widest font-black text-slate-300">{theme.prefix} Net Available Time (NAT)</span>
+                                        </div>
+                                        <div className={`text-xl font-mono font-black tracking-tighter ${theme.textMain}`}>
+                                            {metrics.convertValue(metrics.nat)}{unitSuffix}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-4">
+                                        <KpiBox label={`${theme.prefix} Takt`} value={`${metrics.displayTakt}${unitSuffix}`} sub="Required Pace" iconName="target" formula="NAT ÷ Demand" />
+                                        <KpiBox label={`${theme.prefix} Lead`} value={`${metrics.displayLead}${unitSuffix}`} sub="End-to-End" iconName="fast-forward" health={pltHealth} formula="Σ Wait Time + Σ Cycle Time" />
+                                        <KpiBox label={`${theme.prefix} Load`} value={`${metrics.displayManual}${unitSuffix}`} sub="Staffing Load" iconName="user" formula="Σ (Manual CT × Headcount)" />
+                                        <KpiBox label="Stream OEE" value={`${metrics.streamOEE}%`} sub="Equip Health" iconName="cpu" health={oeeHealth} formula="Availability × Quality" />
+                                        <KpiBox label="VA Ratio" value={`${metrics.varPercentage}%`} sub="Utilization" iconName="trending-up" health={vaHealth} formula="(VAT ÷ Lead Time) × 100" />
+                                        <KpiBox label="RTY %" value={`${metrics.rty}%`} sub="Rolled Yield" iconName="check-circle" health={rtyHealth} formula="Π (1 - Defect Rate)" />
+                                        <KpiBox label="LBE %" value={`${metrics.lbe}%`} sub="Line Balance" iconName="boxes" health={lbeHealth} formula="Σ CT ÷ (Max CT × Steps)" />
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative">
+                                        <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                                            <h2 className="text-lg font-black uppercase tracking-tight">{theme.prefix} Engineering Matrix</h2>
+                                            <div className="flex items-center gap-4">
+                                                <div className="hidden md:flex gap-3 text-[8px] uppercase font-black text-slate-500 tracking-widest mr-2">
+                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded border border-slate-200 bg-slate-50"></div> Optimal</span>
+                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded border border-amber-400 bg-amber-50"></div> Warning</span>
+                                                    <span className="flex items-center gap-1"><div className="w-2 h-2 rounded border border-red-500 bg-red-50"></div> Critical Risk</span>
+                                                </div>
+                                                <button onClick={addStep} className={`${theme.headerBg} border ${theme.border} px-4 py-2 rounded-lg flex items-center gap-2 text-[10px] font-black shadow-md transition-colors`}><Icon name="plus" size={12} /> ADD PROCESS</button>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[600px] overflow-y-auto overflow-x-auto w-full">
+                                            <table className="w-full border-separate border-spacing-y-3">
+                                                <thead className="sticky top-0 bg-white z-[40] shadow-sm"><tr className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                                                    <th className="px-3 py-2 text-center" title="Process Sequence Number">SEQ</th>
+                                                    <th className="px-3 py-2 min-w-[200px]" title="Name of the manufacturing or transactional process">{theme.prefix} PROCESS</th>
+                                                    <th className="px-3 py-2 text-center"><div className="flex items-center justify-center gap-1" title="Units waiting before this process">INV QTY</div></th>
+                                                    <th className="px-3 py-2 text-center"><div className="flex items-center justify-center gap-1" title="Inventory / Demand">WAIT (D)</div></th>
+                                                    <th className="px-3 py-2 text-center"><div className="flex items-center justify-center gap-1" title="Human interaction cycle time">MANUAL CT</div></th>
+                                                    <th className="px-3 py-2 text-center"><div className="flex items-center justify-center gap-1" title="Automated cycle time">MACHINE CT</div></th>
+                                                    <th className="px-3 py-2 text-center"><div className="flex items-center justify-center gap-1" title="Value Adding Time (must be <= Cycle Time)">VAT ({unitSuffix})</div></th>
+                                                    <th className="px-3 py-2 text-center" title="Equipment Availability %">UPTIME %</th>
+                                                    <th className="px-3 py-2 text-center" title="Scrap or Rework %">DEFECT %</th>
+                                                    <th className="px-3 py-2 text-center" title="Overall Equipment Effectiveness">OEE %</th>
+                                                    <th className="px-3 py-2 text-center" title="Setup or Changeover Time"><div className="flex items-center justify-center gap-1">C/O ({unitSuffix})</div></th>
+                                                    <th className="px-3 py-2 text-center" title="Operators Required">HC</th>
+                                                    <th></th>
+                                                </tr></thead>
+                                                <tbody>{metrics.auditedSteps.map((s, i) => {
+                                                    const isOverTakt = s.totalCT > metrics.taktTimeSec && metrics.taktTimeSec > 0 && (Number(customerDemand)||0) > 0;
+                                                    const isWarningTakt = s.totalCT > (metrics.taktTimeSec * 0.8) && !isOverTakt && (Number(customerDemand)||0) > 0;
+                                                    const ctClass = isOverTakt ? 'border-red-500 text-red-600 bg-red-50' : (isWarningTakt ? 'border-amber-400 text-amber-600 bg-amber-50' : 'border-slate-200');
+                                                    const waitVal = Number(s.calculatedWaitDays);
+                                                    const waitHealth = waitVal > theme.waitCrit ? 'text-red-600 bg-red-50' : (waitVal > theme.waitWarn ? 'text-amber-600 bg-amber-50' : 'text-slate-900');
+                                                    const upVal = Number(s.uptimePct);
+                                                    const upHealth = upVal < 85 ? 'text-red-600 bg-red-50 border-red-500' : (upVal < 95 ? 'text-amber-600 bg-amber-50 border-amber-400' : 'text-slate-900 border-slate-200');
+                                                    const defVal = Number(s.defectPct);
+                                                    const defHealth = defVal > 10 ? 'text-red-600 bg-red-50 border-red-500' : (defVal > 5 ? 'text-amber-600 bg-amber-50 border-amber-400' : 'text-slate-900 border-slate-200');
+                                                    const oeeVal = Number(s.stepOEE);
+                                                    const oeeHealth = oeeVal < 75 ? 'text-red-600' : (oeeVal < 85 ? 'text-amber-600' : 'text-slate-900');
+                                                    const coVal = Number(s.changeoverSec);
+                                                    const coHealth = coVal > theme.coCrit ? 'text-red-600 bg-red-50 border-red-500' : (coVal > theme.coWarn ? 'text-amber-600 bg-amber-50 border-amber-400' : 'text-slate-900 border-slate-200');
+
+                                                    return (
+                                                    <tr key={s.id} className="bg-slate-50 hover:bg-white transition-all shadow-sm rounded-xl group border border-slate-100 whitespace-nowrap">
+                                                        <td className="p-3 text-slate-400 text-center text-sm font-black">{i+1}</td>
+                                                        <td className="p-3"><input value={s.name} onChange={e=>handleStepChange(s.id, 'name', e.target.value)} onFocus={e => e.target.select()} className={`w-full bg-white p-2 border font-black border-slate-200 rounded-md text-xs outline-none focus:${theme.border}`} title={`Process ${i+1} Name`} /></td>
+                                                        <td className="p-3 text-center"><input type="number" value={s.inventoryPieces_raw !== undefined ? s.inventoryPieces_raw : s.inventoryPieces} onChange={e=>handleStepChange(s.id, 'inventoryPieces', e.target.value)} onFocus={e => e.target.select()} className={`w-20 bg-white border border-slate-200 rounded-md p-2 text-center text-xs outline-none focus:${theme.border} font-black`} title="Inventory Units" /></td>
+                                                        <td className={`p-3 text-center text-xs rounded-lg font-black ${waitHealth}`} title={`${parseFloat(waitVal.toFixed(2))} Days Wait`}>{parseFloat(waitVal.toFixed(2))}</td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.01" value={s.manualCT_raw !== undefined ? s.manualCT_raw : metrics.getEditValue(s.manualCT)} onChange={e=>handleStepChange(s.id, 'manualCT', e.target.value)} onFocus={e => e.target.select()} className={`w-20 font-black bg-white border rounded-md p-2 text-center text-xs outline-none focus:${theme.border} ${ctClass}`} title={`Manual Cycle Time`} /></td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.01" value={s.machineCT_raw !== undefined ? s.machineCT_raw : metrics.getEditValue(s.machineCT)} onChange={e=>handleStepChange(s.id, 'machineCT', e.target.value)} onFocus={e => e.target.select()} className={`w-20 font-black bg-slate-100 border rounded-md p-2 text-center text-xs outline-none focus:${theme.border} ${ctClass}`} title={`Machine Cycle Time`} /></td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.01" value={s.vatSec_raw !== undefined ? s.vatSec_raw : metrics.getEditValue(s.vatSec)} onChange={e=>handleStepChange(s.id, 'vatSec', e.target.value)} onFocus={e => e.target.select()} className={`w-20 bg-slate-100 border border-slate-300 rounded-md p-2 text-center text-xs outline-none focus:${theme.border} font-black text-slate-800`} title="Value Added Time" /></td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.1" value={s.uptimePct_raw !== undefined ? s.uptimePct_raw : s.uptimePct} onChange={e=>handleStepChange(s.id, 'uptimePct', e.target.value)} onFocus={e => e.target.select()} className={`w-16 font-black border rounded-md p-2 text-center text-xs outline-none focus:${theme.border} ${upHealth}`} title="Availability %" /></td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.1" value={s.defectPct_raw !== undefined ? s.defectPct_raw : s.defectPct} onChange={e=>handleStepChange(s.id, 'defectPct', e.target.value)} onFocus={e => e.target.select()} className={`w-16 font-black border rounded-md p-2 text-center text-xs outline-none focus:${theme.border} ${defHealth}`} title="Defect Rate %" /></td>
+                                                        <td className={`p-3 text-center text-xs font-black ${oeeHealth}`} title="Overall Equipment Effectiveness">{s.stepOEE}%</td>
+                                                        <td className="p-3 text-center"><input type="number" step="0.01" value={s.changeoverSec_raw !== undefined ? s.changeoverSec_raw : metrics.getEditValue(s.changeoverSec)} onChange={e=>handleStepChange(s.id, 'changeoverSec', e.target.value)} onFocus={e => e.target.select()} className={`w-20 font-black bg-white border rounded-md p-2 text-center text-xs outline-none focus:${theme.border} ${coHealth}`} title="Setup / Changeover Time" /></td>
+                                                        <td className="p-3 text-center"><input type="number" value={s.operators_raw !== undefined ? s.operators_raw : s.operators} onChange={e=>handleStepChange(s.id, 'operators', e.target.value)} onFocus={e => e.target.select()} className={`w-16 font-black bg-white border border-slate-200 rounded-md p-2 text-center text-xs outline-none focus:${theme.border} text-slate-900`} title="Headcount" /></td>
+                                                        <td className="p-3 text-center"><button onClick={()=>removeStep(s.id)} className="text-slate-300 hover:text-red-600 transition-all"><Icon name="trash-2" size={16}/></button></td>
+                                                    </tr>
+                                                )})}</tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <MacroVSMTimeline steps={metrics.auditedSteps} metrics={metrics} activeUnit={activeUnit} supplierName={supplierName} customerName={customerName} theme={theme} mapMode={mapMode} />
+                                    <YamazumiChart steps={metrics.auditedSteps} metrics={metrics} activeUnit={activeUnit} theme={theme} />
+                                </div>
+                            )}
+
+                            {activeTab === 'insights' && (
+                                <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
+                                    <div className={`${theme.headerBg} p-8 rounded-2xl border-b-8 ${theme.border} shadow-sm relative overflow-hidden flex items-center justify-between`}>
+                                        <div className="z-10">
+                                            <h2 className={`text-2xl font-black ${theme.textMain} uppercase leading-none`}>{theme.prefix} Waste Diagnostics</h2>
+                                            <div className="text-slate-300 mt-2 text-xs font-bold">Identifying systemic operational losses.</div>
+                                        </div>
+                                        <Icon name="zap" size={100} className="absolute -right-4 -bottom-4 text-white/5" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <SummaryTile label={`${theme.prefix} MUDA (Waste)`} count={wasteSummary.muda} color="red" iconName="layers" desc="Flow stagnation risks" />
+                                        <SummaryTile label={`${theme.prefix} MURA (Unevenness)`} count={wasteSummary.mura} color="yellow" iconName="activity" desc="Changeover limits" />
+                                        <SummaryTile label={`${theme.prefix} MURI (Overburden)`} count={wasteSummary.muri} color="black" iconName="alert-triangle" desc="Constraint failure" />
+                                    </div>
+                                    <div className="space-y-3">
+                                        {wastes.length === 0 ? <div className={`bg-white border border-dashed ${theme.border} p-8 text-center rounded-xl shadow-sm`}><Icon name="check-circle" size={32} className={`${theme.textDark} mx-auto mb-3`} /><h3 className={`text-lg font-black uppercase ${theme.textDark}`}>Operations Optimal</h3></div> : 
+                                          wastes.map((w, idx) => <WasteCard key={idx} waste={w} />)
+                                        }
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'capa' && (
+                                <div className="space-y-6 animate-in slide-in-from-bottom duration-300">
+                                    <div className={`${theme.headerBg} p-8 rounded-2xl border-b-8 ${theme.border} shadow-sm relative overflow-hidden flex items-center justify-between`}>
+                                        <div className="relative z-10">
+                                            <h2 className={`text-2xl font-black ${theme.textMain} uppercase`}>Kaizen Implementation Engine</h2>
+                                            <div className="text-slate-300 mt-1 text-[10px] font-black uppercase tracking-widest">{theme.prefix} Transition Planning</div>
+                                        </div>
+                                        <Icon name="rocket" size={80} className="text-white/5 absolute -right-2 -bottom-2" />
+                                    </div>
+
+                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2"><Icon name="globe-2" size={16} className={theme.textDark} /> System Resiliency Triggers</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                            {Object.keys(EXTERNAL_LOGIC).map(factor => (
+                                                <button key={factor} onClick={() => triggerExt(factor)} className={`p-3 ${theme.headerBg} rounded-lg text-[9px] font-black uppercase tracking-wider ${theme.isFsm ? 'hover:bg-yellow-500 hover:text-black' : 'hover:bg-emerald-500 hover:text-white'} transition-all shadow-sm`}>
+                                                    {factor}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-1 space-y-4">
+                                            <h3 className="text-xs font-black uppercase tracking-widest flex items-center gap-2 border-l-4 border-red-500 pl-3">Design Interventions</h3>
+                                            {capaSuggestions.length === 0 ? <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-slate-500 font-black text-[10px] uppercase">Zero Gaps Detected</div> : 
+                                                capaSuggestions.map(s => (
+                                                <div key={s.id} className="p-4 bg-white rounded-xl border-l-4 border-red-500 shadow-sm flex flex-col gap-2 transition-all">
+                                                    <div className="text-[9px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full uppercase self-start">{s.type}</div>
+                                                    <div className="text-sm font-black text-slate-900">{s.step}</div>
+                                                    <div className="text-[10px] font-bold text-slate-600 leading-snug">{s.issue}</div>
+                                                    <button onClick={() => createCapa(s)} className={`mt-2 w-full ${theme.btnClass} text-[9px] font-black py-2 rounded-md transition-all shadow-sm`}>ADD TO KAIZEN PLAN</button>
+                                                </div>
+                                                ))
+                                            }
+                                        </div>
+                                        <div className="lg:col-span-2 space-y-4">
+                                            <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 border-l-4 ${theme.border} pl-3`}>Active Log</h3>
+                                            {capaRecords.length === 0 ? <div className="p-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center flex flex-col items-center gap-4 text-slate-400"><Icon name="search" size={48} /><div className="uppercase font-black tracking-[0.2em] text-xs">No Active Initiatives</div></div> : 
+                                                capaRecords.map(c => (
+                                                <div key={c.id} className={`bg-white p-6 rounded-2xl shadow-sm border-t-4 ${theme.border} space-y-4 animate-in slide-in-from-right duration-300`}>
+                                                    <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                                                        <div className="flex items-center gap-3"><div className={`p-2 ${theme.bg}/20 ${theme.textDark} rounded-lg shadow-sm`}><Icon name="target" size={16} /></div><h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{c.step} - KAIZEN</h4></div>
+                                                        <button onClick={() => setCapaRecords(capaRecords.filter(r=>r.id!==c.id))} className="text-slate-300 hover:text-red-600 transition-all"><Icon name="trash-2" size={16}/></button>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center gap-1.5"><Icon name="book-open" size={12} /> Lean Principle Applied</label><textarea className={`w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-900 outline-none focus:${theme.border} min-h-[80px]`} value={c.rootCause} onChange={e=>setCapaRecords(capaRecords.map(r=>r.id===c.id?{...r, rootCause:e.target.value}:r))} /></div>
+                                                        <div className="space-y-2"><label className="text-[9px] font-black uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center gap-1.5"><Icon name="hammer" size={12} /> Implementation Action</label><textarea className={`w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-900 outline-none focus:${theme.border} min-h-[80px]`} value={c.correctiveAction} onChange={e=>setCapaRecords(capaRecords.map(r=>r.id===c.id?{...r, correctiveAction:e.target.value}:r))} /></div>
+                                                    </div>
+                                                    <div className="flex flex-col md:flex-row justify-between items-center pt-3 border-t border-slate-100 gap-3">
+                                                        <div className="flex gap-4">
+                                                            <div className="flex flex-col"><span className="text-[8px] text-slate-400 font-black uppercase mb-0.5">Status</span><select className={`text-xs ${theme.textDark} outline-none bg-transparent cursor-pointer font-black`} value={c.status} onChange={e=>setCapaRecords(capaRecords.map(r=>r.id===c.id?{...r, status:e.target.value}:r))}><option className="bg-white text-slate-900">Planned</option><option className="bg-white text-slate-900">In Progress</option><option className="bg-white text-slate-900">Verified</option><option className="bg-white text-slate-900">Complete</option></select></div>
+                                                            <div className="flex flex-col"><span className="text-[8px] text-slate-400 font-black uppercase mb-0.5">Owner</span><input className={`text-xs text-slate-900 outline-none placeholder:text-slate-300 w-32 bg-transparent border-b border-transparent focus:${theme.border} font-black`} placeholder="Lead Name..." value={c.owner} onChange={e=>setCapaRecords(capaRecords.map(r=>r.id===c.id?{...r, owner:e.target.value}:r))} /></div>
+                                                        </div>
+                                                        <div className="text-[8px] text-slate-400 font-black uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md border border-slate-200">ID: {c.id}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'learn' && (
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    <div className={`${theme.headerBg} p-6 rounded-2xl border-l-4 ${theme.border} shadow-sm flex flex-col md:flex-row items-center justify-between gap-4`}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 ${theme.bg} ${theme.isFsm ? 'text-black' : 'text-white'} rounded-lg`}><Icon name="book-open" size={20} /></div>
+                                            <div><h2 className={`text-lg font-black ${theme.textMain} uppercase tracking-tight leading-none`}>{theme.prefix} Dictionary</h2><div className="text-[8px] font-bold text-slate-300 tracking-widest uppercase mt-1">Lean Engineering Parameters</div></div>
+                                        </div>
+                                        <select className={`bg-slate-900 border font-black border-slate-700 ${theme.textMain} rounded-lg px-4 py-2 text-xs outline-none cursor-pointer w-full md:w-64 shadow-inner`} value={activeParamKey} onChange={(e) => setActiveParamKey(e.target.value)}>
+                                            {Object.entries(dynamicDictionary).map(([k, v]) => <option key={k} value={k} className="bg-slate-900 text-white">{v.name}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                                        <div className="flex items-start gap-4 mb-6 border-b border-slate-100 pb-6">
+                                            <div className={`p-3 ${theme.bg}/20 rounded-xl ${theme.textDark}`}><Icon name="info" size={24} /></div>
+                                            <div><h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-1">{dynamicDictionary[activeParamKey].name}</h3><div className="text-xs font-bold text-slate-500 leading-snug">{dynamicDictionary[activeParamKey].purpose}</div></div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-2 shadow-sm">
+                                                <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest flex items-center gap-1.5"><Icon name="lightbulb" size={12} /> Vision Analogy</div>
+                                                <div className="text-xs font-bold text-slate-900 leading-relaxed">{dynamicDictionary[activeParamKey].analogy}</div>
+                                            </div>
+                                            <div className={`p-4 ${theme.bg}/10 rounded-xl border ${theme.border} flex flex-col gap-2 shadow-sm`}>
+                                                <div className={`text-[9px] font-black ${theme.textDark} uppercase tracking-widest flex items-center gap-1.5`}><Icon name="settings" size={12} /> {theme.prefix} Strategy</div>
+                                                <div className="text-xs font-bold text-slate-900 leading-relaxed">{dynamicDictionary[activeParamKey].optimization}</div>
+                                            </div>
+                                        </div>
+                                        <div className={`${theme.headerBg} p-6 rounded-xl border border-white/10 shadow-inner relative overflow-hidden`}>
+                                            <Icon name="calculator" size={80} className="absolute -right-4 -bottom-4 text-white/5 rotate-12" />
+                                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-slate-500"></div> Standard Formula</div>
+                                            <div className="text-sm font-bold text-white font-mono leading-relaxed relative z-10 tracking-tight mb-4">{dynamicDictionary[activeParamKey].formula}</div>
+                                            <div className={`text-[9px] font-black ${theme.textDark} uppercase tracking-widest mb-1 flex items-center gap-2`}><div className={`w-1.5 h-1.5 rounded-full ${theme.bg}`}></div> Values Applied</div>
+                                            <div className={`text-sm font-bold ${theme.textMain} opacity-80 font-mono leading-relaxed relative z-10 tracking-tight mb-4 border-b border-white/10 pb-4`}>{dynamicDictionary[activeParamKey].applied}</div>
+                                            <div className={`text-[9px] font-black ${theme.textMain} uppercase tracking-widest mb-1 flex items-center gap-2`}><div className={`w-1.5 h-1.5 rounded-full ${theme.bg} animate-pulse`}></div> Live Result</div>
+                                            <div className={`text-xl ${theme.textMain} font-mono leading-relaxed relative z-10 tracking-tight font-black`}>{dynamicDictionary[activeParamKey].result}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+
+                    {/* --- PDF EXECUTIVE DIAGNOSTIC REPORT --- */}
+                    <div ref={reportRef} className="hidden print:block">
+                        <div className="bg-white text-black font-sans pb-10 w-full mx-auto shadow-2xl">
+                            <div className="bg-black text-white p-6 border-b-4 border-slate-500 flex justify-between items-center w-full" style={{borderColor: theme.hex}}>
+                                <div className="flex items-center gap-3">
+                                    <div className="text-black p-2 rounded-lg" style={{backgroundColor: theme.hex}}><Icon name="shield-check" size={20}/></div>
+                                    <div>
+                                        <h1 className="text-2xl font-black leading-none tracking-tight mb-1" style={{color: theme.hex}}>MECTS SET....GO</h1>
+                                        <div className="text-[8px] text-slate-300 tracking-widest uppercase font-bold mb-0.5">managing excellence thru continuous transformative solutions</div>
+                                        <div className="text-sm text-white font-black tracking-widest uppercase">{theme.prefix} State Audit - Management Review</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-black uppercase tracking-widest" style={{color: theme.hex}}>Confidential Data</div>
+                                    <div className="text-[10px] font-bold text-slate-400">{new Date().toLocaleDateString()}</div>
+                                </div>
+                            </div>
+                            
+                            <div style={{ height: '0.5in' }}></div>
+
+                            <div className="px-10 space-y-6">
+                                <div className="border border-slate-300 rounded-lg p-5 bg-slate-50 print-no-break">
+                                    <h2 className="text-sm font-black uppercase text-slate-800 border-b border-slate-300 pb-2 mb-3 flex items-center gap-2"><Icon name="activity" size={16}/> {theme.prefix} State Diagnostic Overview</h2>
+                                    <div className="text-xs font-bold text-slate-700 leading-relaxed space-y-3">
+                                        <p>The {theme.prefix} State architecture is operating against a demand of <strong>{customerDemand || 0} units</strong> within <strong>{workingHours || 0} shift hours</strong>, requiring a Takt pulse of <strong>{metrics.displayTakt}{unitSuffix}</strong>.</p>
+                                        <p><span className={isTaktMet ? "text-emerald-600" : "text-red-600"}>{isTaktMet ? `System Capability: The pacing constraint (${bottleneckStep.name} at ${metrics.convertValue(bottleneckStep.totalCT)}${unitSuffix}) safely operates beneath the Takt limit.` : `CRITICAL RISK: The pacing constraint (${bottleneckStep.name} at ${metrics.convertValue(bottleneckStep.totalCT)}${unitSuffix}) exceeds the allowable Takt pulse. Missed deliveries and systemic overburden (Muri) are actively occurring.`}</span></p>
+                                        <p><span className={lbeNum >= theme.lbeOpt ? "text-emerald-600" : "text-amber-600"}>{lbeNum >= theme.lbeOpt ? `The architecture achieves adequate Line Balance Efficiency (LBE) at ${metrics.lbe}%.` : `The architecture exhibits structural imbalance (LBE: ${metrics.lbe}%). Labor and machine capacity are poorly distributed.`}</span></p>
+                                        <p><span className={vaNum >= 20 ? "text-emerald-600" : "text-red-600"}>The Value-Added Ratio (VAR) stands at <strong>{metrics.varPercentage}%</strong> across a total Lead Time of <strong>{metrics.displayLead}{unitSuffix}</strong>. {vaNum < 20 ? "This indicates excessive non-value-added stagnation (Muda) is currently embedded in the flow." : "This reflects a generally efficient flow relative to industry standards."}</span></p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 w-full print-no-break">
+                                    <div className="flex-1 border border-slate-300 rounded-lg p-4 bg-white">
+                                        <h2 className="text-xs font-black uppercase text-slate-500 border-b border-slate-200 pb-1 mb-2">{theme.prefix} Context</h2>
+                                        <div className="grid grid-cols-1 gap-y-2 text-[10px] font-bold text-slate-800">
+                                            <div className="flex justify-between"><span className="text-slate-500">Segment:</span> <span>{INDUSTRY_TEMPLATES[selectedIndustry]?.label || 'Custom'}</span></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Demand:</span> <span>{customerDemand || 0} units</span></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Supplier:</span> <span>{supplierName || 'N/A'}</span></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Customer:</span> <span>{customerName || 'N/A'}</span></div>
+                                            <div className="flex justify-between"><span className="text-slate-500">Shift Hrs:</span> <span>{workingHours || 0}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex-[2.5] grid grid-cols-4 gap-2">
+                                        <div className="border border-slate-300 p-2 rounded bg-white text-center flex flex-col justify-center"><div className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight mb-1">{theme.prefix} Takt</div><div className="text-lg font-black text-black leading-none">{metrics.displayTakt}{unitSuffix}</div></div>
+                                        <div className="border border-slate-300 p-2 rounded bg-white text-center flex flex-col justify-center"><div className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight mb-1">{theme.prefix} Lead</div><div className="text-lg font-black text-black leading-none">{metrics.displayLead}{unitSuffix}</div></div>
+                                        <div className="border border-slate-300 p-2 rounded bg-white text-center flex flex-col justify-center"><div className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight mb-1">Line Balance</div><div className={`text-lg font-black leading-none ${lbeHealth === 'optimal' ? 'text-emerald-600' : (lbeHealth === 'warning' ? 'text-amber-600' : 'text-red-600')}`}>{metrics.lbe}%</div></div>
+                                        <div className="border border-slate-300 p-2 rounded bg-white text-center flex flex-col justify-center"><div className="text-[8px] text-slate-500 font-black uppercase tracking-widest leading-tight mb-1">Stream OEE</div><div className={`text-lg font-black leading-none ${oeeHealth === 'optimal' ? 'text-emerald-600' : (oeeHealth === 'warning' ? 'text-amber-600' : 'text-red-600')}`}>{metrics.streamOEE}%</div></div>
+                                    </div>
+                                </div>
+
+                                <div className="print-no-break">
+                                    <h2 className="text-[10px] font-black uppercase text-slate-500 border-b border-slate-300 pb-1 mb-2">{theme.prefix} Data Matrix</h2>
+                                    <table className="w-full text-[9px] text-center border-collapse border border-slate-300">
+                                        <thead className="bg-slate-100 text-slate-600 uppercase font-black">
+                                            <tr><th className="border border-slate-300 p-1.5">Seq</th><th className="border border-slate-300 p-1.5 text-left">Process</th><th className="border border-slate-300 p-1.5">Inv</th><th className="border border-slate-300 p-1.5">Wait(d)</th><th className="border border-slate-300 p-1.5">Man CT</th><th className="border border-slate-300 p-1.5">Mach CT</th><th className="border border-slate-300 p-1.5">VAT</th><th className="border border-slate-300 p-1.5">OEE</th><th className="border border-slate-300 p-1.5">HC</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {metrics.auditedSteps.map((s, i) => (
+                                                <tr key={i} className="nth-child(even):bg-slate-50">
+                                                    <td className="border border-slate-300 p-1.5 font-black text-slate-500">{i+1}</td>
+                                                    <td className="border border-slate-300 p-1.5 text-left font-black">{s.name}</td>
+                                                    <td className="border border-slate-300 p-1.5 font-black">{s.inventoryPieces}</td>
+                                                    <td className={`border border-slate-300 p-1.5 font-black ${Number(s.calculatedWaitDays) > theme.waitCrit ? 'text-red-600 bg-red-50' : ''}`}>{parseFloat(Number(s.calculatedWaitDays).toFixed(2))}</td>
+                                                    <td className={`border border-slate-300 p-1.5 font-bold ${s.totalCT > metrics.taktTimeSec && metrics.taktTimeSec > 0 ? 'text-red-600 bg-red-50' : ''}`}>{metrics.convertValue(s.manualCT)}</td>
+                                                    <td className="border border-slate-300 p-1.5 font-bold">{metrics.convertValue(s.machineCT)}</td>
+                                                    <td className="border border-slate-300 p-1.5 font-black text-slate-700 bg-slate-100">{metrics.convertValue(s.vatSec)}</td>
+                                                    <td className="border border-slate-300 p-1.5 font-black">{s.stepOEE}%</td>
+                                                    <td className="border border-slate-300 p-1.5 font-black">{s.operators}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="print-no-break border border-slate-300 p-4 rounded-lg bg-white">
+                                    <h2 className="text-xs font-black uppercase text-slate-800 border-b border-slate-200 pb-2 mb-3">Critical Constraint Logs (3M Waste)</h2>
+                                    {wastes.length === 0 ? <div className="text-xs text-emerald-600 font-bold">No critical constraints detected. Architecture complies with Lean tolerances.</div> : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {wastes.map((w, idx) => (
+                                                <div key={idx} className="flex gap-3 items-start border border-slate-200 p-3 rounded bg-slate-50">
+                                                    <div className="text-[10px] font-black text-white bg-slate-800 px-2 py-1 rounded shrink-0">{w.category}</div>
+                                                    <div><div className="text-[10px] font-black text-slate-900 uppercase">{w.step}</div><div className="text-[10px] font-bold text-red-600 leading-tight mt-1">{w.desc}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="print-no-break border border-slate-300 p-4 rounded-lg bg-white">
+                                    <h2 className="text-xs font-black uppercase text-slate-800 border-b border-slate-200 pb-2 mb-3">Kaizen & CAPA Implementation Plan</h2>
+                                    {capaRecords.length === 0 ? <div className="text-xs text-slate-500 font-bold">No interventions logged in the system.</div> : (
+                                        <div className="space-y-3">
+                                            {capaRecords.map((c, idx) => (
+                                                <div key={idx} className="flex flex-col border border-slate-200 p-3 rounded bg-slate-50">
+                                                    <div className="flex justify-between items-center mb-2 border-b border-slate-200 pb-1">
+                                                        <span className="text-[10px] font-black text-slate-900 uppercase">{c.step}</span>
+                                                        <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-200 px-2 py-0.5 rounded">{c.status}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4 text-[10px] font-bold leading-tight">
+                                                        <div><span className="text-slate-400 block uppercase mb-0.5 text-[8px]">Lean Principle / Root Cause</span><span className="text-slate-800">{c.rootCause}</span></div>
+                                                        <div><span className="text-slate-400 block uppercase mb-0.5 text-[8px]">Implementation Action</span><span className="text-slate-800">{c.correctiveAction}</span></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

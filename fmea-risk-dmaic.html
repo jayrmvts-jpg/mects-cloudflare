@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS SET GO - ADVANCED FMEA GOLD STANDARD</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Babel for in-browser JSX transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-50">
+    
+    <!-- This is where the React app will be injected -->
+    <div id="root"></div>
+
+    <!-- React and App Logic -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import { 
+          Settings, Info, AlertTriangle, CheckCircle, 
+          TrendingUp, BarChart2, ShieldAlert, ArrowUp, 
+          Plus, Trash2, ArrowRight, Activity, Zap, ShieldCheck,
+          Grid, Download
+        } from 'https://esm.sh/lucide-react@0.292.0';
+
+        // --- DATA & CONFIGURATION ---
+        const INDUSTRIES = [
+          "CALL CENTER", "SALES & MARKETING", "FINANCE & BANKING", "MANUFACTURING", 
+          "INFORMATION TECHNOLOGY", "HEALTHCARE & NURSING", "RETAIL & E-COMMERCE", 
+          "AUTOMOTIVE & ASSEMBLY", "AEROSPACE & DEFENSE", "LOGISTICS & SUPPLY CHAIN", 
+          "EDUCATION & TRAINING", "HOSPITALITY & TOURISM", "TELECOMMUNICATIONS", 
+          "ENERGY & UTILITIES", "CONSTRUCTION & ENGINEERING", "PHARMACEUTICALS", 
+          "AGRICULTURE & FARMING", "MEDIA & ENTERTAINMENT", "REAL ESTATE", "CONSULTING & STRATEGY"
+        ];
+
+        const getInitialFmeaData = (industry) => {
+          const isIT = industry.includes("IT") || industry.includes("TECH") || industry.includes("TELECOM");
+          const isMfg = industry.includes("MANUFACTUR") || industry.includes("AUTO") || industry.includes("AERO");
+          
+          if (isIT) {
+            return [
+              { id: 1, mode: "SERVER OUTAGE", cause: "DDOS ATTACK", repeated: false, s: 9, o: 3, d: 5 },
+              { id: 2, mode: "DATA SYNC FAILURE", cause: "API TIMEOUT", repeated: true, s: 7, o: 8, d: 6 },
+              { id: 3, mode: "UI GLITCH", cause: "BROWSER CACHE", repeated: false, s: 3, o: 5, d: 2 }
+            ];
+          } else if (isMfg) {
+            return [
+              { id: 1, mode: "COMPONENT FRACTURE", cause: "MATERIAL FATIGUE", repeated: false, s: 10, o: 2, d: 4 },
+              { id: 2, mode: "CALIBRATION DRIFT", cause: "TOOL WEAR", repeated: true, s: 6, o: 9, d: 7 },
+              { id: 3, mode: "SURFACE SCRATCH", cause: "HANDLING", repeated: false, s: 3, o: 6, d: 3 }
+            ];
+          } else {
+            return [
+              { id: 1, mode: "PROCESS DELAY", cause: "RESOURCE SHORTAGE", repeated: false, s: 7, o: 6, d: 4 },
+              { id: 2, mode: "COMPLIANCE BREACH", cause: "OUTDATED SOP", repeated: true, s: 9, o: 7, d: 8 },
+              { id: 3, mode: "MINOR TYPO", cause: "HUMAN ERROR", repeated: false, s: 2, o: 8, d: 2 }
+            ];
+          }
+        };
+
+        // --- SHARED COMPONENTS ---
+        const InfoTooltip = ({ text, align = 'center' }) => {
+          const alignClasses = {
+            left: "left-0",
+            center: "left-1/2 -translate-x-1/2",
+            right: "right-0"
+          };
+          const arrowAlignClasses = {
+            left: "left-2",
+            center: "left-1/2 -translate-x-1/2",
+            right: "right-2"
+          };
+
+          return (
+            <div className="group relative cursor-help text-gray-400 hover:text-indigo-500 inline-block ml-1 align-middle">
+              <Info size={14} />
+              <div className={`absolute top-full mt-2 ${alignClasses[align]} w-56 sm:w-72 p-3 bg-gray-900 text-white text-[11px] rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 font-normal tracking-wide leading-relaxed uppercase`}>
+                {text}
+                <div className={`absolute bottom-full border-4 border-transparent border-b-gray-900 ${arrowAlignClasses[align]}`}></div>
+              </div>
+            </div>
+          );
+        };
+
+        // --- MODULE: FMEA MASTERCLASS ---
+        const FmeaModule = ({ industry }) => {
+          const [rows, setRows] = useState([]);
+          const [originalRows, setOriginalRows] = useState(null);
+          const [isCapaApplied, setIsCapaApplied] = useState(false);
+          const [isExporting, setIsExporting] = useState(false);
+          
+          useEffect(() => { 
+            setRows(getInitialFmeaData(industry)); 
+            setOriginalRows(null);
+            setIsCapaApplied(false);
+          }, [industry]);
+
+          const updateRow = (idx, field, val) => {
+            if (isCapaApplied) return;
+            const newRows = [...rows];
+            if (['s', 'o', 'd'].includes(field)) {
+              if (val === '') {
+                newRows[idx][field] = '';
+              } else {
+                const num = parseInt(val, 10);
+                newRows[idx][field] = isNaN(num) ? '' : Math.max(1, Math.min(10, num));
+              }
+            } else if (field === 'repeated') {
+              newRows[idx][field] = val; // Direct boolean assignment for checkbox
+            } else {
+              // Ensure we only call toUpperCase on strings (Mode and Cause)
+              newRows[idx][field] = typeof val === 'string' ? val.toUpperCase() : val;
+            }
+            setRows(newRows);
+          };
+
+          const addRow = () => {
+            if (isCapaApplied) return;
+            setRows([...rows, { id: crypto.randomUUID ? crypto.randomUUID() : Date.now(), mode: '', cause: '', repeated: false, s: 5, o: 5, d: 5 }]);
+          };
+
+          const deleteRow = (idx) => {
+            if (isCapaApplied) return;
+            setRows(rows.filter((_, i) => i !== idx));
+          };
+
+          // INDUSTRY STANDARD: 1.2x (20%) Penalty for repeated instances
+          const calcRPN = (r) => {
+            const s = Number(r.s) || 1;
+            const o = Number(r.o) || 1;
+            const d = Number(r.d) || 1;
+            const baseline = s * o * d;
+            return r.repeated ? Math.round(baseline * 1.2) : baseline;
+          };
+
+          const getActionPriority = (r) => {
+            const s = Number(r.s) || 1;
+            const o = Number(r.o) || 1;
+            const rpn = calcRPN(r);
+            if (s >= 9 || (s >= 7 && o >= 6) || rpn >= 100) return { label: 'HIGH', color: 'bg-red-100 text-red-700 border-red-200', hex: 'FFFCA5A5', textHex: 'FF991B1B' };
+            if ((s >= 5 && o >= 5) || rpn >= 50) return { label: 'MED', color: 'bg-amber-100 text-amber-700 border-amber-200', hex: 'FFFDE047', textHex: 'FF854D0E' };
+            return { label: 'LOW', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', hex: 'FF86EFAC', textHex: 'FF166534' };
+          };
+
+          const currentMaxRpn = rows.length ? Math.max(...rows.map(calcRPN)) : 0;
+          const originalMaxRpn = originalRows ? Math.max(...originalRows.map(calcRPN)) : currentMaxRpn;
+          const criticalCount = rows.filter(r => calcRPN(r) >= 100 || getActionPriority(r).label === 'HIGH').length;
+          const repeatedCount = rows.filter(r => r.repeated).length;
+
+          const handleApplyCapa = () => {
+            setOriginalRows(JSON.parse(JSON.stringify(rows)));
+            const mitigatedRows = rows.map(r => {
+              let newO = Number(r.o) || 1;
+              let newD = Number(r.d) || 1;
+              if (calcRPN(r) >= 50 || getActionPriority(r).label === 'HIGH') {
+                newO = Math.max(1, Math.floor(newO * 0.4)); 
+                newD = Math.max(1, Math.floor(newD * 0.5)); 
+              }
+              return { 
+                ...r, 
+                o: newO, 
+                d: newD, 
+                repeated: false, 
+                _capaApplied: calcRPN(r) >= 50 || getActionPriority(r).label === 'HIGH'
+              };
+            });
+            setRows(mitigatedRows);
+            setIsCapaApplied(true);
+          };
+
+          const handleResetCapa = () => {
+            setRows(originalRows);
+            setOriginalRows(null);
+            setIsCapaApplied(false);
+          };
+
+          const handleExportExcel = async () => {
+            setIsExporting(true);
+            try {
+              if (!window.ExcelJS) {
+                await new Promise((resolve, reject) => {
+                  const script = document.createElement('script');
+                  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js';
+                  script.onload = resolve;
+                  script.onerror = reject;
+                  document.head.appendChild(script);
+                });
+              }
+              const ExcelJS = window.ExcelJS;
+              const workbook = new ExcelJS.Workbook();
+              const worksheet = workbook.addWorksheet('Advanced FMEA');
+              worksheet.columns = [
+                { header: 'FAILURE MODE', key: 'mode', width: 40 },
+                { header: 'ROOT CAUSE', key: 'cause', width: 40 },
+                { header: 'REPEATED ISSUE?', key: 'repeated', width: 20 },
+                { header: 'SEVERITY (S)', key: 's', width: 15 },
+                { header: 'OCCURRENCE (O)', key: 'o', width: 15 },
+                { header: 'DETECTION (D)', key: 'd', width: 15 },
+                { header: 'RPN (FORMULA)', key: 'rpn', width: 18 },
+                { header: 'ACTION PRIORITY (AP)', key: 'ap', width: 25 }
+              ];
+              worksheet.spliceRows(1, 0,
+                ["MECTS ANALYTICS: ADVANCED FMEA GOLD STANDARD EXPORT"],
+                ["AUTOMOTIVE INDUSTRY ACTION GROUP & VERBAND DER AUTOMOBILINDUSTRIE"],
+                [`INDUSTRY SCENARIO: ${industry}`],
+                [`AUDIT STATUS: ${isCapaApplied ? 'POST-CAPA MITIGATION' : 'BASELINE AUDIT'}`],
+                []
+              );
+              worksheet.getCell('A1').font = { size: 14, bold: true };
+              worksheet.getRow(6).eachCell((cell) => {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+                cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              });
+              rows.forEach((r, index) => {
+                const rowNum = index + 7;
+                const ap = getActionPriority(r);
+                const row = worksheet.addRow({
+                  mode: r.mode || 'UNSPECIFIED',
+                  cause: r.cause || 'UNSPECIFIED',
+                  repeated: r.repeated ? 'YES' : 'NO',
+                  s: Number(r.s) || 1,
+                  o: Number(r.o) || 1,
+                  d: Number(r.d) || 1,
+                  ap: ap.label
+                });
+                row.getCell(7).value = {
+                  formula: `IF(C${rowNum}="YES", (D${rowNum}*E${rowNum}*F${rowNum})*1.2, D${rowNum}*E${rowNum}*F${rowNum})`,
+                  result: calcRPN(r)
+                };
+                const fillStyle = { type: 'pattern', pattern: 'solid', fgColor: { argb: ap.hex } };
+                const fontStyle = { color: { argb: ap.textHex }, bold: true };
+                row.getCell(7).fill = fillStyle; row.getCell(7).font = fontStyle;
+                row.getCell(8).fill = fillStyle; row.getCell(8).font = fontStyle;
+                row.eachCell((cell) => {
+                  cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                });
+              });
+              const buffer = await workbook.xlsx.writeBuffer();
+              const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `FMEA_GOLD_STANDARD_${industry.replace(/[^a-z0-9]/gi, '_')}.xlsx`;
+              a.click();
+            } catch (error) { console.error(error); } finally { setIsExporting(false); }
+          };
+
+          const generateInterpretation = () => {
+            if (rows.length === 0) return { title: "AWAITING DATA", desc: ["PLEASE ADD FAILURE MODES TO GENERATE THE AUDIT."], color: "text-gray-500", bg: "bg-gray-50" };
+            if (isCapaApplied) {
+              const reduction = originalMaxRpn > 0 ? Math.round(((originalMaxRpn - currentMaxRpn) / originalMaxRpn) * 100) : 0;
+              return {
+                title: "CAPA SUCCESSFULLY IMPLEMENTED",
+                desc: [
+                  `CONTROL LIMITS ESTABLISHED. MAXIMUM RPN REDUCED BY ${reduction}% (FROM ${originalMaxRpn} TO ${currentMaxRpn}).`,
+                  `POKA-YOKE AND ENHANCED DETECTION MECHANISMS HAVE NEUTRALIZED CRITICAL ACTION PRIORITY (AP) ITEMS.`,
+                  `THE PROCESS IS NOW OPERATING WITHIN ACCEPTABLE MASTERCLASS TOLERANCES.`
+                ],
+                color: "text-emerald-700", bg: "bg-emerald-50", icon: <ShieldCheck size={24} className="text-emerald-500" />
+              };
+            } else {
+              if (criticalCount > 0) {
+                const descPoints = [`BASELINE AUDIT REVEALS ${criticalCount} FAILURE MODE(S) FLAGGED AS HIGH ACTION PRIORITY OR EXCEEDING THE 100 RPN THRESHOLD.`];
+                if (repeatedCount > 0) descPoints.push(`ALARMINGLY, ${repeatedCount} INCIDENT(S) ARE REPEATING, INCURRING A MANDATORY 20% SYSTEMIC PENALTY.`);
+                descPoints.push(`IMMEDIATE CORRECTIVE ACTIONS (CAPA) ARE REQUIRED TO PREVENT CATASTROPHIC PROCESS FAILURE.`);
+                return { title: "CRITICAL RISKS & HIGH ACTION PRIORITIES DETECTED", desc: descPoints, color: "text-red-700", bg: "bg-red-50", icon: <AlertTriangle size={24} className="text-red-500" /> };
+              } else if (currentMaxRpn >= 50) {
+                return { title: "MODERATE VULNERABILITIES", desc: ["PROCESS EXHIBITS MODERATE VULNERABILITIES. CURRENT CONTROLS ARE BARELY SUFFICIENT.", "RECOMMEND PREVENTIVE ACTIONS TO OPTIMIZE O AND D RATINGS."], color: "text-amber-700", bg: "bg-amber-50", icon: <Activity size={24} className="text-amber-500" /> };
+              } else {
+                return { title: "PROCESS IN CONTROL", desc: ["EXCELLENT. ALL CURRENT FMEA BASELINES ARE UNDER CRITICAL THRESHOLDS.", "MAINTAIN STANDARD CONTROL PLANS."], color: "text-indigo-700", bg: "bg-indigo-50", icon: <CheckCircle size={24} className="text-indigo-500" /> };
+              }
+            }
+          };
+
+          const interpretation = generateInterpretation();
+
+          const getCapaSteps = () => {
+            const criticalRows = (originalRows || rows).filter(r => calcRPN(r) >= 100 || getActionPriority(r).label === 'HIGH').sort((a, b) => calcRPN(b) - calcRPN(a));
+            if (criticalRows.length === 0) return null;
+            return criticalRows.map(r => {
+              let steps = [];
+              const sVal = Number(r.s) || 1; const oVal = Number(r.o) || 1; const dVal = Number(r.d) || 1;
+              if (sVal >= 8) steps.push(`SEVERITY (${sVal}) IS CRITICAL: REQUIRES FUNDAMENTAL PROCESS REDESIGN.`);
+              if (oVal >= 7) steps.push(`OCCURRENCE (${oVal}) IS HIGH: IMPLEMENT SPC OR HARD CONSTRAINTS FOR "${r.cause || 'CAUSE'}".`);
+              if (dVal >= 7) steps.push(`DETECTION (${dVal}) IS POOR: UPGRADE TO AUTOMATED INLINE VERIFICATION.`);
+              if (r.repeated) steps.push(`SYSTEMIC FAILURE: PRIOR CONTROLS FAILED. MANDATORY POKA-YOKE REQUIRED TO BREAK REPETITION.`);
+              if (steps.length === 0) steps.push(`CONDUCT 5-WHY ANALYSIS IMMEDIATELY ON "${r.cause || 'THIS ISSUE'}".`);
+              return { mode: r.mode || 'UNSPECIFIED MODE', steps };
+            });
+          };
+
+          const capaSteps = getCapaSteps();
+
+          return (
+            <div className="space-y-6 animate-in fade-in duration-500 uppercase">
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+                  <div><h3 className="text-lg font-black text-gray-900 flex items-center gap-2 tracking-tight uppercase"><Settings size={20} className="text-indigo-600" /> 1. AIAG-VDA FMEA RISK MATRIX</h3><p className="text-xs text-gray-500 font-medium mt-1 uppercase">S = SEVERITY | O = OCCURRENCE | D = DETECTION. PENALTIES APPLIED FOR REPEATED INSTANCES.</p></div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleExportExcel} disabled={isExporting} className="flex items-center gap-1.5 text-xs font-bold bg-green-50 hover:bg-green-100 text-green-700 px-4 py-2 rounded-lg border border-green-200 transition-colors shadow-sm disabled:opacity-50 uppercase">{isExporting ? <Activity size={14} className="animate-spin" /> : <Download size={14} />} {isExporting ? 'EXPORTING...' : 'EXPORT TO EXCEL'}</button>
+                    {!isCapaApplied && <button onClick={addRow} className="flex items-center gap-1.5 text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg border border-indigo-200 transition-colors shadow-sm uppercase"><Plus size={14} /> ADD FAILURE MODE</button>}
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-inner bg-gray-50/50">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100/80 border-b border-gray-200">
+                      <tr>
+                        <th className="p-3 text-left font-bold text-gray-600 uppercase">FAILURE MODE & CAUSE</th>
+                        <th className="p-3 text-center font-bold text-gray-600 uppercase">RPT? <InfoTooltip align="left" text="SYSTEMIC CONTROL FAILURE: APPLIES A SEVERE 1.2X PENALTY TO THE RPN." /></th>
+                        <th className="p-3 text-center font-bold text-gray-600 uppercase">S <InfoTooltip text="1=NO EFFECT, 9-10=SAFETY HAZARD." /></th>
+                        <th className="p-3 text-center font-bold text-gray-600 uppercase">O <InfoTooltip text="1=IMPOSSIBLE, 10=CERTAIN." /></th>
+                        <th className="p-3 text-center font-bold text-gray-600 uppercase">D <InfoTooltip text="1=CERTAIN DETECT, 10=CANNOT DETECT." /></th>
+                        <th className="p-3 text-center font-black text-gray-900 bg-gray-200/50 uppercase">RPN</th>
+                        <th className="p-3 text-center font-bold text-gray-600 uppercase">AP <InfoTooltip align="right" text="ACTION PRIORITY (AIAG-VDA - AUTOMOTIVE INDUSTRY ACTION GROUP & VERBAND DER AUTOMOBILINDUSTRIE STANDARD): PRIORITIZES SEVERITY, THEN OCCURRENCE, THEN DETECTION TO FLAG HIGH, MEDIUM, OR LOW URGENCY REGARDLESS OF PURE RPN." /></th>
+                        <th className="p-3 text-center font-bold text-gray-600 w-12"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {rows.map((r, i) => {
+                        const rpn = calcRPN(r); const ap = getActionPriority(r); const isModified = isCapaApplied && r._capaApplied;
+                        let oldRpn = rpn; if (isModified && originalRows && originalRows[i]) { oldRpn = calcRPN(originalRows[i]); }
+                        return (
+                          <tr key={r.id} className={`group transition-colors ${isModified ? 'bg-emerald-50/30' : 'hover:bg-gray-50'}`}>
+                            <td className="p-3">
+                              <input type="text" value={r.mode} onChange={e => updateRow(i, 'mode', e.target.value)} disabled={isCapaApplied} className="w-full font-bold text-gray-900 bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500 py-1 uppercase" placeholder="FAILURE MODE" />
+                              <input type="text" value={r.cause} onChange={e => updateRow(i, 'cause', e.target.value)} disabled={isCapaApplied} className="w-full text-xs text-gray-700 mt-2 bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500 py-1 uppercase" placeholder="ROOT CAUSE" />
+                            </td>
+                            <td className="p-3 text-center align-middle"><input type="checkbox" checked={r.repeated} onChange={e => updateRow(i, 'repeated', e.target.checked)} disabled={isCapaApplied} className="w-4 h-4 text-rose-600 rounded border-gray-300 focus:ring-rose-500 cursor-pointer" /></td>
+                            <td className="p-3 text-center"><input type="number" value={r.s} onChange={e => updateRow(i, 's', e.target.value)} disabled={isCapaApplied} className="w-12 text-center border rounded p-1 font-mono outline-none focus:border-indigo-500" /></td>
+                            <td className="p-3 text-center"><input type="number" value={r.o} onChange={e => updateRow(i, 'o', e.target.value)} disabled={isCapaApplied} className={`w-12 text-center border rounded p-1 font-mono outline-none ${isModified ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : ''}`} /></td>
+                            <td className="p-3 text-center"><input type="number" value={r.d} onChange={e => updateRow(i, 'd', e.target.value)} disabled={isCapaApplied} className={`w-12 text-center border rounded p-1 font-mono outline-none ${isModified ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : ''}`} /></td>
+                            <td className="p-3 text-center bg-gray-50/50"><div className="flex flex-col items-center"><span className={`text-lg font-black ${ap.label === 'HIGH' ? 'text-red-600' : ap.label === 'MED' ? 'text-amber-500' : 'text-emerald-600'}`}>{rpn}</span>{isModified && <span className="text-[10px] text-gray-400 font-bold line-through uppercase">WAS {oldRpn}</span>}{r.repeated && !isCapaApplied && <span className="text-[9px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold uppercase mt-0.5 border border-rose-200">20% PENALTY</span>}</div></td>
+                            <td className="p-3 text-center"><span className={`text-[10px] font-black px-2 py-1 rounded border ${ap.color}`}>{ap.label}</span></td>
+                            <td className="p-3 text-center">{!isCapaApplied && <button onClick={() => deleteRow(i)} className="text-gray-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50"><Trash2 size={16}/></button>}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm col-span-1 flex flex-col h-full">
+                  <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2 tracking-tight uppercase"><BarChart2 size={16} className="text-indigo-600" /> 2. RISK VISUALIZERS</h3>
+                  <div className="flex-1 flex flex-col w-full space-y-8">
+                    <div>
+                      <h4 className="text-sm font-black text-black uppercase mb-4 border-b pb-2">RPN PARETO BAR</h4>
+                      <div className="space-y-4">
+                        {[...(originalRows || rows)].sort((a,b) => calcRPN(b) - calcRPN(a)).map((r, i) => {
+                          const baselineRpn = calcRPN(r);
+                          const currentDataRow = rows.find(cr => cr.id === r.id) || r;
+                          const currentRpn = isCapaApplied ? calcRPN(currentDataRow) : baselineRpn;
+                          const maxScale = Math.max(originalMaxRpn, 150);
+                          return (
+                            <div key={r.id || i}>
+                              <div className="flex justify-between text-[10px] font-bold text-gray-600 mb-1 uppercase">
+                                <span className="truncate pr-2">{r.mode || 'ISSUE'} {r.repeated && <span className="text-rose-500">[!]</span>}</span>
+                                <span>{currentRpn}</span>
+                              </div>
+                              <div className="h-4 bg-gray-100 rounded-full overflow-hidden relative border">
+                                {isCapaApplied && <div className="absolute h-full bg-gray-300 opacity-40" style={{ width: `${(baselineRpn / maxScale) * 100}%` }}></div>}
+                                <div className={`h-full transition-all duration-1000 ${currentRpn >= 100 ? 'bg-red-500' : currentRpn >= 50 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${(currentRpn / maxScale) * 100}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-black uppercase mb-4 border-b pb-2">S-O RISK HEATMAP</h4>
+                      <div className="pl-10 pb-10 pr-4 pt-4">
+                        <div className="relative w-full aspect-square border-l-2 border-b-2 border-gray-600 bg-gradient-to-tr from-green-500 via-yellow-400 to-red-500 rounded-tr-lg shadow-inner">
+                          <span className="absolute -left-10 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-black text-gray-500 tracking-widest uppercase">SEVERITY</span>
+                          <span className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-[10px] font-black text-gray-500 tracking-widest uppercase">OCCURRENCE</span>
+                          <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-20 pointer-events-none"><div className="border-r border-b border-black"></div><div className="border-r border-b border-black"></div><div className="border-b border-black"></div><div className="border-r border-b border-black"></div><div className="border-r border-b border-black"></div><div className="border-b border-black"></div><div className="border-r border-black"></div><div className="border-r border-black"></div></div>
+                          {(originalRows || rows).map((r, i) => {
+                            const dRow = rows.find(cr => cr.id === r.id) || r; const targetData = isCapaApplied ? dRow : r;
+                            const s = Number(targetData.s) || 1; const o = Number(targetData.o) || 1;
+                            return (
+                              <div key={r.id || i} className="group absolute w-5 h-5 -ml-2.5 -mb-2.5 rounded-full bg-indigo-900 border-2 border-white shadow-lg transition-all duration-500 cursor-pointer z-10 hover:z-50 hover:scale-125 flex items-center justify-center text-[9px] font-black text-white" style={{ bottom: `${5 + ((s-1)/9)*90}%`, left: `${5 + ((o-1)/9)*90}%` }}>{i + 1}<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max max-w-[160px] p-2 bg-gray-900 text-white text-[10px] rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none z-50 font-normal text-center leading-tight uppercase"><span className="font-bold block mb-1 text-indigo-300 border-b border-gray-700 pb-1">{r.mode || 'ISSUE'}</span>SEVERITY: {s} | OCC: {o}</div></div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={`col-span-1 md:col-span-2 p-5 rounded-2xl border shadow-sm flex flex-col justify-between transition-colors duration-500 ${interpretation.bg} border-${interpretation.color.split('-')[1]}-200`}>
+                  <div><h3 className={`text-sm font-black flex items-center gap-2 tracking-tight mb-3 uppercase ${interpretation.color}`}>{interpretation.icon} 3. DYNAMIC DEEP INTERPRETATION</h3><h4 className={`text-lg font-black mb-2 uppercase ${interpretation.color}`}>{interpretation.title}</h4><div className={`text-sm font-medium leading-relaxed uppercase ${interpretation.color} opacity-90`}>{interpretation.desc.length > 1 ? (<ul className="list-disc pl-5 space-y-2.5">{interpretation.desc.map((p, idx) => (<li key={idx}>{p}</li>))}</ul>) : (<p>{interpretation.desc[0]}</p>)}</div>{capaSteps && !isCapaApplied && (<div className="mt-4 bg-white/60 p-4 rounded-xl border border-red-100/50 backdrop-blur-sm"><h5 className="text-sm font-black text-red-900 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Zap size={16}/> MECTS SET GO SUGGESTED CAPA PLAN</h5><div className="space-y-4">{capaSteps.map((item, idx) => (<div key={idx} className="text-sm text-red-800 font-medium uppercase"><span className="font-bold text-gray-900 mb-2 block">{item.mode}:</span><ul className="list-disc pl-5 space-y-2.5">{item.steps.map((sT, sI) => (<li key={sI} className="leading-relaxed">{sT}</li>))}</ul></div>))}</div></div>)}</div>
+                  <div className="mt-6 pt-5 border-t border-black/5 flex items-center justify-between uppercase"><div className="text-xs font-bold text-gray-500 uppercase tracking-widest">AUDITOR ACTIONS</div>{!isCapaApplied ? (<button onClick={handleApplyCapa} disabled={rows.length === 0 || (currentMaxRpn < 50 && criticalCount === 0)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg hover:-translate-y-0.5 disabled:bg-gray-400 uppercase"><ShieldAlert size={18} /> EXECUTE CAPA CORRECTION</button>) : (<button onClick={handleResetCapa} className="flex items-center gap-2 bg-white text-gray-700 hover:text-indigo-600 px-6 py-3 rounded-xl font-bold border border-gray-200 transition-all uppercase"><ArrowRight size={16} /> REVERT TO BASELINE DATA</button>)}</div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        function App() {
+          const [industry, setIndustry] = useState(INDUSTRIES[0]);
+          return (
+            <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8 uppercase">
+              <div className="max-w-6xl mx-auto space-y-6">
+                
+                {/* STUNNING PREMIUM HEADER */}
+                <header className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-indigo-900 p-8 md:p-10 rounded-3xl shadow-2xl border border-indigo-800/50">
+                  {/* Glowing decorative background elements */}
+                  <div className="absolute top-0 right-0 -mt-20 w-96 h-96 bg-indigo-500 rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 -mb-20 w-72 h-72 bg-emerald-500 rounded-full blur-[100px] opacity-10 pointer-events-none"></div>
+                  
+                  <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 w-full">
+                    <div className="flex-1 w-full">
+                      <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-4 drop-shadow-md uppercase">
+                        MECTS...SET...GO
+                      </h1>
+                      <h2 className="text-2xl md:text-3xl font-extrabold text-indigo-200 tracking-tight mb-5 drop-shadow-sm uppercase">
+                        ADVANCED FMEA (RPN & AP)
+                      </h2>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs md:text-sm font-black text-yellow-400 uppercase tracking-[0.3em] bg-white/10 px-4 py-2 rounded-lg border border-yellow-400/30 backdrop-blur-md">
+                            GOLD STANDARD
+                          </span>
+                        </div>
+                        <div className="text-[10px] md:text-xs font-bold text-indigo-300 uppercase tracking-[0.1em] max-w-2xl leading-relaxed opacity-80">
+                          AUTOMOTIVE INDUSTRY ACTION GROUP & VERBAND DER AUTOMOBILINDUSTRIE
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-black/20 rounded-full border border-white/10 backdrop-blur-md shrink-0 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">SYSTEM ACTIVE</span>
+                    </div>
+                  </div>
+                </header>
+
+                <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-4 md:px-6 rounded-2xl shadow-sm border border-gray-200">
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                      <Settings size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">ACTIVE INDUSTRY SCENARIO</div>
+                      <div className="relative inline-block w-full sm:w-auto">
+                        <select 
+                          value={industry} 
+                          onChange={e => setIndustry(e.target.value)} 
+                          className="w-full sm:w-64 bg-transparent font-bold text-base text-gray-900 outline-none cursor-pointer appearance-none pr-8 hover:text-indigo-600 transition-colors uppercase"
+                        >
+                          {INDUSTRIES.map(ind => <option key={ind}>{ind}</option>)}
+                        </select>
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500 font-bold text-xs">▼</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="hidden md:block text-xs font-medium text-gray-500 uppercase">
+                    CONFIGURE BASELINE RISKS AND EXECUTE CAPA TO SIMULATE MITIGATION.
+                  </div>
+                </div>
+
+                <main className="min-h-[500px]">
+                  <FmeaModule industry={industry} />
+                </main>
+
+                <footer className="text-center pb-12 pt-6">
+                  <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="px-8 py-3 bg-white border border-gray-200 shadow-sm rounded-full text-xs font-black tracking-widest text-gray-500 hover:text-indigo-600 hover:border-indigo-300 transition-all flex items-center gap-2 mx-auto uppercase">
+                    <ArrowUp size={16}/> BACK TO TOP
+                  </button>
+                </footer>
+              </div>
+            </div>
+          );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Industrial Box Plot & CAPA Simulator</title>
+    <!-- Tailwind CSS for modern, adaptive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Plotly.js for robust statistical visualization -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Tooltip styles */
+        .tooltip .tooltip-text {
+            visibility: hidden; width: max-content; max-width: 250px;
+            background-color: #1e293b; color: #fff; text-align: left;
+            border-radius: 6px; padding: 8px 12px; position: absolute;
+            z-index: 10; bottom: 125%; left: 50%;
+            transform: translateX(-50%); opacity: 0; transition: opacity 0.3s;
+            font-size: 0.75rem; font-weight: normal; line-height: 1.4;
+        }
+        .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Header -->
+    <header class="bg-slate-900 text-white shadow-md z-10 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex flex-col">
+                <span class="text-base font-extrabold tracking-widest text-emerald-400 uppercase">MECTS....SET.... GO</span>
+                <h1 class="text-2xl font-bold tracking-tight">BOX WHISKER PLOTS PLATFORM</h1>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="downloadData()" class="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-sm transition-colors">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download Data CSV
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-screen-2xl w-full mx-auto p-4 gap-4">
+        
+        <!-- Left Sidebar: Controls & Inputs -->
+        <aside class="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
+            
+            <!-- Simulator Selection -->
+            <div class="glass-panel rounded-xl p-4">
+                <h2 class="text-md font-semibold mb-3 flex items-center gap-2 border-b pb-2">
+                    <i data-lucide="factory" class="w-5 h-5 text-indigo-600"></i> Industrial Segments
+                </h2>
+                <label class="block text-xs text-slate-500 mb-1">Select simulated process:</label>
+                <select id="industrySelect" class="w-full bg-slate-50 border border-slate-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow">
+                    <!-- Populated by JS -->
+                </select>
+                <button onclick="generateSegmentData()" class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded shadow transition-colors text-sm">
+                    Simulate Process Data
+                </button>
+            </div>
+
+            <!-- Process Specifications -->
+            <div class="glass-panel rounded-xl p-4 bg-blue-50 border-blue-200">
+                <h2 class="text-md font-semibold mb-2 flex items-center gap-2 text-blue-800 border-b border-blue-200 pb-2">
+                    <i data-lucide="sliders" class="w-5 h-5"></i> Specification Limits
+                </h2>
+                <div class="grid grid-cols-3 gap-2 mt-2">
+                    <div>
+                        <label class="block text-[10px] text-blue-600 font-bold uppercase">LSL</label>
+                        <input type="number" id="inputLSL" step="any" class="w-full bg-white border border-blue-200 rounded p-1 text-sm focus:ring-1 focus:ring-blue-500" oninput="updateUI()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-blue-600 font-bold uppercase">Target</label>
+                        <input type="number" id="inputTarget" step="any" class="w-full bg-white border border-blue-200 rounded p-1 text-sm focus:ring-1 focus:ring-blue-500" oninput="updateUI()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-blue-600 font-bold uppercase">USL</label>
+                        <input type="number" id="inputUSL" step="any" class="w-full bg-white border border-blue-200 rounded p-1 text-sm focus:ring-1 focus:ring-blue-500" oninput="updateUI()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clear All Button -->
+            <button onclick="clearAll()" class="w-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:text-red-700 font-semibold py-2.5 rounded-xl shadow-sm transition-colors text-sm flex justify-center items-center gap-2">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Clear All Data & Reset
+            </button>
+
+            <!-- Custom Data Input -->
+            <div class="glass-panel rounded-xl p-4 flex flex-col flex-1">
+                <h2 class="text-md font-semibold mb-2 flex items-center gap-2 border-b pb-2">
+                    <i data-lucide="database" class="w-5 h-5 text-emerald-600"></i> Custom Data Input
+                </h2>
+                <p class="text-xs text-slate-500 mb-2">Paste data directly from Excel (column-wise) or use comma separation. Min 5, Max 10,000 points.</p>
+                <textarea id="customDataInput" class="w-full flex-1 min-h-[120px] resize-y bg-slate-50 border border-slate-300 rounded p-2 text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow custom-scrollbar" placeholder="Paste Excel column here...&#10;10.2&#10;10.5&#10;9.8&#10;&#10;or: 10.2, 10.5, 9.8" oninput="handleDataInput()"></textarea>
+                <div id="dataWarning" class="text-xs text-red-600 mt-1 hidden font-medium"></div>
+            </div>
+
+            <!-- CAPA Controls -->
+            <div class="glass-panel rounded-xl p-4 bg-orange-50 border-orange-200">
+                <h2 class="text-md font-semibold mb-2 flex items-center gap-2 text-orange-800 border-b border-orange-200 pb-2">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i> CAPA Action
+                </h2>
+                <p class="text-xs text-orange-700 mb-3">Corrective & Preventive Action: Apply process improvement to reduce variance and eliminate outliers.</p>
+                <div class="flex gap-2">
+                    <button id="btnCapa" onclick="applyCAPA()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 rounded shadow transition-colors text-sm flex justify-center items-center gap-1">
+                        <i data-lucide="wrench" class="w-4 h-4"></i> Implement
+                    </button>
+                    <button id="btnRevert" onclick="revertCAPA()" disabled class="flex-1 bg-slate-400 hover:bg-slate-500 text-white font-medium py-2 rounded shadow transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Revert
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Main Area: Viz & Stats -->
+        <main class="w-full md:w-2/3 lg:w-3/4 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+            
+            <!-- Plot Area -->
+            <div class="glass-panel rounded-xl p-2 flex-shrink-0 h-[400px] relative shadow-sm flex flex-col">
+                <div class="absolute top-2 right-4 z-10 flex items-center gap-2 bg-white/80 px-2 py-1 rounded border border-slate-200 text-xs shadow-sm">
+                    <input type="checkbox" id="toggleJitter" class="rounded text-indigo-600 focus:ring-indigo-500" onchange="updateUI()">
+                    <label for="toggleJitter" class="font-medium text-slate-700 cursor-pointer">Overlay All Data Points</label>
+                </div>
+                <div id="plotDiv" class="w-full h-full flex-1"></div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-4 flex-1">
+                <!-- Statistics Dashboard -->
+                <div class="glass-panel rounded-xl p-4 lg:w-1/2 flex flex-col shadow-sm">
+                    <h2 class="text-md font-semibold mb-3 border-b pb-2 flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-600"></i> Statistical Summary
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3 text-sm flex-1">
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">Count (N)</span>
+                            <span id="statN" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">Total number of valid numeric data points inputted.</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">Skewness</span>
+                            <span id="statSkew" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">Measures asymmetry. ~0 is normal. >0 tail is to the right. <0 tail is to the left.</span>
+                        </div>
+                        <div id="cpContainer" class="bg-blue-50 p-2 rounded border border-blue-100 tooltip relative transition-colors duration-300">
+                            <span id="cpLabel" class="text-blue-600 block text-xs uppercase font-bold tracking-wider flex items-center gap-1">Process Cap (Cp)</span>
+                            <span id="statCp" class="font-mono text-lg font-semibold text-blue-800">-</span>
+                            <span class="tooltip-text">Cp = (USL - LSL) / 6*Sigma. Measures potential spread relative to specs.</span>
+                        </div>
+                        <div id="cpkContainer" class="bg-indigo-50 p-2 rounded border border-indigo-100 tooltip relative transition-colors duration-300">
+                            <span id="cpkLabel" class="text-indigo-600 block text-xs uppercase font-bold tracking-wider flex items-center gap-1">Actual Cap (Cpk)</span>
+                            <span id="statCpk" class="font-mono text-lg font-semibold text-indigo-800">-</span>
+                            <span class="tooltip-text">Cpk considers centering. Min(Cpu, Cpl). If Cpk < Cp, the process is off-center.</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">Mean (μ)</span>
+                            <span id="statMean" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">The mathematical average of the dataset.</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">Median (Q2)</span>
+                            <span id="statMedian" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">The middle value separating the higher half from the lower half. Less affected by outliers.</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">IQR</span>
+                            <span id="statIQR" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">Interquartile Range (Q3 - Q1). Represents the middle 50% of the data. Defines the box width.</span>
+                        </div>
+                        <div class="bg-slate-50 p-2 rounded border border-slate-100 tooltip relative">
+                            <span class="text-slate-500 block text-xs uppercase font-bold tracking-wider">Std Dev (σ)</span>
+                            <span id="statStdDev" class="font-mono text-lg font-semibold text-slate-800">-</span>
+                            <span class="tooltip-text">Standard Deviation. Measures the dispersion or spread of the data relative to its mean.</span>
+                        </div>
+                        <div id="outliersContainer" class="bg-red-50 p-2 rounded border border-red-100 tooltip relative col-span-2 flex justify-between items-center transition-colors duration-300">
+                            <div>
+                                <span id="outliersLabel" class="text-red-600 block text-xs uppercase font-bold tracking-wider flex items-center gap-1">Outliers Detected</span>
+                                <span id="statOutliers" class="font-mono text-lg font-semibold text-red-800">-</span>
+                            </div>
+                            <div id="outliersIconWrapper">
+                                <i data-lucide="alert-triangle" class="w-6 h-6 text-red-400"></i>
+                            </div>
+                            <span class="tooltip-text">Values lying below (Q1 - 1.5*IQR) or above (Q3 + 1.5*IQR). Indicates process anomalies.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Narration & Excel Formulas -->
+                <div class="glass-panel rounded-xl flex flex-col lg:w-1/2 shadow-sm overflow-hidden">
+                    
+                    <!-- Dynamic Narration -->
+                    <div class="p-4 flex-1 bg-slate-900 text-slate-100">
+                        <h2 class="text-md font-semibold mb-2 flex items-center gap-2 text-emerald-400 border-b border-slate-700 pb-2">
+                            <i data-lucide="activity" class="w-5 h-5"></i> Real-time Interpretation
+                        </h2>
+                        <div id="narrationBox" class="text-sm leading-relaxed mt-2 text-slate-300">
+                            Select a process or input data to begin analysis...
+                        </div>
+                    </div>
+
+                    <!-- Excel Formulas Embed -->
+                    <div class="p-4 bg-slate-50 border-t border-slate-200">
+                        <div class="flex justify-between items-center mb-2 cursor-pointer" onclick="document.getElementById('excelBox').classList.toggle('hidden'); document.getElementById('chevIcon').classList.toggle('rotate-180');">
+                            <h2 class="text-sm font-semibold flex items-center gap-2 text-green-700">
+                                <i data-lucide="table" class="w-4 h-4"></i> Embedded Excel Formulas
+                            </h2>
+                            <i data-lucide="chevron-down" id="chevIcon" class="w-4 h-4 text-slate-500 transition-transform"></i>
+                        </div>
+                        <div id="excelBox" class="hidden text-xs font-mono bg-white p-3 rounded border border-slate-200 text-slate-600 mt-2">
+                            <p class="mb-1"><span class="font-bold text-slate-800">Min:</span> <code class="bg-slate-100 px-1 rounded">=MIN(A:A)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Q1 (25th %):</span> <code class="bg-slate-100 px-1 rounded">=QUARTILE.INC(A:A, 1)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Median (Q2):</span> <code class="bg-slate-100 px-1 rounded">=MEDIAN(A:A)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Q3 (75th %):</span> <code class="bg-slate-100 px-1 rounded">=QUARTILE.INC(A:A, 3)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Max:</span> <code class="bg-slate-100 px-1 rounded">=MAX(A:A)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">IQR:</span> <code class="bg-slate-100 px-1 rounded">=QUARTILE.INC(A:A,3)-QUARTILE.INC(A:A,1)</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Cp:</span> <code class="bg-slate-100 px-1 rounded">=(USL - LSL) / (6 * STDEV.S(A:A))</code></p>
+                            <p class="mb-1"><span class="font-bold text-slate-800">Cpk:</span> <code class="bg-slate-100 px-1 rounded">=MIN((USL-AVERAGE)/(3*STDEV), (AVERAGE-LSL)/(3*STDEV))</code></p>
+                            <p class="mt-2 text-[10px] text-slate-400 italic">Assume your data is in Column A.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Educational Footer -->
+            <div class="glass-panel rounded-xl p-5 shadow-sm text-sm text-slate-700 leading-relaxed mb-4">
+                <strong class="text-slate-900 text-base mb-2 block border-b border-slate-200 pb-2 flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5 text-indigo-600"></i> Box & Whisker Plot Guide
+                </strong>
+                <ul class="list-disc pl-5 space-y-2 mt-3">
+                    <li>The <strong>Box</strong> represents the middle 50% of the data (IQR), bounded by <strong>Q1</strong> (25th percentile) and <strong>Q3</strong> (75th percentile).</li>
+                    <li>The solid line inside the box is the <strong>Median (Q2)</strong>, while the dotted line represents the <strong>Mean</strong>.</li>
+                    <li>The <strong>Whiskers</strong> extend to the lowest and highest values within 1.5 * IQR from the box edges.</li>
+                    <li>Any points beyond the whiskers are mathematically classified as <strong>Outliers</strong>.</li>
+                    <li><strong>Cp</strong> measures potential capability (spread vs limits). <strong>Cpk</strong> measures actual capability (accounts for mean centering).</li>
+                </ul>
+            </div>
+            
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // 20 Industrial Segments Definition
+        const segments = [
+            { id: "auto_gap", name: "Automotive Assembly", param: "Panel Gap (mm)", target: 3.5, variance: 0.8 },
+            { id: "semi_thick", name: "Semiconductor Fab", param: "Wafer Thickness (nm)", target: 775, variance: 5 },
+            { id: "pharma_wt", name: "Pharmaceutical", param: "Pill Weight (mg)", target: 500, variance: 12 },
+            { id: "food_vol", name: "Food & Beverage", param: "Bottle Fill Volume (ml)", target: 355, variance: 4 },
+            { id: "aero_pitch", name: "Aerospace", param: "Turbine Blade Pitch (deg)", target: 45.0, variance: 0.15 },
+            { id: "petro_octane", name: "Petrochemical", param: "Octane Rating", target: 95.5, variance: 0.6 },
+            { id: "textile_ten", name: "Textile Mfg", param: "Thread Tension (N)", target: 12.0, variance: 1.5 },
+            { id: "steel_str", name: "Steel Production", param: "Tensile Strength (MPa)", target: 400, variance: 25 },
+            { id: "elec_res", name: "Electronics", param: "Resistor Value (Ohms)", target: 1000, variance: 35 },
+            { id: "plastic_cool", name: "Plastic Molding", param: "Cooling Time (s)", target: 14.5, variance: 1.2 },
+            { id: "chem_ph", name: "Chemical Process", param: "pH Level", target: 7.2, variance: 0.3 },
+            { id: "water_cl", name: "Water Treatment", param: "Chlorine Conc. (ppm)", target: 1.5, variance: 0.2 },
+            { id: "glass_trans", name: "Glass Making", param: "Light Transmittance (%)", target: 91.5, variance: 0.8 },
+            { id: "pack_seal", name: "Packaging", param: "Seal Strength (N/m)", target: 250, variance: 18 },
+            { id: "cosm_visc", name: "Cosmetics", param: "Emulsion Viscosity (cP)", target: 15000, variance: 800 },
+            { id: "solar_eff", name: "Solar Energy", param: "Cell Efficiency (%)", target: 22.5, variance: 0.9 },
+            { id: "agri_fert", name: "Agriculture Tech", param: "Fertilizer Spread (kg/ha)", target: 120, variance: 8 },
+            { id: "mining_ore", name: "Mining", param: "Ore Grade (%)", target: 2.8, variance: 0.4 },
+            { id: "paper_thick", name: "Paper Production", param: "Sheet Thickness (µm)", target: 105, variance: 3 },
+            { id: "bio_viab", name: "Bio-Technology", param: "Cell Viability (%)", target: 96.0, variance: 2.5 }
+        ];
+
+        // State variables
+        let originalData = [];
+        let currentData = [];
+        let currentParamName = "Data Value";
+        let isCapaActive = false;
+        let typingTimer; // For debounce
+        
+        // Initialization
+        window.onload = () => {
+            populateSelect();
+            
+            // Initialize empty placeholder plot
+            Plotly.newPlot('plotDiv', [], {
+                title: { text: 'Awaiting Data...', font: { size: 14, color: '#94a3b8' } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+                xaxis: { showgrid: false, zeroline: false, showticklabels: false }
+            }, { responsive: true, displayModeBar: false });
+            
+            // Handle window resize for Plotly responsiveness
+            window.addEventListener('resize', () => {
+                if(document.getElementById('plotDiv').data) {
+                    Plotly.Plots.resize(document.getElementById('plotDiv'));
+                }
+            });
+        };
+
+        // Populate Dropdown
+        function populateSelect() {
+            const select = document.getElementById('industrySelect');
+            segments.forEach((seg, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = `${seg.name} - ${seg.param}`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Generate normally distributed random number (Box-Muller transform)
+        function randomNormal(mean, stdDev) {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            return num * stdDev + mean;
+        }
+
+        // Generate Simulated Data for selected segment
+        function generateSegmentData() {
+            const idx = document.getElementById('industrySelect').value;
+            const seg = segments[idx];
+            currentParamName = seg.param;
+            
+            let data = [];
+            const n = 120; // Number of points
+            
+            // Generate normal data
+            for(let i=0; i<n; i++) {
+                data.push(randomNormal(seg.target, seg.variance));
+            }
+            
+            // Inject 2-5 intentional outliers to make the simulator interesting
+            const outlierCount = Math.floor(Math.random() * 4) + 2; 
+            for(let i=0; i<outlierCount; i++) {
+                const isHigh = Math.random() > 0.5;
+                const magnitude = seg.variance * (Math.random() * 2 + 3); // 3 to 5 std devs away
+                data.push(isHigh ? seg.target + magnitude : seg.target - magnitude);
+            }
+
+            // Shuffle array
+            data.sort(() => Math.random() - 0.5);
+            
+            // Round to sensible decimals
+            data = data.map(v => parseFloat(v.toFixed(3)));
+
+            // Define Spec limits (Simulation standard: Target +/- 3*variance)
+            const usl = seg.target + (seg.variance * 3);
+            const lsl = seg.target - (seg.variance * 3);
+            
+            document.getElementById('inputUSL').value = usl.toFixed(3);
+            document.getElementById('inputTarget').value = seg.target;
+            document.getElementById('inputLSL').value = lsl.toFixed(3);
+
+            setOriginalData(data, false); // false = not from typing, okay to update textarea
+            updateUI();
+        }
+
+        // Debounce handler for real-time typing
+        function handleDataInput() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => loadCustomData(true), 400); // Pass true to indicate active typing
+        }
+
+        // Load data from custom input textarea
+        function loadCustomData(isTyping = false) {
+            const rawText = document.getElementById('customDataInput').value;
+            const warningEl = document.getElementById('dataWarning');
+            
+            // Parse numbers separated by Excel newlines (\n), spaces, or commas
+            let parsedData = rawText.split(/[\s,]+/)
+                                    .map(str => parseFloat(str))
+                                    .filter(num => !isNaN(num));
+            
+            // God Mode Fix: Graceful handling of a completely cleared text box
+            if (parsedData.length === 0 && isTyping) {
+                warningEl.classList.add('hidden');
+                return;
+            }
+
+            if (parsedData.length < 5) {
+                warningEl.textContent = "Error: Please provide at least 5 numeric values to generate a valid plot.";
+                warningEl.classList.remove('hidden');
+                return;
+            }
+            
+            // Threshold Guard: Truncate to prevent browser memory crashes
+            if (parsedData.length > 10000) {
+                warningEl.textContent = "Warning: Data truncated to 10,000 points to ensure performance.";
+                warningEl.classList.remove('hidden');
+                parsedData = parsedData.slice(0, 10000);
+            } else {
+                warningEl.classList.add('hidden');
+            }
+
+            currentParamName = "Custom User Data";
+            
+            // If the spec limits are blank, estimate them. Otherwise, leave user's custom limits alone.
+            if(!document.getElementById('inputUSL').value || !document.getElementById('inputLSL').value) {
+                const mean = calculateMean(parsedData);
+                const std = calculateStdDev(parsedData, mean);
+                document.getElementById('inputUSL').value = (mean + (std * 3)).toFixed(3);
+                document.getElementById('inputTarget').value = mean.toFixed(3);
+                document.getElementById('inputLSL').value = (mean - (std * 3)).toFixed(3);
+            }
+
+            setOriginalData(parsedData, isTyping);
+            updateUI();
+        }
+
+        function setOriginalData(data, isTyping) {
+            originalData = [...data];
+            currentData = [...data];
+            isCapaActive = false;
+            document.getElementById('btnCapa').disabled = false;
+            document.getElementById('btnCapa').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btnRevert').disabled = true;
+            
+            // Critical UX Fix: Do not overwrite the textarea while the user is actively typing, 
+            // otherwise the cursor jumps and input formatting is ruined.
+            if(!isTyping) {
+                document.getElementById('customDataInput').value = data.join('\n');
+            }
+        }
+
+        // Apply Corrective & Preventive Action (CAPA)
+        function applyCAPA() {
+            if(isCapaActive || originalData.length === 0) return;
+            
+            const stats = calculateStats(originalData);
+            
+            // CAPA Godmode Logic: 
+            // 1. Remove outliers completely.
+            // 2. Reduce variance and center the data EXACTLY towards the SPECIFIED TARGET.
+            let improvedData = originalData.filter(v => v >= stats.lowerBound && v <= stats.upperBound);
+            
+            // Pull target from the UI input. If none, fallback to median.
+            const uiTarget = parseFloat(document.getElementById('inputTarget').value);
+            const target = !isNaN(uiTarget) ? uiTarget : stats.median;
+            
+            improvedData = improvedData.map(v => {
+                const diff = v - target;
+                return parseFloat((target + (diff * 0.5)).toFixed(3)); // 50% variance reduction & centering
+            });
+
+            currentData = improvedData;
+            isCapaActive = true;
+            
+            document.getElementById('btnCapa').disabled = true;
+            document.getElementById('btnCapa').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btnRevert').disabled = false;
+            
+            updateUI();
+            
+            // Update input box to reflect CAPA data in Excel column format
+            document.getElementById('customDataInput').value = currentData.join('\n');
+        }
+
+        // Revert CAPA to original data
+        function revertCAPA() {
+            if(!isCapaActive) return;
+            currentData = [...originalData];
+            isCapaActive = false;
+            
+            document.getElementById('btnCapa').disabled = false;
+            document.getElementById('btnCapa').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btnRevert').disabled = true;
+            
+            updateUI();
+            
+            // Update input box to reflect Original data in Excel column format
+            document.getElementById('customDataInput').value = currentData.join('\n');
+        }
+
+        // ------------------ Deep Godmode Audit: Statistical Calculations ------------------
+        
+        function sortData(arr) {
+            return [...arr].sort((a, b) => a - b);
+        }
+
+        function calculateMean(arr) {
+            if(arr.length === 0) return 0;
+            return arr.reduce((a, b) => a + b, 0) / arr.length;
+        }
+
+        function calculateStdDev(arr, mean) {
+            if(arr.length <= 1) return 0; // Prevent division by zero
+            const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (arr.length - 1); // Sample StdDev
+            return Math.sqrt(variance);
+        }
+        
+        function calculateSkewness(arr, mean, stdDev) {
+            if(arr.length < 3 || stdDev === 0) return 0;
+            const n = arr.length;
+            const sumCubedDeviations = arr.reduce((a, b) => a + Math.pow(b - mean, 3), 0);
+            return (n / ((n - 1) * (n - 2))) * (sumCubedDeviations / Math.pow(stdDev, 3));
+        }
+
+        // Emulates Excel QUARTILE.INC
+        function calculatePercentile(sortedArr, p) {
+            const index = (sortedArr.length - 1) * p;
+            const lower = Math.floor(index);
+            const upper = lower + 1;
+            const weight = index % 1;
+            
+            if (upper >= sortedArr.length) return sortedArr[lower];
+            return sortedArr[lower] * (1 - weight) + sortedArr[upper] * weight;
+        }
+
+        function calculateStats(data) {
+            if(data.length === 0) return null;
+            
+            const sorted = sortData(data);
+            const n = data.length;
+            const mean = calculateMean(sorted);
+            const stdDev = calculateStdDev(sorted, mean);
+            
+            const min = sorted[0];
+            const max = sorted[n - 1];
+            
+            const q1 = calculatePercentile(sorted, 0.25);
+            const median = calculatePercentile(sorted, 0.50);
+            const q3 = calculatePercentile(sorted, 0.75);
+            
+            const iqr = q3 - q1;
+            
+            const lowerBound = q1 - (1.5 * iqr);
+            const upperBound = q3 + (1.5 * iqr);
+            
+            const outliers = sorted.filter(x => x < lowerBound || x > upperBound);
+            const skewness = calculateSkewness(data, mean, stdDev);
+            
+            // Fetch spec limits from UI - God Mode strict NaN handling
+            const uslRaw = document.getElementById('inputUSL').value;
+            const lslRaw = document.getElementById('inputLSL').value;
+            const usl = uslRaw !== '' ? parseFloat(uslRaw) : NaN;
+            const lsl = lslRaw !== '' ? parseFloat(lslRaw) : NaN;
+
+            // Process Capability (Cp & Cpk)
+            let cp = 0, cpk = 0;
+            if(stdDev > 0 && !isNaN(usl) && !isNaN(lsl)) {
+                cp = (usl - lsl) / (6 * stdDev);
+                const cpu = (usl - mean) / (3 * stdDev);
+                const cpl = (mean - lsl) / (3 * stdDev);
+                cpk = Math.min(cpu, cpl);
+            }
+
+            return {
+                n, min, max, q1, median, q3, iqr, lowerBound, upperBound, mean, stdDev, skewness, outliers, cp, cpk, usl, lsl
+            };
+        }
+
+        // ------------------ UI Updates & Plotting ------------------
+
+        function updateUI() {
+            const stats = calculateStats(currentData);
+            if(!stats) return;
+
+            // 1. Update Plotly Chart
+            drawPlot(currentData, stats);
+
+            // 2. Update Dashboard Stats
+            document.getElementById('statN').textContent = stats.n;
+            document.getElementById('statSkew').textContent = stats.skewness.toFixed(3);
+            document.getElementById('statMean').textContent = stats.mean.toFixed(3);
+            document.getElementById('statMedian').textContent = stats.median.toFixed(3);
+            document.getElementById('statIQR').textContent = stats.iqr.toFixed(3);
+            document.getElementById('statStdDev').textContent = stats.stdDev.toFixed(3);
+            document.getElementById('statOutliers').textContent = stats.outliers.length;
+            
+            // Safe display for Cp/Cpk if limits are removed
+            document.getElementById('statCp').textContent = stats.cp > 0 ? stats.cp.toFixed(2) : "N/A";
+            document.getElementById('statCpk').textContent = (stats.cp !== 0 || stats.cpk !== 0) && !isNaN(stats.usl) && !isNaN(stats.lsl) ? stats.cpk.toFixed(2) : "N/A";
+            
+            // Dynamic Traffic Light styling for CP
+            const cpContainer = document.getElementById('cpContainer');
+            const cpLabel = document.getElementById('cpLabel');
+            const cpEl = document.getElementById('statCp');
+            
+            cpContainer.className = "p-2 rounded border tooltip relative transition-colors duration-300";
+            if(stats.cp === 0 || isNaN(stats.usl) || isNaN(stats.lsl)) {
+                cpContainer.classList.add('bg-slate-50', 'border-slate-200');
+                cpLabel.className = "block text-xs uppercase font-bold tracking-wider text-slate-500 flex items-center gap-1";
+                cpLabel.innerHTML = 'Process Cap (Cp)';
+                cpEl.className = "font-mono text-lg font-semibold text-slate-500";
+            }
+            else if(stats.cp >= 1.33) {
+                cpContainer.classList.add('bg-emerald-50', 'border-emerald-200');
+                cpLabel.className = "block text-xs uppercase font-bold tracking-wider text-emerald-700 flex items-center gap-1";
+                cpLabel.innerHTML = 'Process Cap (Cp) <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>';
+                cpEl.className = "font-mono text-lg font-semibold text-emerald-800";
+            }
+            else if(stats.cp >= 1.0) {
+                cpContainer.classList.add('bg-amber-50', 'border-amber-200');
+                cpLabel.className = "block text-xs uppercase font-bold tracking-wider text-amber-700 flex items-center gap-1";
+                cpLabel.innerHTML = 'Process Cap (Cp) <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_5px_rgba(245,158,11,0.8)]"></span>';
+                cpEl.className = "font-mono text-lg font-semibold text-amber-800";
+            }
+            else {
+                cpContainer.classList.add('bg-red-50', 'border-red-200');
+                cpLabel.className = "block text-xs uppercase font-bold tracking-wider text-red-700 flex items-center gap-1";
+                cpLabel.innerHTML = 'Process Cap (Cp) <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>';
+                cpEl.className = "font-mono text-lg font-semibold text-red-800";
+            }
+
+            // God Mode Fix: Re-instating the truncated Cpk Traffic Light logic
+            const cpkContainer = document.getElementById('cpkContainer');
+            const cpkLabel = document.getElementById('cpkLabel');
+            const cpkEl = document.getElementById('statCpk');
+            
+            cpkContainer.className = "p-2 rounded border tooltip relative transition-colors duration-300";
+            if(stats.cp === 0 || isNaN(stats.usl) || isNaN(stats.lsl)) {
+                cpkContainer.classList.add('bg-slate-50', 'border-slate-200');
+                cpkLabel.className = "block text-xs uppercase font-bold tracking-wider text-slate-500 flex items-center gap-1";
+                cpkLabel.innerHTML = 'Actual Cap (Cpk)';
+                cpkEl.className = "font-mono text-lg font-semibold text-slate-500";
+            }
+            else if(stats.cpk >= 1.33) {
+                cpkContainer.classList.add('bg-emerald-50', 'border-emerald-200');
+                cpkLabel.className = "block text-xs uppercase font-bold tracking-wider text-emerald-700 flex items-center gap-1";
+                cpkLabel.innerHTML = 'Actual Cap (Cpk) <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>';
+                cpkEl.className = "font-mono text-lg font-semibold text-emerald-800";
+            }
+            else if(stats.cpk >= 1.0) {
+                cpkContainer.classList.add('bg-amber-50', 'border-amber-200');
+                cpkLabel.className = "block text-xs uppercase font-bold tracking-wider text-amber-700 flex items-center gap-1";
+                cpkLabel.innerHTML = 'Actual Cap (Cpk) <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_5px_rgba(245,158,11,0.8)]"></span>';
+                cpkEl.className = "font-mono text-lg font-semibold text-amber-800";
+            }
+            else {
+                cpkContainer.classList.add('bg-red-50', 'border-red-200');
+                cpkLabel.className = "block text-xs uppercase font-bold tracking-wider text-red-700 flex items-center gap-1";
+                cpkLabel.innerHTML = 'Actual Cap (Cpk) <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>';
+                cpkEl.className = "font-mono text-lg font-semibold text-red-800";
+            }
+
+            // Dynamic Traffic Light styling for Outliers
+            const outContainer = document.getElementById('outliersContainer');
+            const outLabel = document.getElementById('outliersLabel');
+            const outEl = document.getElementById('statOutliers');
+            const outIconWrap = document.getElementById('outliersIconWrapper');
+            
+            outContainer.className = "p-2 rounded border tooltip relative col-span-2 flex justify-between items-center transition-colors duration-300";
+            
+            if(stats.outliers.length === 0) {
+                outContainer.classList.add('bg-emerald-50', 'border-emerald-200');
+                outLabel.className = "block text-xs uppercase font-bold tracking-wider text-emerald-700 flex items-center gap-1";
+                outLabel.innerHTML = 'Outliers Detected <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span>';
+                outEl.className = "font-mono text-lg font-semibold text-emerald-800";
+                outIconWrap.innerHTML = '<i data-lucide="check-circle" class="w-6 h-6 text-emerald-500"></i>';
+            }
+            else if(stats.outliers.length <= 2) {
+                outContainer.classList.add('bg-amber-50', 'border-amber-200');
+                outLabel.className = "block text-xs uppercase font-bold tracking-wider text-amber-700 flex items-center gap-1";
+                outLabel.innerHTML = 'Outliers Detected <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_5px_rgba(245,158,11,0.8)]"></span>';
+                outEl.className = "font-mono text-lg font-semibold text-amber-800";
+                outIconWrap.innerHTML = '<i data-lucide="alert-circle" class="w-6 h-6 text-amber-500"></i>';
+            }
+            else {
+                outContainer.classList.add('bg-red-50', 'border-red-200');
+                outLabel.className = "block text-xs uppercase font-bold tracking-wider text-red-700 flex items-center gap-1";
+                outLabel.innerHTML = 'Outliers Detected <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]"></span>';
+                outEl.className = "font-mono text-lg font-semibold text-red-800";
+                outIconWrap.innerHTML = '<i data-lucide="alert-triangle" class="w-6 h-6 text-red-500"></i>';
+            }
+            
+            lucide.createIcons();
+
+            // 3. Update Dynamic Narration
+            generateNarration(stats);
+        }
+
+        function drawPlot(data, stats) {
+            const showJitter = document.getElementById('toggleJitter').checked;
+            
+            const trace = {
+                y: data,
+                type: 'box',
+                name: currentParamName,
+                marker: { color: isCapaActive ? '#10b981' : '#4f46e5' }, // Emerald for CAPA, Indigo for normal
+                boxpoints: showJitter ? 'all' : 'outliers', 
+                jitter: 0.3,
+                pointpos: showJitter ? -1.5 : 0,
+                boxmean: true // Displays dotted line for mean
+            };
+
+            const layout = {
+                title: {
+                    text: `${isCapaActive ? '[CAPA APPLIED] ' : ''}${currentParamName} Distribution`,
+                    font: { size: 14, color: '#334155' }
+                },
+                yaxis: {
+                    title: currentParamName,
+                    zeroline: false,
+                    gridcolor: '#e2e8f0'
+                },
+                margin: { l: 50, r: 35, t: 40, b: 30 },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                showlegend: false
+            };
+            
+            // Dynamic specification lines overlay - Godmode crash prevention logic
+            const usl = parseFloat(document.getElementById('inputUSL').value);
+            const lsl = parseFloat(document.getElementById('inputLSL').value);
+            const target = parseFloat(document.getElementById('inputTarget').value);
+
+            layout.shapes = [];
+            layout.annotations = [];
+
+            if (!isNaN(usl)) {
+                layout.shapes.push({ type: 'line', yref: 'y', xref: 'paper', x0: 0, x1: 1, y0: usl, y1: usl, line: { color: '#ef4444', width: 2, dash: 'dash' } });
+                layout.annotations.push({ xref: 'paper', yref: 'y', x: 1, y: usl, xanchor: 'left', yanchor: 'bottom', text: 'USL', showarrow: false, font: {color: '#ef4444', size: 10} });
+            }
+            if (!isNaN(lsl)) {
+                layout.shapes.push({ type: 'line', yref: 'y', xref: 'paper', x0: 0, x1: 1, y0: lsl, y1: lsl, line: { color: '#ef4444', width: 2, dash: 'dash' } });
+                layout.annotations.push({ xref: 'paper', yref: 'y', x: 1, y: lsl, xanchor: 'left', yanchor: 'bottom', text: 'LSL', showarrow: false, font: {color: '#ef4444', size: 10} });
+            }
+            if (!isNaN(target)) {
+                layout.shapes.push({ type: 'line', yref: 'y', xref: 'paper', x0: 0, x1: 1, y0: target, y1: target, line: { color: '#10b981', width: 2, dash: 'dot' } });
+                layout.annotations.push({ xref: 'paper', yref: 'y', x: 1, y: target, xanchor: 'left', yanchor: 'bottom', text: 'TGT', showarrow: false, font: {color: '#10b981', size: 10} });
+            }
+
+            const config = { responsive: true, displayModeBar: false };
+
+            Plotly.react('plotDiv', [trace], layout, config);
+        }
+
+        function generateNarration(stats) {
+            const box = document.getElementById('narrationBox');
+            let text = "";
+
+            if (isCapaActive) {
+                text += `<strong class="text-emerald-400">CAPA Intervention Successful.</strong> Variance has been statistically reduced, pulling points closer to the median target of ${stats.median.toFixed(2)}. `;
+                text += `The actual process capability index (Cpk) has improved to <strong>${stats.cpk.toFixed(2)}</strong>. `;
+                if (stats.outliers.length === 0) {
+                    text += "All critical outliers have been eliminated, stabilizing the manufacturing limits.";
+                } else {
+                    text += `However, ${stats.outliers.length} inherent anomalies still remain despite adjustments.`;
+                }
+            } else {
+                text += `Currently observing the <strong>${currentParamName}</strong> process with a sample size of ${stats.n}. `;
+                
+                if (stats.outliers.length > 0) {
+                    text += `Immediate attention required: <strong class="text-red-400">${stats.outliers.length} outliers detected</strong> beyond the control limits (IQR mathematically defined). `;
+                } else {
+                    text += "The process distribution is relatively contained within the statistical whiskers. No extreme outliers detected. ";
+                }
+
+                // Focus narration heavily on Cpk vs Cp (Centering vs Spread)
+                if (stats.cpk < 1.0) {
+                    text += `<br><br><span class="text-red-400">🔴 Traffic Light RED: Cpk is ${stats.cpk.toFixed(2)} (< 1.0).</span> High risk of producing out-of-spec defects. `;
+                    if (stats.cp > 1.0 && stats.cpk < 1.0) {
+                         text += `<strong>Note:</strong> Cp is acceptable (${stats.cp.toFixed(2)}), but Cpk is poor. This means the process is <strong>off-center</strong>. Re-calibrate to target!`;
+                    } else {
+                         text += `<strong>Recommend initiating CAPA immediately.</strong>`;
+                    }
+                } else if (stats.cpk < 1.33) {
+                    text += `<br><br><span class="text-amber-400">🟡 Traffic Light YELLOW: Cpk is ${stats.cpk.toFixed(2)}.</span> Process is marginally capable but minor shifts could result in defects.`;
+                } else {
+                    text += `<br><br><span class="text-emerald-400">🟢 Traffic Light GREEN: Process is highly capable (Cpk = ${stats.cpk.toFixed(2)}).</span> Variation is well within acceptable specification limits and centered.`;
+                }
+            }
+
+            box.innerHTML = text;
+        }
+
+        // Clear All Data & Reset UI
+        function clearAll() {
+            // Reset state
+            originalData = [];
+            currentData = [];
+            currentParamName = "Data Value";
+            isCapaActive = false;
+
+            // Clear inputs
+            document.getElementById('customDataInput').value = '';
+            document.getElementById('inputLSL').value = '';
+            document.getElementById('inputTarget').value = '';
+            document.getElementById('inputUSL').value = '';
+            document.getElementById('dataWarning').classList.add('hidden');
+            document.getElementById('industrySelect').selectedIndex = 0;
+
+            // Reset CAPA buttons
+            document.getElementById('btnCapa').disabled = false;
+            document.getElementById('btnCapa').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btnRevert').disabled = true;
+
+            // Reset Plotly to placeholder
+            Plotly.newPlot('plotDiv', [], {
+                title: { text: 'Awaiting Data...', font: { size: 14, color: '#94a3b8' } },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+                xaxis: { showgrid: false, zeroline: false, showticklabels: false }
+            }, { responsive: true, displayModeBar: false });
+
+            // Reset Dashboard Stats
+            const dashElements = ['statN', 'statSkew', 'statMean', 'statMedian', 'statIQR', 'statStdDev', 'statOutliers', 'statCp', 'statCpk'];
+            dashElements.forEach(id => document.getElementById(id).textContent = '-');
+
+            // Reset Traffic Lights Helper
+            const resetTrafficLight = (containerId, labelId, labelText, elId) => {
+                const container = document.getElementById(containerId);
+                const label = document.getElementById(labelId);
+                const el = document.getElementById(elId);
+
+                container.className = "p-2 rounded border tooltip relative transition-colors duration-300 bg-slate-50 border-slate-200";
+                label.className = "block text-xs uppercase font-bold tracking-wider text-slate-500 flex items-center gap-1";
+                label.innerHTML = labelText;
+                el.className = "font-mono text-lg font-semibold text-slate-500";
+            };
+
+            resetTrafficLight('cpContainer', 'cpLabel', 'Process Cap (Cp)', 'statCp');
+            resetTrafficLight('cpkContainer', 'cpkLabel', 'Actual Cap (Cpk)', 'statCpk');
+
+            // Reset Outliers specifically
+            const outContainer = document.getElementById('outliersContainer');
+            const outLabel = document.getElementById('outliersLabel');
+            const outEl = document.getElementById('statOutliers');
+            const outIconWrap = document.getElementById('outliersIconWrapper');
+
+            outContainer.className = "p-2 rounded border tooltip relative col-span-2 flex justify-between items-center transition-colors duration-300 bg-slate-50 border-slate-200";
+            outLabel.className = "block text-xs uppercase font-bold tracking-wider text-slate-500 flex items-center gap-1";
+            outLabel.innerHTML = 'Outliers Detected';
+            outEl.className = "font-mono text-lg font-semibold text-slate-500";
+            outIconWrap.innerHTML = '<i data-lucide="alert-triangle" class="w-6 h-6 text-slate-400"></i>';
+
+            lucide.createIcons();
+
+            // Reset Narration
+            document.getElementById('narrationBox').innerHTML = 'Select a process or input data to begin analysis...';
+        }
+
+        // God Mode Download Data Export (Blob allocation prevents browser crash for large limits)
+        function downloadData() {
+            if(currentData.length === 0) {
+                alert("No data available to download.");
+                return;
+            }
+            
+            let csvContent = `${currentParamName} (${isCapaActive ? 'CAPA Applied' : 'Original'})\n`;
+            csvContent += currentData.join("\n");
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `mects_process_data_${isCapaActive ? 'capa' : 'original'}.csv`);
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up memory
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }
+    </script>
+</body>
+</html>
