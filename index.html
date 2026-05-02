@@ -4,85 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MECTS SET GO PLATFORM</title>
-    
-            background-color: black;
-            color: white;
-            font-family: 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        header {
-            text-align: center;
-            padding: 30px 20px;
-            border-bottom: 2px solid #facc15; /* Industrial Yellow */
-            background-color: #0a0a0a;
-        }
-        header h1 {
-            color: #facc15;
-            margin: 0;
-            font-size: 2.8rem;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-        header a {
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 1.1rem;
-            opacity: 0.8;
-            transition: 0.3s;
-        }
-        header a:hover { opacity: 1; color: #facc15; }
+    <style>
+body {
+    background-color: black;
+    color: white;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
 
-        /* Login Status Bar */
-        .auth-status {
-            padding: 10px;
-            text-align: right;
-            background: #111;
-            font-size: 0.9rem;
-        }
+header {
+    text-align: center;
+    padding: 30px 20px;
+    border-bottom: 2px solid #facc15;
+    background-color: #0a0a0a;
+}
 
-        /* 3-Column Grid Layout */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            padding: 40px;
-            max-width: 1200px;
-            margin: auto;
-            flex-grow: 1;
-        }
-        .button {
-            background-color: #facc15; /* High-Contrast Yellow */
-            color: black;
-            text-align: center;
-            padding: 25px 15px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.05rem;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid transparent;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .button:hover {
-            background-color: white;
-            transform: translateY(-3px);
-            border: 2px solid #facc15;
-            box-shadow: 0 6px 12px rgba(250, 204, 21, 0.2);
-        }
+header h1 {
+    color: #facc15;
+    margin: 0;
+    font-size: 2.8rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
 
-        /* Mobile Optimization */
-        @media (max-width: 900px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } }
-    </style>
-</head>
-<body>
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 40px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+.button {
+    background-color: #facc15;
+    color: black;
+    padding: 20px;
+    text-align: center;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.button:hover {
+    background-color: white;
+}
+</style>
+         
 
 
 
