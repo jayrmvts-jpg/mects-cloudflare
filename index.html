@@ -1,36 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS - Executive Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; overflow: hidden; }
-        .admin-hotspot {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 15px;
-            height: 15px;
-            z-index: 100;
-            cursor: default;
-            opacity: 0;
-        }
-        .admin-hotspot:hover { opacity: 0.05; background: black; }
-    </style>
-</head>
-<body class="bg-slate-50 min-h-screen flex flex-col relative">
-
-    <div onclick="openAdminLogs()" class="admin-hotspot" title="Admin Access"></div>
-
-    <div class="flex-grow flex flex-col md:flex-row items-stretch">
+<div class="flex-grow flex flex-col md:flex-row items-stretch">
         
-        <div class="md:w-3/5 bg-white flex flex-col items-center justify-center p-6 md:p-12">
-            <div class="flex flex-col items-center text-center space-y-4">
-                <img src="MECTS 1000 SHIELD TRANSPARENT.png" alt="MECTS Shield" 
-                     class="w-64 h-auto md:w-[420px] lg:w-[500px] drop-shadow-2xl">
+        <div class="md:w-3/5 bg-white flex flex-col items-center justify-center p-6 md:p-12 relative">
+            <div class="flex flex-col items-center text-center space-y-4 relative">
+                
+                <div class="relative inline-block">
+                    <img src="MECTS 1000 SHIELD TRANSPARENT.png" alt="MECTS Shield" 
+                         class="w-64 h-auto md:w-[420px] lg:w-[500px] drop-shadow-2xl">
+                    
+                    <div onclick="openAdminLogs()" 
+                         style="position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; cursor: pointer; z-index: 100;" 
+                         title="MECTS Admin Gateway">
+                    </div>
+                </div>
                 
                 <div class="max-w-2xl">
                     <h1 class="text-6xl md:text-7xl font-black text-slate-900 tracking-tighter uppercase leading-none">MECTS</h1>
@@ -45,115 +26,21 @@
                 </div>
             </div>
         </div>
-
-        <div class="md:w-2/5 bg-blue-900 flex flex-col items-center justify-center p-10 md:p-12 text-white border-l border-blue-800">
-            <div class="w-full max-w-sm space-y-6 bg-blue-950 p-8 rounded-3xl shadow-2xl border border-blue-800">
-                
-                <header class="text-center">
-                    <h2 class="text-2xl font-bold tracking-tight text-white uppercase italic">Executive Access</h2>
-                    <p class="mt-1 text-[10px] text-blue-300 font-bold tracking-widest uppercase">Strict Session Control Active</p>
-                </header>
-
-                <form class="space-y-4">
-                    <input id="email" type="email" required placeholder="Corporate Email" 
-                           class="w-full px-4 py-3 bg-blue-900/50 text-white rounded-xl border border-blue-700 focus:ring-2 focus:ring-cyan-500 focus:outline-none placeholder:text-blue-700 font-semibold">
-                    <input id="password" type="password" required placeholder="Access Key" 
-                           class="w-full px-4 py-3 bg-blue-900/50 text-white rounded-xl border border-blue-700 focus:ring-2 focus:ring-cyan-500 focus:outline-none placeholder:text-blue-700 font-semibold">
-
-                    <button onclick="loginWithEmail()" type="button" 
-                            class="w-full bg-cyan-500 text-blue-950 font-black py-4 rounded-xl hover:bg-cyan-400 transition-all shadow-lg active:scale-95 uppercase tracking-widest">
-                        Login to Suite
-                    </button>
-                </form>
-
-                <div class="relative py-1 text-center">
-                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-blue-800"></div></div>
-                    <span class="relative bg-blue-950 px-4 font-bold text-blue-500 text-[10px] uppercase tracking-widest">Verify Identity</span>
-                </div>
-
-                <button onclick="loginWithGoogle()" 
-                    class="w-full flex items-center justify-center gap-3 bg-white text-slate-900 font-bold py-3 px-4 rounded-xl hover:bg-slate-100 transition-all shadow-md active:scale-95">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" class="w-5 h-5">
-                    <span>Continue with Google</span>
-                </button>
-
-                <footer class="mt-6 text-center">
-                    <p id="errorField" class="text-red-400 font-bold text-[10px] uppercase mb-4"></p>
-                    <p class="text-blue-600 font-black tracking-[0.3em] uppercase text-[10px]">MECTS SET GO</p>
-                </footer>
-            </div>
+        
         </div>
-    </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // ... (Keep your existing Firebase imports and config here) ...
 
-        // Your specific project config confirmed from screenshot
-        const firebaseConfig = {
-            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
-            authDomain: "mects-login-lss-msme.firebaseapp.com",
-            projectId: "mects-login-lss-msme",
-            appId: "1:338870341775:web:f5a5e783ae59a538b725c8"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-
-        // LOGGING FUNCTION: Captures Duration (via login event), IP, and Location
-        async function logActivity(user) {
-            console.log("Initiating Audit Logging...");
-            try {
-                const res = await fetch('https://ipapi.co/json/');
-                const geo = await res.json();
-                
-                await setDoc(doc(db, "AuditTrail", user.uid), {
-                    email: user.email,
-                    loginTime: serverTimestamp(),
-                    ip: geo.ip || "Direct Access",
-                    location: `${geo.city || 'Unknown'}, ${geo.region || 'India'}`,
-                    isp: geo.org || "Corporate Network"
-                }, { merge: true });
-                
-                console.log("AuditTrail synchronized.");
-                return true;
-            } catch(e) { 
-                console.error("Audit log deferred:", e); 
-                return false;
-            }
-        }
-
-        // REDIRECT LOGIC: Waits for the database to acknowledge the login before moving
-        onAuthStateChanged(auth, async (user) => { 
-            if (user) {
-                const logged = await logActivity(user);
-                // 1.2 second delay ensures Firestore UI picks up the new collection
-                setTimeout(() => {
-                    window.location.replace("dashboard.html");
-                }, 1200); 
-            } 
-        });
-
-        window.loginWithGoogle = () => signInWithPopup(auth, provider);
-        window.loginWithEmail = () => {
-            const e = document.getElementById("email").value;
-            const p = document.getElementById("password").value;
-            signInWithEmailAndPassword(auth, e, p).catch(() => {
-                document.getElementById("errorField").innerText = "UNAUTHORIZED ACCESS DETECTED";
-            });
-        };
-
-        // THE HIDDEN ADMIN BUTTON (Enter your birth year to access logs)
+        // THE HIDDEN ADMIN FUNCTION
         window.openAdminLogs = () => {
-            const key = prompt("ADMIN KEY REQUIRED:");
+            const key = prompt("MECTS EXECUTIVE KEY REQUIRED:");
             if(key === "1968") { 
-                window.location.href = "https://console.firebase.google.com/project/mects-login-lss-msme/firestore";
+                window.location.href = "https://console.firebase.google.com/project/mects-login-lss-msme/firestore/data/~2FAuditTrail";
+            } else if (key !== null) {
+                alert("ACCESS DENIED: UNAUTHORIZED CREDENTIALS");
             }
         };
+
+        // ... (Keep your existing logActivity and onAuthStateChanged code here) ...
     </script>
-</body>
-</html>
