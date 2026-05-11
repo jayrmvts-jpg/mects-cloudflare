@@ -3,114 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS SET GO PLATFORM</title>
-    <style>
-body {
-    background-color: black;
-    color: white;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
+    <title>MECTS Executive Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen font-sans">
 
-header {
-    text-align: center;
-    padding: 30px 20px;
-    border-bottom: 2px solid #facc15;
-    background-color: #0a0a0a;
-}
-
-header h1 {
-    color: #facc15;
-    margin: 0;
-    font-size: 2.8rem;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-}
-
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    padding: 40px;
-    max-width: 1200px;
-    margin: auto;
-}
-
-.button {
-    background-color: #facc15;
-    color: black;
-    padding: 20px;
-    text-align: center;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.button:hover {
-    background-color: white;
-}
-</style>
-         
-
-
-
-<header>
-  
-
-<div class="grid-container">
-    <!-- Row 1 -->
-    <a href="activities-vsm.html" class="button">Activities VSM</a>
-    <a href="annova-ver-3.5.html" class="button">ANOVA Analysis Ver 3.5</a>
-    <a href="assessments-portal.html" class="button">Assessments Portal</a>
+<div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-blue-700">
+    <div class="text-center mb-8">
+        <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight uppercase">MECTS</h2>
+        <p class="text-slate-500 font-medium mt-1">Lean MSME Diagnostic Portal</p>
+    </div>
     
-    <!-- Row 2 -->
-    <a href="box-whisker-plot-ver-2.5.html" class="button">Box & Whisker Plot Ver 2.5</a>
-    <a href="cronbach-platform-ver-9.0.html" class="button">Cronbach Platform Ver 9.0</a>
-    <a href="current-state-and-future-state.html" class="button">Current & Future State Platform</a>
-    
-    <!-- Row 3 -->
-    <a href="cusum-ver-1.50.html" class="button">CUSUM Ver 1.50</a>
-    <a href="fmea-risk-dmaic.html" class="button">FMEA Risk DMAIC Integration</a>
-    <a href="fmea-gold-std-2.0.html" class="button">FMEA Analysis Gold Std Ver 2.0</a>
-    
-    <!-- Row 4 -->
-    <a href="gemba-walk-ver-11.0.html" class="button">Gemba Walk Ver 11.0</a>
-    <a href="histogram-ver-11.0.html" class="button">Histogram Ver 11.0</a>
-    <a href="mttf-mtbf-ver-11.0.html" class="button">MTTF & MTBF Ver 11.0</a>
-    
-    <!-- Row 5 -->
-    <a href="normal-distribution-ver-2.0.html" class="button">Normal Distribution Ver 2.0</a>
-    <a href="pareto-ver-7.0.html" class="button">Pareto Analysis Ver 7.0</a>
-    <a href="process-capabilities-ver-9.0.html" class="button">Process Capabilities Ver 9.0</a>
-    
-    <!-- Row 6 -->
-    <a href="sensitivity-analysis.html" class="button">Sensitivity Analysis Platform</a>
-    <a href="taguchi-analysis.html" class="button">Taguchi Analysis</a>
-    <a href="pareto-secondary.html" class="button">Pareto Analysis (Secondary)</a>
-    
-    <!-- Row 7 -->
-    <a href="unified-spc.html" class="button">Unified SPC</a>
-    <a href="vsm-assessment.html" class="button">VSM Assessment Platform</a>
-    <a href="vsm-concepts-crm.html" class="button">VSM Concepts & CRM</a>
-    
-    <!-- Row 8 -->
-    <a href="vsm-concepts.html" class="button">VSM Concepts</a>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Corporate Email</label>
+            <input type="email" id="email" placeholder="name@company.com" 
+                   class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+            <input type="password" id="password" placeholder="••••••••" 
+                   class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+        </div>
+        
+        <button onclick="login()" class="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-lg transform active:scale-95 transition-all">
+            Access Dashboard
+        </button>
+
+        <div class="relative flex py-4 items-center">
+            <div class="flex-grow border-t border-slate-200"></div>
+            <span class="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase">or</span>
+            <div class="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <button onclick="googleLogin()" class="w-full py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg flex items-center justify-center gap-3 transition-all shadow-sm">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="w-5 h-5" alt="Google">
+            Continue with Google
+        </button>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+        <p id="status" class="text-sm text-slate-500 mb-4">Awaiting credentials...</p>
+        <button onclick="signUp()" class="text-blue-700 hover:text-blue-900 font-bold text-sm underline decoration-2 underline-offset-4">
+            Request New Account Access
+        </button>
+    </div>
 </div>
 
-<script>
-  // Poka-Yoke: Ensure user is logged in to see the platform
-  netlifyIdentity.on('init', user => {
-    if (!user) {
-      netlifyIdentity.open(); // Force login popup
-    }
-  });
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// Keeping your specific MECTS credentials
+const firebaseConfig = {
+  apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
+  authDomain: "mects-login-lss-msme.firebaseapp.com",
+  projectId: "mects-login-lss-msme",
+  storageBucket: "mects-login-lss-msme.firebasestorage.app",
+  messagingSenderId: "371034406858",
+  appId: "1:371034406858:web:71cfdd2e47e8d6b3715933"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Check for existing session
+(async () => {
+    try {
+        await setPersistence(auth, browserLocalPersistence);
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            document.getElementById("status").innerText = "Verified. Entering Dashboard...";
+            document.getElementById("status").classList.add("text-green-600");
+            setTimeout(() => { window.location.replace("dashboard.html"); }, 1000);
+          }
+        });
+    } catch (e) { console.error("Session error:", e); }
+})();
+
+// Social Login
+window.googleLogin = async () => {
+  try { await signInWithPopup(auth, provider); } 
+  catch (e) { alert("Google Auth Error: " + e.message); }
+};
+
+// Email Login
+window.login = async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
   
-  // Refresh page on logout to secure the view
-  netlifyIdentity.on('logout', () => location.reload());
+  if(!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+  }
+
+  document.getElementById("status").innerText = "Authenticating...";
+  try { 
+      await signInWithEmailAndPassword(auth, email, password); 
+  } catch (e) { 
+      document.getElementById("status").innerText = "Error: Invalid credentials";
+      alert(e.message); 
+  }
+};
+
+// New Account Creation
+window.signUp = async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  if(!email || !password) {
+      alert("Type the email and password you want to create in the boxes first.");
+      return;
+  }
+
+  try { 
+      await createUserWithEmailAndPassword(auth, email, password);
+      alert("Success! Account created for " + email);
+  } catch (e) { alert(e.message); }
+};
 </script>
 
 </body>
