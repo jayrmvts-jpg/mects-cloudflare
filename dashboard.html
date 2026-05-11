@@ -3,96 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS Executive Dashboard</title>
+    <title>MECTS Executive Suite</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50 min-h-screen">
-
-    <nav class="bg-blue-800 text-white p-4 shadow-lg">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-widest uppercase">MECTS Executive Assets</h1>
-            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-all">
-                Logout
-            </button>
+<body class="bg-slate-100 min-h-screen font-sans">
+    <nav class="bg-blue-900 text-white p-4 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tighter uppercase">MECTS Digital Deployment</h1>
+            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold transition-all">Logout</button>
         </div>
     </nav>
 
-    <div class="max-w-6xl mx-auto p-6">
-        <div class="mb-8">
-            <h2 class="text-3xl font-bold text-slate-800">Operational Excellence Suite</h2>
-            <p class="text-slate-600">Select a Lean Six Sigma tool to begin your analysis.</p>
+    <div class="max-w-7xl mx-auto p-6">
+        <header class="mb-10 text-center">
+            <h2 class="text-3xl font-black text-slate-800">Operational Excellence Suite</h2>
+            <p class="text-slate-600">26 Executive Assets for Lean Six Sigma Transformation</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <a href="anova-ver-3.5.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>ANOVA Analysis</strong></a>
+            <a href="histogram-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Histograms</strong></a>
+            <a href="pareto-ver-7.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Pareto Analysis</strong></a>
+            <a href="normal-distribution-ver-2.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Normal Distribution</strong></a>
+            <a href="box-whisker-plot-ver-2.5.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Box-Whisker Plots</strong></a>
+            <a href="cronbach-platform-ver-9.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Cronbach Alpha</strong></a>
+
+            <a href="fmea-gold-std-2.0.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>FMEA Gold Std</strong></a>
+            <a href="fmea-risk-dmaic.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>FMEA Risk DMAIC</strong></a>
+            <a href="process-capabilities-ver-9.0.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Process Capability</strong></a>
+            <a href="sensitivity-analysis.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Sensitivity Analysis</strong></a>
+            <a href="taguchi-analysis.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Taguchi Analysis</strong></a>
+            <a href="unified-spc.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Unified SPC</strong></a>
+            <a href="cusum-ver-1.50.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>CUSUM Charts</strong></a>
+
+            <a href="vsm-assessment.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Assessment</strong></a>
+            <a href="vsm-concepts.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Concepts</strong></a>
+            <a href="vsm-concepts-crm.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM CRM</strong></a>
+            <a href="activities-vsm.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Activities</strong></a>
+            <a href="gemba-walk-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>Gemba Walk</strong></a>
+            <a href="current-state-and-future-state.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>Current/Future State</strong></a>
+
+            <a href="mttf-mtbf-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-red-500 hover:bg-red-50"><strong>MTTF / MTBF</strong></a>
+            <a href="assessments-portal.html" class="bg-white p-4 rounded shadow border-l-4 border-red-500 hover:bg-red-50"><strong>Assessments Hub</strong></a>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            <a href="anova-ver-3.5.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-blue-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-blue-700">ANOVA Analysis</h3>
-                <p class="text-slate-500 text-sm mt-2">Variance analysis for process optimization and statistical significance.</p>
-                <span class="inline-block mt-4 text-blue-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-            <a href="fmea-gold-std-2.0.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-yellow-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-yellow-600">FMEA Gold Standard</h3>
-                <p class="text-slate-500 text-sm mt-2">Failure Mode and Effects Analysis for risk mitigation and quality control.</p>
-                <span class="inline-block mt-4 text-yellow-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-            <a href="vsm-assessment.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-green-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-green-700">VSM Proficiency</h3>
-                <p class="text-slate-500 text-sm mt-2">Value Stream Mapping assessment for lean manufacturing workflows.</p>
-                <span class="inline-block mt-4 text-green-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-            <a href="box-whisker-plot-ver-2.5.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-purple-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-purple-700">Box-Whisker Plots</h3>
-                <p class="text-slate-500 text-sm mt-2">Visualize data distribution and identify outliers in process cycles.</p>
-                <span class="inline-block mt-4 text-purple-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-            <a href="pareto-ver-7.0.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-orange-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-orange-700">Pareto Analysis</h3>
-                <p class="text-slate-500 text-sm mt-2">The 80/20 rule application for identifying critical process bottlenecks.</p>
-                <span class="inline-block mt-4 text-orange-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-            <a href="process-capabilities-ver-9.0.html" class="group bg-white p-6 rounded-xl shadow hover:shadow-xl border-t-4 border-cyan-500 transition-all">
-                <h3 class="text-xl font-bold text-slate-800 group-hover:text-cyan-700">Process Capability (Cp/Cpk)</h3>
-                <p class="text-slate-500 text-sm mt-2">Measure how well your process meets customer specifications.</p>
-                <span class="inline-block mt-4 text-cyan-600 font-semibold text-sm">Launch Tool →</span>
-            </a>
-
-        </div>
-
-        <footer class="mt-12 text-center text-slate-400 text-xs">
-            © 2026 MECTS - Managing Effective Corporate Training Solutions
-        </footer>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
-            authDomain: "mects-login-lss-msme.firebaseapp.com",
-            projectId: "mects-login-lss-msme",
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-
-        // Secure the page: If not logged in, send back to login screen
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.replace("index.html");
-            }
-        });
-
-        window.logout = () => {
-            signOut(auth).then(() => {
-                window.location.replace("index.html");
-            });
-        };
+        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
+        window.logout = () => signOut(auth).then(() => window.location.replace("index.html"));
     </script>
 </body>
 </html>
