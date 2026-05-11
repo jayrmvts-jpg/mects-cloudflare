@@ -3,135 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS Executive Portal</title>
+    <title>MECTS - Executive Portal Deployment</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-slate-100 flex items-center justify-center min-h-screen font-sans">
+<body class="bg-slate-50 min-h-screen flex flex-col">
 
-<div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-blue-700">
-    <div class="text-center mb-8">
-        <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight uppercase">MECTS</h2>
-        <p class="text-slate-500 font-medium mt-1">Lean MSME Diagnostic Portal</p>
-    </div>
-    
-    <div class="space-y-4">
-        <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Corporate Email</label>
-            <input type="email" id="email" placeholder="name@company.com" 
-                   class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-        </div>
-        <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
-            <input type="password" id="password" placeholder="••••••••" 
-                   class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
-        </div>
+    <div class="flex-grow flex flex-col md:flex-row items-stretch">
         
-        <button onclick="login()" class="w-full py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg shadow-lg transform active:scale-95 transition-all">
-            Access Dashboard
-        </button>
-
-        <div class="relative flex py-4 items-center">
-            <div class="flex-grow border-t border-slate-200"></div>
-            <span class="flex-shrink mx-4 text-slate-400 text-xs font-bold uppercase">or</span>
-            <div class="flex-grow border-t border-slate-200"></div>
+        <div class="md:w-3/5 bg-white flex flex-col items-center justify-center p-10 md:p-16">
+            <img src="https://i.ibb.co/X8gT3D3/mects-logo-metallic.jpg" alt="MECTS Executive Shield" 
+                 class="w-80 h-auto md:w-[480px] lg:w-[600px] shadow-lg rounded-full">
+            
+            <div class="text-center mt-12 md:mt-16 max-w-2xl">
+                <h1 class="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">MECTS</h1>
+                <p class="text-slate-600 mt-4 text-xl">Operational Excellence for MSME's & Corporate Digital Deployment</p>
+                <div class="mt-8 border-t border-slate-200 pt-6">
+                    <p class="text-slate-400 text-sm tracking-widest uppercase font-semibold">Training • Mentoring • Consultancy • Assessment Platforms</p>
+                </div>
+            </div>
         </div>
 
-        <button onclick="googleLogin()" class="w-full py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-lg flex items-center justify-center gap-3 transition-all shadow-sm">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" class="w-5 h-5" alt="Google">
-            Continue with Google
-        </button>
+        <div class="md:w-2/5 bg-blue-900 flex flex-col items-center justify-center p-10 md:p-12 text-white">
+            <div class="w-full max-w-sm space-y-8 bg-blue-950 p-8 rounded-2xl shadow-2xl border border-blue-800">
+                
+                <header class="text-center">
+                    <h2 class="text-2xl font-bold tracking-tight text-white uppercase">Executive Suite Access</h2>
+                    <p class="mt-2 text-sm text-blue-200">Please authenticate your account</p>
+                </header>
+
+                <form class="space-y-5">
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-blue-100">Email Address</label>
+                        <input id="email" type="email" required placeholder="name@yourcompany.com" 
+                               class="w-full px-4 py-3 mt-1 text-slate-900 rounded-lg border-2 border-blue-800 focus:ring-4 focus:ring-blue-500 focus:border-blue-400">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-semibold text-blue-100">Password</label>
+                        <input id="password" type="password" required placeholder="Minimum 6 characters" 
+                               class="w-full px-4 py-3 mt-1 text-slate-900 rounded-lg border-2 border-blue-800 focus:ring-4 focus:ring-blue-500 focus:border-blue-400">
+                    </div>
+
+                    <button onclick="loginWithEmail()" type="button" 
+                            class="w-full bg-cyan-500 text-slate-950 font-bold py-3 px-4 rounded-lg hover:bg-cyan-400 transition-all shadow-md">
+                        Access Dashboard
+                    </button>
+                </form>
+
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div class="w-full border-t border-blue-700"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs uppercase">
+                        <span class="bg-blue-950 px-3 font-semibold text-blue-300">Or Corporate SSO</span>
+                    </div>
+                </div>
+
+                <button onclick="loginWithGoogle()" 
+                    class="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-800 font-bold py-3 px-4 rounded-lg hover:bg-slate-50 transition-all shadow-sm">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5">
+                    <span>Continue with Google</span>
+                </button>
+
+                <footer class="mt-8 space-y-3 text-center text-xs">
+                    <p id="errorField" class="text-red-400 font-semibold"></p>
+                    <p id="successField" class="text-cyan-400 font-semibold"></p>
+                    <p class="text-blue-300">
+                        Private Email? <button onclick="signUpWithEmail()" class="text-white underline font-medium">Request New Account</button>
+                    </p>
+                    <p class="text-blue-500 pt-6"><strong>MECTS SET GO</strong> | Operational Excellence</p>
+                </footer>
+            </div>
+        </div>
+
     </div>
 
-    <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-        <p id="status" class="text-sm text-slate-500 mb-4">Awaiting credentials...</p>
-        <button onclick="signUp()" class="text-blue-700 hover:text-blue-900 font-bold text-sm underline decoration-2 underline-offset-4">
-            Request New Account Access
-        </button>
-    </div>
-</div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        // *** YOUR REAL KEYSET - DO NOT SHARE THESE OUTSIDE THIS PLATFORM ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
+            authDomain: "mects-login-lss-msme.firebaseapp.com",
+            projectId: "mects-login-lss-msme",
+            storageBucket: "mects-login-lss-msme.appspot.com",
+            messagingSenderId: "338870341775",
+            appId: "1:338870341775:web:f5a5e783ae59a538b725c8",
+            measurementId: "G-W1XJ039K9K"
+        };
 
-// Keeping your specific MECTS credentials
-const firebaseConfig = {
-  apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
-  authDomain: "mects-login-lss-msme.firebaseapp.com",
-  projectId: "mects-login-lss-msme",
-  storageBucket: "mects-login-lss-msme.firebasestorage.app",
-  messagingSenderId: "371034406858",
-  appId: "1:371034406858:web:71cfdd2e47e8d6b3715933"
-};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+        const getElements = () => {
+            return {
+                email: document.getElementById("email").value,
+                pass: document.getElementById("password").value,
+                errorF: document.getElementById("errorField"),
+                successF: document.getElementById("successField")
+            }
+        };
 
-// Check for existing session
-(async () => {
-    try {
-        await setPersistence(auth, browserLocalPersistence);
-        onAuthStateChanged(auth, (user) => {
-          if (user) {
-            document.getElementById("status").innerText = "Verified. Entering Dashboard...";
-            document.getElementById("status").classList.add("text-green-600");
-            setTimeout(() => { window.location.replace("dashboard.html"); }, 1000);
-          }
-        });
-    } catch (e) { console.error("Session error:", e); }
-})();
+        // Redir if logged in
+        onAuthStateChanged(auth, (user) => { if (user) { window.location.replace("dashboard.html"); } });
 
-// Social Login
-window.googleLogin = async () => {
-  try { await signInWithPopup(auth, provider); } 
-  catch (e) { alert("Google Auth Error: " + e.message); }
-};
+        // 1. Google (with 'auth/popup-closed' catch)
+        window.loginWithGoogle = () => {
+            getElements().successF.innerText = "Attempting Secure SSO...";
+            signInWithPopup(auth, provider).then(() => { getElements().errorF.innerText = ""; })
+            .catch((e) => { 
+                getElements().successF.innerText = "";
+                if(e.code === 'auth/popup-closed-by-user') { getElements().errorF.innerText = "SSO Popup Closed - Please Retry."; }
+                else { getElements().errorF.innerText = "SSO Error: " + e.code; }
+            });
+        };
 
-// Email Login
-window.login = async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-  
-  if(!email || !password) {
-      alert("Please enter both email and password.");
-      return;
-  }
+        // 2. Email Sign Up
+        window.signUpWithEmailAndPassword = () => {
+            const {email, pass, errorF, successF} = getElements(); errorF.innerText = ""; successF.innerText = "Verifying Credentials...";
+            if(!email || !pass || pass.length < 6) { successF.innerText = ""; errorF.innerText="Invalid or short password."; return; }
+            createUserWithEmailAndPassword(auth, email, pass).then(() => { successF.innerText = "Success! Account Created. You may now login."; })
+            .catch((e) => { successF.innerText = ""; if(e.code === 'auth/email-already-in-use') { errorF.innerText = "Account exists. Please login."; } else { errorF.innerText = "Error: " + e.code; } });
+        };
 
-  document.getElementById("status").innerText = "Authenticating...";
-  try { 
-      await signInWithEmailAndPassword(auth, email, password); 
-  } catch (e) { 
-      document.getElementById("status").innerText = "Error: Invalid credentials";
-      alert(e.message); 
-  }
-};
-
-// New Account Creation
-window.signUp = async () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
-
-  if(!email || !password) {
-      alert("Type the email and password you want to create in the boxes first.");
-      return;
-  }
-
-  try { 
-      await createUserWithEmailAndPassword(auth, email, password);
-      alert("Success! Account created for " + email);
-  } catch (e) { alert(e.message); }
-};
-</script>
-
+        // 3. Email Login
+        window.loginWithEmail = () => {
+            const {email, pass, errorF, successF} = getElements(); errorF.innerText = ""; successF.innerText = "Authenticating...";
+            signInWithEmailAndPassword(auth, email, pass).then(() => { successF.innerText="Access Granted. Redirecting..."; })
+            .catch((e) => { successF.innerText = ""; errorF.innerText = "Invalid credentials. Try again."; });
+        };
+    </script>
 </body>
 </html>
