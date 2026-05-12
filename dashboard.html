@@ -3,231 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS - Enterprise Command Center</title>
+    <title>MECTS Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; }
-        .tool-card { 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            border: 1px solid rgba(255,255,255,0.05);
-            background: linear-gradient(145deg, #0f172a, #1e293b);
-        }
-        .tool-card:hover { 
-            transform: translateY(-8px); 
-            border-color: #3b82f6; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            background: linear-gradient(145deg, #1e293b, #334155);
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        .platform-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05); background: #0f172a; }
+        .platform-card:hover { transform: translateY(-5px); border-color: #3b82f6; background-color: #1e293b; }
     </style>
 </head>
-<body class="min-h-screen text-slate-200">
+<body class="min-h-screen pb-20">
 
-    <nav class="sticky top-0 z-50 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800 p-5">
+    <nav class="p-6 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white italic">M</div>
-                <h1 class="text-2xl font-black tracking-tighter text-white uppercase italic">MECTS <span class="text-blue-500">Command</span></h1>
-            </div>
-            <div class="flex items-center gap-6">
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-slate-800 px-3 py-1 rounded-full">Admin: Jayesh Ramani</span>
-                <button onclick="logout()" class="text-xs font-black text-red-500 hover:text-white transition-colors">LOGOUT</button>
-            </div>
+            <h1 class="text-2xl font-black tracking-tighter uppercase italic text-white">MECTS <span class="text-blue-500 italic">Enterprise</span></h1>
+            <button onclick="logout()" class="text-xs font-bold px-4 py-2 border border-slate-700 rounded-lg hover:bg-white hover:text-slate-900 transition-all">LOGOUT</button>
         </div>
     </nav>
 
-    <header class="max-w-7xl mx-auto px-8 pt-16 pb-6">
-        <h2 class="text-6xl font-black text-white tracking-tighter italic mb-4 uppercase">Executive Asset Repository</h2>
-        <p class="text-slate-400 text-lg max-w-2xl font-medium leading-relaxed">
-            Standardized deployment for Lean Six Sigma, ISO Audits, and Strategic MSME Roadmaps.
-        </p>
-    </header>
+    <div class="max-w-7xl mx-auto px-6 mt-12">
+        <h2 class="text-6xl font-black mb-2 uppercase italic text-white">Executive Asset Repository</h2>
+        <p class="text-slate-400 mb-12 font-medium">26 High-Fidelity Engines for Lean Six Sigma & Audit Intelligence.</p>
 
-    <main class="max-w-7xl mx-auto px-8 pb-32">
-        
-        <h3 class="text-blue-500 font-black text-xs uppercase tracking-[0.4em] mb-8 mt-16 flex items-center">
-            <span class="w-12 h-px bg-blue-500 mr-4"></span> Statistical Analysis & Hypothesis
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onclick="window.location.href='anova.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📊</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">ANOVA Analysis</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Variance Diagnostics</p>
-            </div>
-            <div onclick="window.location.href='regression.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📈</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Regression Engine</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Correlation Analytics</p>
-            </div>
-            <div onclick="window.location.href='monte-carlo.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🎲</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Monte Carlo</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Risk Simulation</p>
-            </div>
-            <div onclick="window.location.href='cronbach.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🧬</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Cronbach Alpha</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Reliability Testing</p>
-            </div>
-            <div onclick="window.location.href='normal-dist.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🔔</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Normal Distribution</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Probability Hub</p>
-            </div>
-            <div onclick="window.location.href='taguchi.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">⚙️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Taguchi Analysis</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Robust Design</p>
+        <div class="mb-12">
+            <h3 class="text-blue-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
+                <span class="w-12 h-px bg-blue-500 mr-4"></span> Statistical Analysis
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="window.location.href='anova.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📊 <h4 class="font-bold text-sm uppercase mt-4">ANOVA Analysis</h4></div>
+                <div onclick="window.location.href='regression.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📈 <h4 class="font-bold text-sm uppercase mt-4">Regression Engine</h4></div>
+                <div onclick="window.location.href='monte-carlo.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🎲 <h4 class="font-bold text-sm uppercase mt-4">Monte Carlo</h4></div>
+                <div onclick="window.location.href='cronbach.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🧬 <h4 class="font-bold text-sm uppercase mt-4">Cronbach Alpha</h4></div>
+                <div onclick="window.location.href='normal-dist.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🔔 <h4 class="font-bold text-sm uppercase mt-4">Normal Dist.</h4></div>
+                <div onclick="window.location.href='taguchi.html'" class="platform-card p-8 rounded-3xl cursor-pointer">⚙️ <h4 class="font-bold text-sm uppercase mt-4">Taguchi Analysis</h4></div>
             </div>
         </div>
 
-        <h3 class="text-purple-500 font-black text-xs uppercase tracking-[0.4em] mb-8 mt-16 flex items-center">
-            <span class="w-12 h-px bg-purple-500 mr-4"></span> Data Visualization & SPC
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onclick="window.location.href='pareto.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📈</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Pareto Engine</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">80/20 Modeling</p>
-            </div>
-            <div onclick="window.location.href='box-whisker.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📦</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Box & Whisker</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Outlier Analytics</p>
-            </div>
-            <div onclick="window.location.href='histogram.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📊</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Histogram Hub</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Frequency Matrix</p>
-            </div>
-            <div onclick="window.location.href='cusum.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📉</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">CUSUM Charts</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Cumulative Control</p>
-            </div>
-            <div onclick="window.location.href='spc-charts.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📉</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">SPC Monitoring</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Process Stability</p>
+        <div class="mb-12">
+            <h3 class="text-purple-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
+                <span class="w-12 h-px bg-purple-500 mr-4"></span> Data Visualization
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="window.location.href='pareto.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📊 <h4 class="font-bold text-sm uppercase mt-4">Pareto Engine</h4></div>
+                <div onclick="window.location.href='box-whisker.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📦 <h4 class="font-bold text-sm uppercase mt-4">Box & Whisker</h4></div>
+                <div onclick="window.location.href='histogram.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📉 <h4 class="font-bold text-sm uppercase mt-4">Histogram Hub</h4></div>
+                <div onclick="window.location.href='cusum.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📉 <h4 class="font-bold text-sm uppercase mt-4">CUSUM Charts</h4></div>
+                <div onclick="window.location.href='spc-charts.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📉 <h4 class="font-bold text-sm uppercase mt-4">SPC Control</h4></div>
             </div>
         </div>
 
-        <h3 class="text-emerald-500 font-black text-xs uppercase tracking-[0.4em] mb-8 mt-16 flex items-center">
-            <span class="w-12 h-px bg-emerald-500 mr-4"></span> Lean & Reliability
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onclick="window.location.href='vsm.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🛠️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">VSM Engine</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Value Stream Mapping</p>
-            </div>
-            <div onclick="window.location.href='fmea.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">⚠️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">FMEA Matrix</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Risk Assessment</p>
-            </div>
-            <div onclick="window.location.href='mttf-mtbf.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">⏳</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">MTTF / MTBF</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Reliability Logs</p>
-            </div>
-            <div onclick="window.location.href='process-capability.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🎯</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Process Capability</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Cp / Cpk Analytics</p>
-            </div>
-            <div onclick="window.location.href='takt-time.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">⏱️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Workflow Speed</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Takt Time Calc</p>
+        <div class="mb-12">
+            <h3 class="text-emerald-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
+                <span class="w-12 h-px bg-emerald-500 mr-4"></span> Lean & Reliability
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="window.location.href='vsm.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🛠️ <h4 class="font-bold text-sm uppercase mt-4">VSM Hub</h4></div>
+                <div onclick="window.location.href='fmea.html'" class="platform-card p-8 rounded-3xl cursor-pointer">⚠️ <h4 class="font-bold text-sm uppercase mt-4">FMEA Matrix</h4></div>
+                <div onclick="window.location.href='mttf-mtbf.html'" class="platform-card p-8 rounded-3xl cursor-pointer">⏳ <h4 class="font-bold text-sm uppercase mt-4">MTTF / MTBF</h4></div>
+                <div onclick="window.location.href='process-capability.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🎯 <h4 class="font-bold text-sm uppercase mt-4">Process Cap.</h4></div>
+                <div onclick="window.location.href='takt-time.html'" class="platform-card p-8 rounded-3xl cursor-pointer">⏱️ <h4 class="font-bold text-sm uppercase mt-4">Workflow Speed</h4></div>
             </div>
         </div>
 
-        <h3 class="text-orange-500 font-black text-xs uppercase tracking-[0.4em] mb-8 mt-16 flex items-center">
-            <span class="w-12 h-px bg-orange-500 mr-4"></span> Audit & Field Intelligence
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onclick="window.location.href='assessments.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📝</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Assessment Hub</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Skill Proficiency</p>
-            </div>
-            <div onclick="window.location.href='gemba.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🚶</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Gemba Walk</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Real-time Logs</p>
-            </div>
-            <div onclick="window.location.href='sensitivity.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🔦</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Sensitivity Analysis</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Impact Testing</p>
-            </div>
-            <div onclick="window.location.href='risk-audit.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🛡️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">ISO 27001 Audit</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Security Matrix</p>
-            </div>
-            <div onclick="window.location.href='oee-calc.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">⚙️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">OEE Analytics</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Equipment Efficiency</p>
+        <div class="mb-12">
+            <h3 class="text-orange-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
+                <span class="w-12 h-px bg-orange-500 mr-4"></span> Audit Intelligence
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="window.location.href='assessments.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📝 <h4 class="font-bold text-sm uppercase mt-4">Assessments</h4></div>
+                <div onclick="window.location.href='gemba.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🚶 <h4 class="font-bold text-sm uppercase mt-4">Gemba Walk</h4></div>
+                <div onclick="window.location.href='sensitivity.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🔦 <h4 class="font-bold text-sm uppercase mt-4">Sensitivity</h4></div>
+                <div onclick="window.location.href='risk-audit.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🛡️ <h4 class="font-bold text-sm uppercase mt-4">ISO Audit</h4></div>
+                <div onclick="window.location.href='oee-calc.html'" class="platform-card p-8 rounded-3xl cursor-pointer">⚙️ <h4 class="font-bold text-sm uppercase mt-4">OEE Analytics</h4></div>
             </div>
         </div>
 
-        <h3 class="text-rose-500 font-black text-xs uppercase tracking-[0.4em] mb-8 mt-16 flex items-center">
-            <span class="w-12 h-px bg-rose-500 mr-4"></span> Strategic MSME Roadmaps
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div onclick="window.location.href='blue-ocean.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🌊</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Blue Ocean Strategy</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Value Innovation</p>
-            </div>
-            <div onclick="window.location.href='msme-roadmap.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🗾</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Lean Transformation</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Strategic Pathing</p>
-            </div>
-            <div onclick="window.location.href='six-sigma-calc.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🎯</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Sigma Yield Master</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">DPMO Calculations</p>
-            </div>
-            <div onclick="window.location.href='kanban-sim.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">🗂️</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Kanban Simulator</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Inventory Flow</p>
-            </div>
-            <div onclick="window.location.href='executive-assets.html'" class="tool-card p-8 rounded-3xl cursor-pointer">
-                <div class="text-3xl mb-4">📁</div>
-                <h4 class="font-bold text-white uppercase tracking-tight">Asset Vault</h4>
-                <p class="text-slate-500 text-[11px] mt-2 font-bold">Corporate Playbooks</p>
+        <div class="mb-12">
+            <h3 class="text-rose-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
+                <span class="w-12 h-px bg-rose-500 mr-4"></span> Strategic Roadmaps
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div onclick="window.location.href='blue-ocean.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🌊 <h4 class="font-bold text-sm uppercase mt-4">Blue Ocean</h4></div>
+                <div onclick="window.location.href='msme-roadmap.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🗾 <h4 class="font-bold text-sm uppercase mt-4">MSME Path</h4></div>
+                <div onclick="window.location.href='six-sigma-calc.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🎯 <h4 class="font-bold text-sm uppercase mt-4">Yield Master</h4></div>
+                <div onclick="window.location.href='kanban-sim.html'" class="platform-card p-8 rounded-3xl cursor-pointer">🗂️ <h4 class="font-bold text-sm uppercase mt-4">Kanban Sim</h4></div>
+                <div onclick="window.location.href='executive-assets.html'" class="platform-card p-8 rounded-3xl cursor-pointer">📁 <h4 class="font-bold text-sm uppercase mt-4">Asset Vault</h4></div>
             </div>
         </div>
-
-    </main>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
-            authDomain: "mects-login-lss-msme.firebaseapp.com",
-            projectId: "mects-login-lss-msme",
-            appId: "1:338870341775:web:f5a5e783ae59a538b725c8"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme", appId: "1:338870341775:web:f5a5e783ae59a538b725c8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-
-        onAuthStateChanged(auth, (user) => {
-            if (!user) window.location.replace("index.html");
-        });
-
-        window.logout = () => {
-            signOut(auth).then(() => window.location.replace("index.html"));
-        };
+        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
+        window.logout = () => { signOut(auth).then(() => window.location.replace("index.html")); };
     </script>
 </body>
 </html>
