@@ -15,34 +15,34 @@
             transition: opacity 0.5s ease;
         }
 
-        /* Scaled-down Corporate Grid Boxes */
+        /* High-Density Corporate Web Grid Boxes */
         .cushion-card {
-            border-radius: 16px;
-            padding: 1.25rem;
-            transition: all 0.2s ease-in-out;
+            border-radius: 14px;
+            padding: 1rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border: 1px solid rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
             cursor: pointer;
-            min-height: 140px;
+            min-height: 110px;
             justify-content: center;
         }
 
         .cushion-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            filter: brightness(1.05);
+            filter: brightness(1.08);
         }
 
-        /* Vibrant Corporate Gradients */
+        /* Vibrant Full-Color Interiors */
         .bg-stats { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; }
         .bg-visuals { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; }
         .bg-lean { background: linear-gradient(135deg, #059669, #047857); color: white; }
         .bg-audit { background: linear-gradient(135deg, #d97706, #b45309); color: white; }
 
-        .brand-spacing { letter-spacing: 0.3em; }
+        .brand-spacing { letter-spacing: 0.35em; }
     </style>
 </head>
 <body class="pb-20">
@@ -50,120 +50,108 @@
     <header class="bg-[#0f172a] p-8 shadow-xl border-b-4 border-[#facc15]">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex flex-col text-center md:text-left">
-                <h1 class="text-3xl md:text-4xl font-extrabold text-[#facc15] uppercase brand-spacing">
+                <h1 class="text-3xl md:text-5xl font-extrabold text-[#facc15] uppercase brand-spacing">
                     M E C T S &nbsp; S E T &nbsp; G O
                 </h1>
-                <p class="text-sm font-bold text-white uppercase tracking-wider opacity-80 mt-1">
+                <p class="text-sm font-bold text-white uppercase tracking-widest mt-2">
                     Managing Excellence thru Continuous Transformative solutions
                 </p>
-                <a href="https://www.mects.in" target="_blank" class="text-xs font-bold text-blue-400 mt-1 hover:text-yellow-400">WWW.MECTS.IN</a>
+                <a href="https://www.mects.in" target="_blank" class="text-xs font-bold text-blue-400 mt-2 hover:text-yellow-400 transition-colors">WWW.MECTS.IN</a>
             </div>
-            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-black px-8 py-3 rounded-full transition-all uppercase tracking-widest">LOGOUT</button>
+            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-black px-10 py-4 rounded-full transition-all uppercase tracking-widest shadow-lg">LOGOUT</button>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-6 mt-12">
         
-        <h2 class="text-3xl font-extrabold text-slate-900 mb-10 uppercase border-l-4 border-blue-600 pl-4">Project Asset Repository</h2>
+        <h2 class="text-3xl font-extrabold text-slate-900 mb-10 uppercase border-l-8 border-blue-600 pl-6">Project Asset Repository</h2>
 
         <section class="mb-12">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Statistical Engines</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <h3 class="text-sm font-black text-slate-500 uppercase tracking-[0.4em] mb-6">Statistical Engines</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
                 <div onclick="location.href='anova.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">📊</span><h4 class="font-bold uppercase text-[10px]">Anova</h4>
+                    <span class="text-2xl mb-1">📊</span><h4 class="font-bold uppercase text-[10px]">Anova</h4>
                 </div>
                 <div onclick="location.href='regression.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">📈</span><h4 class="font-bold uppercase text-[10px]">Regression</h4>
+                    <span class="text-2xl mb-1">📈</span><h4 class="font-bold uppercase text-[10px]">Regression</h4>
                 </div>
                 <div onclick="location.href='monte-carlo.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">🎲</span><h4 class="font-bold uppercase text-[10px]">Monte Carlo</h4>
+                    <span class="text-2xl mb-1">🎲</span><h4 class="font-bold uppercase text-[10px]">Monte Carlo</h4>
                 </div>
                 <div onclick="location.href='cronbach.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">🧬</span><h4 class="font-bold uppercase text-[10px]">Cronbach</h4>
+                    <span class="text-2xl mb-1">🧬</span><h4 class="font-bold uppercase text-[10px]">Cronbach</h4>
                 </div>
                 <div onclick="location.href='normal-dist.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">🔔</span><h4 class="font-bold uppercase text-[10px]">Normal Dist</h4>
+                    <span class="text-2xl mb-1">🔔</span><h4 class="font-bold uppercase text-[10px]">Normal Dist</h4>
                 </div>
                 <div onclick="location.href='taguchi-analysis.html'" class="cushion-card bg-stats">
-                    <span class="text-2xl mb-2">⚙️</span><h4 class="font-bold uppercase text-[10px]">Taguchi</h4>
+                    <span class="text-2xl mb-1">⚙️</span><h4 class="font-bold uppercase text-[10px]">Taguchi</h4>
                 </div>
             </div>
         </section>
 
         <section class="mb-12">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Visualization & SPC</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <h3 class="text-sm font-black text-slate-500 uppercase tracking-[0.4em] mb-6">Visualization & SPC</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
                 <div onclick="location.href='pareto.html'" class="cushion-card bg-visuals">
-                    <span class="text-2xl mb-2">📊</span><h4 class="font-bold uppercase text-[10px]">Pareto</h4>
+                    <span class="text-2xl mb-1">📊</span><h4 class="font-bold uppercase text-[10px]">Pareto</h4>
                 </div>
                 <div onclick="location.href='box-whisker.html'" class="cushion-card bg-visuals">
-                    <span class="text-2xl mb-2">📦</span><h4 class="font-bold uppercase text-[10px]">Box Whisker</h4>
+                    <span class="text-2xl mb-1">📦</span><h4 class="font-bold uppercase text-[10px]">Box Whisker</h4>
                 </div>
                 <div onclick="location.href='histogram.html'" class="cushion-card bg-visuals">
-                    <span class="text-2xl mb-2">📉</span><h4 class="font-bold uppercase text-[10px]">Histogram</h4>
+                    <span class="text-2xl mb-1">📉</span><h4 class="font-bold uppercase text-[10px]">Histogram</h4>
                 </div>
                 <div onclick="location.href='cusum.html'" class="cushion-card bg-visuals">
-                    <span class="text-2xl mb-2">📈</span><h4 class="font-bold uppercase text-[10px]">Cusum</h4>
+                    <span class="text-2xl mb-1">📈</span><h4 class="font-bold uppercase text-[10px]">Cusum</h4>
                 </div>
                 <div onclick="location.href='unified-spc.html'" class="cushion-card bg-visuals">
-                    <span class="text-2xl mb-2">📊</span><h4 class="font-bold uppercase text-[10px]">Unified SPC</h4>
+                    <span class="text-2xl mb-1">📋</span><h4 class="font-bold uppercase text-[10px]">Unified SPC</h4>
                 </div>
             </div>
         </section>
 
         <section class="mb-12">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-6">VSM & Lean Operations</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <h3 class="text-sm font-black text-slate-500 uppercase tracking-[0.4em] mb-6">VSM & Lean Operations</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
                 <div onclick="location.href='vsm.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">🛠️</span><h4 class="font-bold uppercase text-[10px]">VSM Main</h4>
+                    <span class="text-2xl mb-1">🛠️</span><h4 class="font-bold uppercase text-[10px]">VSM Main</h4>
                 </div>
                 <div onclick="location.href='vsm-concepts.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">💡</span><h4 class="font-bold uppercase text-[10px]">VSM Concepts</h4>
+                    <span class="text-2xl mb-1">💡</span><h4 class="font-bold uppercase text-[10px]">VSM Concepts</h4>
                 </div>
                 <div onclick="location.href='vsm-concepts-crm.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">💼</span><h4 class="font-bold uppercase text-[10px]">VSM CRM</h4>
+                    <span class="text-2xl mb-1">💼</span><h4 class="font-bold uppercase text-[10px]">VSM CRM</h4>
                 </div>
                 <div onclick="location.href='current-state-and-future-state.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">🗺️</span><h4 class="font-bold uppercase text-[9px] leading-tight">Flow Mapping</h4>
+                    <span class="text-2xl mb-1">🗺️</span><h4 class="font-bold uppercase text-[9px] leading-tight">Flow Mapping</h4>
                 </div>
                 <div onclick="location.href='fmea.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">⚠️</span><h4 class="font-bold uppercase text-[10px]">FMEA Matrix</h4>
+                    <span class="text-2xl mb-1">⚠️</span><h4 class="font-bold uppercase text-[10px]">FMEA Matrix</h4>
                 </div>
                 <div onclick="location.href='fmea-risk-dmaic.html'" class="cushion-card bg-lean">
-                    <span class="text-2xl mb-2">⚡</span><h4 class="font-bold uppercase text-[10px]">Risk DMAIC</h4>
+                    <span class="text-2xl mb-1">⚡</span><h4 class="font-bold uppercase text-[10px]">Risk DMAIC</h4>
                 </div>
             </div>
         </section>
 
         <section class="mb-12">
-            <h3 class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-6">Performance Intelligence</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <h3 class="text-sm font-black text-slate-500 uppercase tracking-[0.4em] mb-6">Audit & Performance</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-5">
                 <div onclick="location.href='assessments.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">📝</span><h4 class="font-bold uppercase text-[10px]">Assessments</h4>
+                    <span class="text-2xl mb-1">📝</span><h4 class="font-bold uppercase text-[10px]">Assessments</h4>
                 </div>
                 <div onclick="location.href='gemba.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">🚶</span><h4 class="font-bold uppercase text-[10px]">Gemba Walk</h4>
+                    <span class="text-2xl mb-1">🚶</span><h4 class="font-bold uppercase text-[10px]">Gemba Walk</h4>
                 </div>
                 <div onclick="location.href='process-capability.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">🎯</span><h4 class="font-bold uppercase text-[10px]">Capability</h4>
-                </div>
-                <div onclick="location.href='mttf-mtbf.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">⏳</span><h4 class="font-bold uppercase text-[10px]">MTTF / MTBF</h4>
+                    <span class="text-2xl mb-1">🎯</span><h4 class="font-bold uppercase text-[10px]">Capability</h4>
                 </div>
                 <div onclick="location.href='sensitivity-analysis.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">🔦</span><h4 class="font-bold uppercase text-[10px]">Sensitivity</h4>
+                    <span class="text-2xl mb-1">🔦</span><h4 class="font-bold uppercase text-[10px]">Sensitivity</h4>
                 </div>
-                <div onclick="location.href='oee-calc.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">⚙️</span><h4 class="font-bold uppercase text-[10px]">OEE Calc</h4>
-                </div>
-                <div onclick="location.href='takt-time.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">⏱️</span><h4 class="font-bold uppercase text-[10px]">Takt Time</h4>
-                </div>
-                <div onclick="location.href='executive-assets.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">💎</span><h4 class="font-bold uppercase text-[10px]">Assets</h4>
-                </div>
-                <div onclick="location.href='pareto-excel.html'" class="cushion-card bg-audit">
-                    <span class="text-2xl mb-2">📁</span><h4 class="font-bold uppercase text-[10px]">Excel Engine</h4>
+                <div onclick="location.href='mttf-mtbf.html'" class="cushion-card bg-audit">
+                    <span class="text-2xl mb-1">⏳</span><h4 class="font-bold uppercase text-[10px]">MTTF / MTBF</h4>
                 </div>
             </div>
         </section>
@@ -178,7 +166,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Security Handshake
         onAuthStateChanged(auth, (user) => {
             if (user) { document.body.style.opacity = "1"; } 
             else { window.location.replace("index.html"); }
