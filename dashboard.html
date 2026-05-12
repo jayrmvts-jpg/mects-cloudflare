@@ -3,65 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS - Executive Dashboard</title>
+    <title>MECTS - Enterprise Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        .tool-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.1); }
+        .tool-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen text-slate-200">
 
-    <nav class="bg-slate-900 text-white p-6 shadow-2xl">
+    <nav class="sticky top-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-black tracking-tighter uppercase leading-none">MECTS</h1>
-                <p class="text-[10px] text-cyan-400 font-bold tracking-[0.3em] uppercase mt-1">Executive Dashboard</p>
+                <span class="text-2xl font-black tracking-tighter text-white uppercase">MECTS</span>
+                <span class="ml-2 text-[10px] bg-blue-600 px-2 py-1 rounded font-bold uppercase tracking-widest">Enterprise Suite</span>
             </div>
-            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black py-2 px-6 rounded-full transition-all active:scale-95 uppercase tracking-widest">
-                Logout
-            </button>
+            <button onclick="logout()" class="text-xs font-bold border border-red-500/50 text-red-500 px-4 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all">LOGOUT</button>
         </div>
     </nav>
 
-    <main class="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
-        <header class="mb-12">
-            <h2 class="text-4xl font-black text-slate-900 tracking-tight italic">Operational Excellence Suite</h2>
-            <p class="text-slate-500 font-semibold mt-2">Select an executive asset to begin deployment.</p>
-        </header>
+    <header class="max-w-7xl mx-auto px-6 pt-12 pb-4">
+        <h1 class="text-5xl font-black text-white tracking-tight italic mb-2 uppercase">Operational Excellence Portal</h1>
+        <p class="text-slate-400 font-medium tracking-wide">26 Specialized Digital Engines for Lean Six Sigma Deployment</p>
+    </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
-            <button onclick="window.location.href='anova.html'" 
-                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
-                <div class="text-4xl mb-4 text-blue-900">📊</div>
-                <h3 class="text-2xl font-black text-slate-900 uppercase">ANOVA Analysis</h3>
-                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Statistical variance diagnostics and engine performance analytics.</p>
-                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
-            </button>
-
-            <button onclick="window.location.href='assessments.html'" 
-                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
-                <div class="text-4xl mb-4 text-blue-900">📝</div>
-                <h3 class="text-2xl font-black text-slate-900 uppercase">Assessment Hub</h3>
-                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Proficiency evaluations and technical skill-gap assessments.</p>
-                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
-            </button>
-
-            <button onclick="window.location.href='vsm.html'" 
-                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
-                <div class="text-4xl mb-4 text-blue-900">🛠️</div>
-                <h3 class="text-2xl font-black text-slate-900 uppercase">VSM Activities</h3>
-                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Value Stream Mapping and lean process optimization tools.</p>
-                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
-            </button>
-
+    <main class="max-w-7xl mx-auto px-6 pb-20">
+        
+        <h2 class="text-blue-500 font-black text-xs uppercase tracking-[0.3em] mb-6 mt-12 flex items-center">
+            <span class="w-8 h-px bg-blue-500 mr-4"></span> Statistical Analysis & Hypothesis
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div onclick="window.location.href='anova.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📊</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">ANOVA Analysis</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Variance diagnostics & P-value testing.</p>
+            </div>
+            <div onclick="window.location.href='cronbach.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🧬</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Cronbach Alpha</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Internal consistency & reliability.</p>
+            </div>
+            <div onclick="window.location.href='normal-dist.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🔔</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Normal Dist.</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Bell curve and probability modeling.</p>
+            </div>
+            <div onclick="window.location.href='regression.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📉</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Regression Engine</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Linear & multiple variable analysis.</p>
+            </div>
         </div>
-    </main>
 
-    <footer class="p-8 text-center bg-slate-50 border-t border-slate-200">
-        <p class="text-slate-400 font-black tracking-[0.4em] uppercase text-[10px]">MECTS • SET • GO • LEAN</p>
-    </footer>
+        <h2 class="text-purple-500 font-black text-xs uppercase tracking-[0.3em] mb-6 mt-12 flex items-center">
+            <span class="w-8 h-px bg-purple-500 mr-4"></span> Data Visualization
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div onclick="window.location.href='pareto.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📈</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Pareto Engine</h3>
+                <p class="text-slate-500 text-[10px] mt-2">80/20 Rule distribution modeling.</p>
+            </div>
+            <div onclick="window.location.href='box-whisker.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📦</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Box & Whisker</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Quartile & outlier visualization.</p>
+            </div>
+            <div onclick="window.location.href='histogram.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📊</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Histogram Hub</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Frequency distribution analytics.</p>
+            </div>
+            <div onclick="window.location.href='cusum.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📉</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">CUSUM Charts</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Cumulative sum control modeling.</p>
+            </div>
+        </div>
+
+        <h2 class="text-emerald-500 font-black text-xs uppercase tracking-[0.3em] mb-6 mt-12 flex items-center">
+            <span class="w-8 h-px bg-emerald-500 mr-4"></span> Lean & Reliability
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div onclick="window.location.href='vsm.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🛠️</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">VSM Engine</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Value stream mapping (Current/Future).</p>
+            </div>
+            <div onclick="window.location.href='fmea.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">⚠️</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">FMEA Matrix</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Risk priority and failure analysis.</p>
+            </div>
+            <div onclick="window.location.href='mttf-mtbf.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">⏳</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">MTTF / MTBF</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Equipment reliability & downtime logs.</p>
+            </div>
+            <div onclick="window.location.href='process-capability.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🎯</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Process Cap.</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Cp, Cpk, and Sigma level studies.</p>
+            </div>
+        </div>
+
+        <h2 class="text-orange-500 font-black text-xs uppercase tracking-[0.3em] mb-6 mt-12 flex items-center">
+            <span class="w-8 h-px bg-orange-500 mr-4"></span> Audit & Field Intelligence
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div onclick="window.location.href='assessments.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">📝</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Assessment Hub</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Technical proficiency evaluations.</p>
+            </div>
+            <div onclick="window.location.href='gemba.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🚶</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Gemba Walk</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Shop floor observation logs.</p>
+            </div>
+            <div onclick="window.location.href='sensitivity.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🔦</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Sensitivity Analysis</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Impact testing for variable shifts.</p>
+            </div>
+            <div onclick="window.location.href='monte-carlo.html'" class="tool-card bg-slate-900 p-6 rounded-2xl cursor-pointer group">
+                <div class="text-2xl mb-4">🎲</div>
+                <h3 class="font-bold text-white uppercase text-sm tracking-tight">Monte Carlo</h3>
+                <p class="text-slate-500 text-[10px] mt-2">Risk simulation & forecasting.</p>
+            </div>
+        </div>
+
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -77,18 +151,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Security Check
         onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.replace("index.html");
-            }
+            if (!user) window.location.replace("index.html");
         });
 
-        // Logout
         window.logout = () => {
-            signOut(auth).then(() => {
-                window.location.replace("index.html");
-            });
+            signOut(auth).then(() => window.location.replace("index.html"));
         };
     </script>
 </body>
