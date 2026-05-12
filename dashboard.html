@@ -3,91 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS Command Center</title>
+    <title>MECTS SET GO | Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
-        .platform-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05); background: #0f172a; }
-        .platform-card:hover { transform: translateY(-5px); border-color: #3b82f6; background-color: #1e293b; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b;
+            opacity: 0; /* Hidden by default for security */
+            transition: opacity 0.5s ease;
+        }
+        
+        .cushion-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border-radius: 24px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cushion-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: #3b82f6;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #1e40af, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
 </head>
-<body class="min-h-screen pb-20">
+<body>
 
-    <nav class="p-6 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
+    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 py-4 px-8">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-black tracking-tighter uppercase italic text-white">MECTS <span class="text-blue-500 italic">Enterprise</span></h1>
-            <button onclick="logout()" class="text-xs font-bold px-4 py-2 border border-slate-700 rounded-lg hover:bg-white hover:text-slate-900 transition-all">LOGOUT</button>
+            <div class="flex flex-col">
+                <h1 class="text-2xl font-extrabold tracking-tight italic">
+                    MECTS <span class="text-blue-600">SET GO</span>
+                </h1>
+                <a href="https://www.mects.in" target="_blank" class="text-[10px] font-bold text-slate-400 tracking-widest hover:text-blue-500 transition-colors">WWW.MECTS.IN</a>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="hidden md:block text-right">
+                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Certified Professional</p>
+                    <p class="text-xs font-bold text-slate-900">Jayesh Ramani</p>
+                </div>
+                <button onclick="logout()" class="bg-slate-900 text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-red-600 transition-all shadow-lg">SIGN OUT</button>
+            </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-6 mt-12">
-        <h2 class="text-4xl font-black mb-2 uppercase italic text-white">Project Asset Repository</h2>
-        <p class="text-slate-400 mb-12 font-medium">Active Operational Excellence Engines.</p>
+    <main class="max-w-7xl mx-auto px-8 py-16">
+        <header class="mb-16">
+            <h2 class="text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Project Asset <span class="gradient-text">Repository</span></h2>
+            <div class="h-1.5 w-24 bg-blue-600 rounded-full mb-6"></div>
+            <p class="text-slate-500 font-medium text-lg">Operational Excellence & Lean Six Sigma Digital Infrastructure.</p>
+        </header>
 
-        <div class="mb-12">
-            <h3 class="text-blue-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
-                <span class="w-12 h-px bg-blue-500 mr-4"></span> Statistical Analysis
+        <div class="mb-20">
+            <h3 class="text-slate-900 font-extrabold text-sm uppercase tracking-widest mb-8 flex items-center">
+                <span class="w-2 h-2 bg-blue-600 rounded-full mr-3"></span> Statistical Analysis
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div onclick="window.location.href='anova.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📊 <h4 class="font-bold text-xs uppercase mt-4">Anova</h4></div>
-                <div onclick="window.location.href='regression.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📈 <h4 class="font-bold text-xs uppercase mt-4">Regression</h4></div>
-                <div onclick="window.location.href='monte-carlo.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🎲 <h4 class="font-bold text-xs uppercase mt-4">Monte Carlo</h4></div>
-                <div onclick="window.location.href='cronbach.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🧬 <h4 class="font-bold text-xs uppercase mt-4">Cronbach</h4></div>
-                <div onclick="window.location.href='normal-dist.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🔔 <h4 class="font-bold text-xs uppercase mt-4">Normal Dist</h4></div>
-                <div onclick="window.location.href='taguchi-analysis.html'" class="platform-card p-6 rounded-2xl cursor-pointer">⚙️ <h4 class="font-bold text-xs uppercase mt-4">Taguchi Analysis</h4></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div onclick="window.location.href='anova.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">📊</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Anova</h4>
+                </div>
+                <div onclick="window.location.href='regression.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">📈</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Regression</h4>
+                </div>
+                <div onclick="window.location.href='monte-carlo.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">🎲</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Monte Carlo</h4>
+                </div>
+                <div onclick="window.location.href='cronbach.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">🧬</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Cronbach</h4>
+                </div>
             </div>
         </div>
 
-        <div class="mb-12">
-            <h3 class="text-purple-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
-                <span class="w-12 h-px bg-purple-500 mr-4"></span> Visualization & SPC
+        <div class="mb-20">
+            <h3 class="text-slate-900 font-extrabold text-sm uppercase tracking-widest mb-8 flex items-center">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full mr-3"></span> VSM & Performance
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div onclick="window.location.href='pareto.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📊 <h4 class="font-bold text-xs uppercase mt-4">Pareto</h4></div>
-                <div onclick="window.location.href='box-whisker.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📦 <h4 class="font-bold text-xs uppercase mt-4">Box & Whisker</h4></div>
-                <div onclick="window.location.href='histogram.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📉 <h4 class="font-bold text-xs uppercase mt-4">Histogram</h4></div>
-                <div onclick="window.location.href='cusum.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📉 <h4 class="font-bold text-xs uppercase mt-4">Cusum</h4></div>
-                <div onclick="window.location.href='unified-spc.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📉 <h4 class="font-bold text-xs uppercase mt-4">Unified SPC</h4></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div onclick="window.location.href='vsm.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">🛠️</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">VSM Main</h4>
+                </div>
+                <div onclick="window.location.href='current-state-and-future-state.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">🗺️</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Flow State</h4>
+                </div>
+                <div onclick="window.location.href='fmea.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">⚠️</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">FMEA Matrix</h4>
+                </div>
+                <div onclick="window.location.href='assessments.html'" class="cushion-card p-8 cursor-pointer group">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">📝</div>
+                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Assessments</h4>
+                </div>
             </div>
         </div>
-
-        <div class="mb-12">
-            <h3 class="text-emerald-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
-                <span class="w-12 h-px bg-emerald-500 mr-4"></span> VSM & Risk Management
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div onclick="window.location.href='vsm.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🛠️ <h4 class="font-bold text-xs uppercase mt-4">VSM Main</h4></div>
-                <div onclick="window.location.href='vsm-concepts.html'" class="platform-card p-6 rounded-2xl cursor-pointer">💡 <h4 class="font-bold text-xs uppercase mt-4">VSM Concepts</h4></div>
-                <div onclick="window.location.href='vsm-concepts-crm.html'" class="platform-card p-6 rounded-2xl cursor-pointer">💼 <h4 class="font-bold text-xs uppercase mt-4">VSM CRM</h4></div>
-                <div onclick="window.location.href='current-state-and-future-state.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🗺️ <h4 class="font-bold text-[10px] uppercase mt-4">Current/Future State</h4></div>
-                <div onclick="window.location.href='fmea.html'" class="platform-card p-6 rounded-2xl cursor-pointer">⚠️ <h4 class="font-bold text-xs uppercase mt-4">FMEA</h4></div>
-                <div onclick="window.location.href='fmea-risk-dmaic.html'" class="platform-card p-6 rounded-2xl cursor-pointer">⚡ <h4 class="font-bold text-xs uppercase mt-4">FMEA Risk DMAIC</h4></div>
-            </div>
-        </div>
-
-        <div class="mb-12">
-            <h3 class="text-orange-500 font-black text-xs uppercase tracking-[0.3em] mb-6 flex items-center">
-                <span class="w-12 h-px bg-orange-500 mr-4"></span> Audit & Performance
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div onclick="window.location.href='assessments.html'" class="platform-card p-6 rounded-2xl cursor-pointer">📝 <h4 class="font-bold text-xs uppercase mt-4">Assessments</h4></div>
-                <div onclick="window.location.href='gemba.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🚶 <h4 class="font-bold text-xs uppercase mt-4">Gemba</h4></div>
-                <div onclick="window.location.href='process-capability.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🎯 <h4 class="font-bold text-xs uppercase mt-4">Process Cap.</h4></div>
-                <div onclick="window.location.href='mttf-mtbf.html'" class="platform-card p-6 rounded-2xl cursor-pointer">⏳ <h4 class="font-bold text-xs uppercase mt-4">MTTF / MTBF</h4></div>
-                <div onclick="window.location.href='sensitivity-analysis.html'" class="platform-card p-6 rounded-2xl cursor-pointer">🔦 <h4 class="font-bold text-xs uppercase mt-4">Sensitivity</h4></div>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme", appId: "1:338870341775:web:f5a5e783ae59a538b725c8" };
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", 
+            authDomain: "mects-login-lss-msme.firebaseapp.com", 
+            projectId: "mects-login-lss-msme", 
+            appId: "1:338870341775:web:f5a5e783ae59a538b725c8" 
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
-        window.logout = () => { signOut(auth).then(() => window.location.replace("index.html")); };
+
+        // Security Handshake: Only show body if authenticated
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.body.style.opacity = "1";
+            } else {
+                window.location.replace("index.html");
+            }
+        });
+
+        window.logout = () => {
+            signOut(auth).then(() => window.location.replace("index.html"));
+        };
     </script>
 </body>
 </html>
