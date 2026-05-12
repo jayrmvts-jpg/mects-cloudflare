@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Regression Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <div class="max-w-4xl mx-auto p-8">
+        <header class="mb-12 border-l-4 border-blue-500 pl-6">
+            <h1 class="text-4xl font-black uppercase italic">Regression Engine</h1>
+            <p class="text-blue-400 text-xs font-bold tracking-widest mt-2">CORRELATION & PREDICTIVE ANALYTICS</p>
+        </header>
+
+        <div class="bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
+            <div class="grid grid-cols-1 gap-6">
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">X Values (Independent Variable)</label>
+                    <input id="xInput" type="text" class="w-full bg-slate-900 border-none p-4 rounded-xl" placeholder="10, 20, 30, 40">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase text-slate-400 mb-2">Y Values (Dependent Variable)</label>
+                    <input id="yInput" type="text" class="w-full bg-slate-900 border-none p-4 rounded-xl" placeholder="100, 200, 300, 400">
+                </div>
+                <button onclick="runRegression()" class="bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase tracking-widest transition-all">Calculate Correlation</button>
+            </div>
+            <div id="results" class="mt-8 p-6 bg-slate-900 rounded-2xl hidden">
+                <p id="output" class="font-mono text-cyan-400 text-sm"></p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme", appId: "1:338870341775:web:f5a5e783ae59a538b725c8" };
+        const auth = getAuth(initializeApp(firebaseConfig));
+        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
+
+        window.runRegression = () => {
+            const x = document.getElementById('xInput').value.split(',').map(Number);
+            const y = document.getElementById('yInput').value.split(',').map(Number);
+            const result = jStat.models.ols(y, x.map(v => [v]));
+            document.getElementById('results').classList.remove('hidden');
+            document.getElementById('output').innerText = `R-Squared: ${jStat.coeffofdetermination(x, y).toFixed(4)}`;
+        };
+    </script>
+</body>
+</html>
