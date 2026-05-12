@@ -3,142 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS SET GO | Command Center</title>
+    <title>MECTS SET GO | Enterprise Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
-            background-color: #f8fafc; 
-            color: #1e293b;
-            opacity: 0; /* Hidden by default for security */
-            transition: opacity 0.5s ease;
+            background-color: #ffffff; 
+            color: #0f172a;
+            opacity: 0; 
+            transition: opacity 0.6s ease-in-out;
         }
         
+        /* Vibrant Cushion Box Styling */
         .cushion-card {
             background: #ffffff;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             border-radius: 24px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-width: 2px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         }
 
         .cushion-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border-color: #3b82f6;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.08);
+            filter: brightness(1.02);
         }
 
-        .gradient-text {
-            background: linear-gradient(90deg, #1e40af, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /* Specific Border Colors */
+        .border-stats { border-color: #3b82f6; } /* Blue */
+        .border-visuals { border-color: #8b5cf6; } /* Purple */
+        .border-lean { border-color: #10b981; } /* Emerald */
+        .border-audit { border-color: #f59e0b; } /* Amber */
+
+        .header-spacing { letter-spacing: 0.05em; }
+        .subtext-spacing { letter-spacing: 0.02em; }
     </style>
 </head>
-<body>
+<body class="pb-24">
 
-    <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 py-4 px-8">
+    <nav class="bg-white/90 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 py-5 px-8">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex flex-col">
-                <h1 class="text-2xl font-extrabold tracking-tight italic">
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-900 leading-none">
                     MECTS <span class="text-blue-600">SET GO</span>
                 </h1>
-                <a href="https://www.mects.in" target="_blank" class="text-[10px] font-bold text-slate-400 tracking-widest hover:text-blue-500 transition-colors">WWW.MECTS.IN</a>
+                <p class="text-[11px] font-semibold text-slate-500 mt-1 uppercase tracking-wider">
+                    Managing Excellence thru Continuous Transformative solutions
+                </p>
+                <a href="https://www.mects.in" target="_blank" class="text-[9px] font-bold text-blue-400 mt-0.5 hover:underline">WWW.MECTS.IN</a>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="hidden md:block text-right">
-                    <p class="text-[10px] font-black uppercase text-slate-400 tracking-tighter">Certified Professional</p>
-                    <p class="text-xs font-bold text-slate-900">Jayesh Ramani</p>
-                </div>
-                <button onclick="logout()" class="bg-slate-900 text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-red-600 transition-all shadow-lg">SIGN OUT</button>
-            </div>
+            <button onclick="logout()" class="bg-red-50 text-red-600 border border-red-100 text-xs font-bold px-8 py-3 rounded-full hover:bg-red-600 hover:text-white transition-all shadow-sm">LOGOUT</button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-8 py-16">
-        <header class="mb-16">
-            <h2 class="text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Project Asset <span class="gradient-text">Repository</span></h2>
-            <div class="h-1.5 w-24 bg-blue-600 rounded-full mb-6"></div>
-            <p class="text-slate-500 font-medium text-lg">Operational Excellence & Lean Six Sigma Digital Infrastructure.</p>
+    <main class="max-w-7xl mx-auto px-8 pt-20">
+        <header class="mb-20">
+            <h2 class="text-5xl font-extrabold text-slate-900 header-spacing uppercase mb-4 italic">
+                Project Asset <span class="text-blue-600">Repository</span>
+            </h2>
+            <p class="text-slate-500 font-medium text-xl subtext-spacing max-w-3xl">
+                Operational Excellence & Lean Six Sigma Digital Infrastructure
+            </p>
         </header>
 
-        <div class="mb-20">
-            <h3 class="text-slate-900 font-extrabold text-sm uppercase tracking-widest mb-8 flex items-center">
-                <span class="w-2 h-2 bg-blue-600 rounded-full mr-3"></span> Statistical Analysis
+        <section class="mb-16">
+            <h3 class="text-blue-600 font-black text-xs uppercase tracking-[0.4em] mb-8 flex items-center">
+                <span class="w-12 h-1 bg-blue-600 rounded-full mr-4"></span> Statistical Analysis
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div onclick="window.location.href='anova.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">📊</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Anova</h4>
+                <div onclick="location.href='anova.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📊</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Anova</h4>
                 </div>
-                <div onclick="window.location.href='regression.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">📈</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Regression</h4>
+                <div onclick="location.href='regression.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📈</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Regression</h4>
                 </div>
-                <div onclick="window.location.href='monte-carlo.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">🎲</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Monte Carlo</h4>
+                <div onclick="location.href='monte-carlo.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🎲</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Monte Carlo</h4>
                 </div>
-                <div onclick="window.location.href='cronbach.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-blue-600 transition-colors">🧬</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Cronbach</h4>
+                <div onclick="location.href='cronbach.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🧬</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Cronbach</h4>
+                </div>
+                <div onclick="location.href='normal-dist.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🔔</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Normal Dist</h4>
+                </div>
+                <div onclick="location.href='taguchi-analysis.html'" class="cushion-card border-stats p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">⚙️</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Taguchi</h4>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="mb-20">
-            <h3 class="text-slate-900 font-extrabold text-sm uppercase tracking-widest mb-8 flex items-center">
-                <span class="w-2 h-2 bg-emerald-500 rounded-full mr-3"></span> VSM & Performance
+        <section class="mb-16">
+            <h3 class="text-purple-600 font-black text-xs uppercase tracking-[0.4em] mb-8 flex items-center">
+                <span class="w-12 h-1 bg-purple-600 rounded-full mr-4"></span> Visualization & SPC
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div onclick="window.location.href='vsm.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">🛠️</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">VSM Main</h4>
+                <div onclick="location.href='pareto.html'" class="cushion-card border-visuals p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📈</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Pareto Engine</h4>
                 </div>
-                <div onclick="window.location.href='current-state-and-future-state.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">🗺️</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Flow State</h4>
+                <div onclick="location.href='box-whisker.html'" class="cushion-card border-visuals p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📦</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Box & Whisker</h4>
                 </div>
-                <div onclick="window.location.href='fmea.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">⚠️</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">FMEA Matrix</h4>
+                <div onclick="location.href='histogram.html'" class="cushion-card border-visuals p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📊</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Histogram</h4>
                 </div>
-                <div onclick="window.location.href='assessments.html'" class="cushion-card p-8 cursor-pointer group">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:bg-emerald-500 transition-colors">📝</div>
-                    <h4 class="font-bold text-slate-900 mt-6 uppercase text-sm">Assessments</h4>
+                <div onclick="location.href='cusum.html'" class="cushion-card border-visuals p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📉</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Cusum Chart</h4>
+                </div>
+                <div onclick="location.href='unified-spc.html'" class="cushion-card border-visuals p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📉</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Unified SPC</h4>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <section class="mb-16">
+            <h3 class="text-emerald-600 font-black text-xs uppercase tracking-[0.4em] mb-8 flex items-center">
+                <span class="w-12 h-1 bg-emerald-600 rounded-full mr-4"></span> VSM & Performance
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div onclick="location.href='vsm.html'" class="cushion-card border-lean p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🛠️</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">VSM Main</h4>
+                </div>
+                <div onclick="location.href='vsm-concepts.html'" class="cushion-card border-lean p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">💡</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">VSM Concepts</h4>
+                </div>
+                <div onclick="location.href='vsm-concepts-crm.html'" class="cushion-card border-lean p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">💼</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">VSM CRM</h4>
+                </div>
+                <div onclick="location.href='current-state-and-future-state.html'" class="cushion-card border-lean p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🗺️</div>
+                    <h4 class="font-extrabold text-[10px] uppercase text-slate-800 leading-tight">Current & Future State</h4>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h3 class="text-amber-600 font-black text-xs uppercase tracking-[0.4em] mb-8 flex items-center">
+                <span class="w-12 h-1 bg-amber-600 rounded-full mr-4"></span> Audit & Risk Intelligence
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div onclick="location.href='fmea.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">⚠️</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">FMEA Matrix</h4>
+                </div>
+                <div onclick="location.href='fmea-risk-dmaic.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">⚡</div>
+                    <h4 class="font-extrabold text-xs uppercase text-slate-800">FMEA Risk DMAIC</h4>
+                </div>
+                <div onclick="location.href='assessments.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">📝</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Assessments</h4>
+                </div>
+                <div onclick="location.href='gemba.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🚶</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Gemba Walk</h4>
+                </div>
+                <div onclick="location.href='process-capability.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🎯</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Process Capability</h4>
+                </div>
+                <div onclick="location.href='mttf-mtbf.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">⏳</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">MTTF / MTBF</h4>
+                </div>
+                <div onclick="location.href='sensitivity-analysis.html'" class="cushion-card border-audit p-8 cursor-pointer group">
+                    <div class="text-4xl mb-4">🔦</div>
+                    <h4 class="font-extrabold text-sm uppercase text-slate-800">Sensitivity Analysis</h4>
+                </div>
+            </div>
+        </section>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        const firebaseConfig = { 
-            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", 
-            authDomain: "mects-login-lss-msme.firebaseapp.com", 
-            projectId: "mects-login-lss-msme", 
-            appId: "1:338870341775:web:f5a5e783ae59a538b725c8" 
-        };
-
+        
+        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme", appId: "1:338870341775:web:f5a5e783ae59a538b725c8" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // Security Handshake: Only show body if authenticated
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.body.style.opacity = "1";
-            } else {
-                window.location.replace("index.html");
-            }
+            if (user) { document.body.style.opacity = "1"; } 
+            else { window.location.replace("index.html"); }
         });
 
-        window.logout = () => {
-            signOut(auth).then(() => window.location.replace("index.html"));
-        };
+        window.logout = () => { signOut(auth).then(() => window.location.replace("index.html")); };
     </script>
 </body>
 </html>
