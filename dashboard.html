@@ -3,59 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MECTS Executive Suite</title>
+    <title>MECTS - Executive Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    </style>
 </head>
-<body class="bg-slate-100 min-h-screen font-sans">
-    <nav class="bg-blue-900 text-white p-4 shadow-xl sticky top-0 z-50">
+<body class="min-h-screen flex flex-col">
+
+    <nav class="bg-slate-900 text-white p-6 shadow-2xl">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tighter uppercase">MECTS Digital Deployment</h1>
-            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm font-bold transition-all">Logout</button>
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter uppercase leading-none">MECTS</h1>
+                <p class="text-[10px] text-cyan-400 font-bold tracking-[0.3em] uppercase mt-1">Executive Dashboard</p>
+            </div>
+            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-black py-2 px-6 rounded-full transition-all active:scale-95 uppercase tracking-widest">
+                Logout
+            </button>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto p-6">
-        <header class="mb-10 text-center">
-            <h2 class="text-3xl font-black text-slate-800">Operational Excellence Suite</h2>
-            <p class="text-slate-600">26 Executive Assets for Lean Six Sigma Transformation</p>
+    <main class="flex-grow p-6 md:p-12 max-w-7xl mx-auto w-full">
+        <header class="mb-12">
+            <h2 class="text-4xl font-black text-slate-900 tracking-tight italic">Operational Excellence Suite</h2>
+            <p class="text-slate-500 font-semibold mt-2">Select an executive asset to begin deployment.</p>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <a href="anova-ver-3.5.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>ANOVA Analysis</strong></a>
-            <a href="histogram-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Histograms</strong></a>
-            <a href="pareto-ver-7.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Pareto Analysis</strong></a>
-            <a href="normal-distribution-ver-2.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Normal Distribution</strong></a>
-            <a href="box-whisker-plot-ver-2.5.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Box-Whisker Plots</strong></a>
-            <a href="cronbach-platform-ver-9.0.html" class="bg-white p-4 rounded shadow border-l-4 border-blue-600 hover:bg-blue-50"><strong>Cronbach Alpha</strong></a>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <button onclick="window.location.href='anova.html'" 
+                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
+                <div class="text-4xl mb-4 text-blue-900">📊</div>
+                <h3 class="text-2xl font-black text-slate-900 uppercase">ANOVA Analysis</h3>
+                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Statistical variance diagnostics and engine performance analytics.</p>
+                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
+            </button>
 
-            <a href="fmea-gold-std-2.0.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>FMEA Gold Std</strong></a>
-            <a href="fmea-risk-dmaic.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>FMEA Risk DMAIC</strong></a>
-            <a href="process-capabilities-ver-9.0.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Process Capability</strong></a>
-            <a href="sensitivity-analysis.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Sensitivity Analysis</strong></a>
-            <a href="taguchi-analysis.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Taguchi Analysis</strong></a>
-            <a href="unified-spc.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>Unified SPC</strong></a>
-            <a href="cusum-ver-1.50.html" class="bg-white p-4 rounded shadow border-l-4 border-orange-500 hover:bg-orange-50"><strong>CUSUM Charts</strong></a>
+            <button onclick="window.location.href='assessments.html'" 
+                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
+                <div class="text-4xl mb-4 text-blue-900">📝</div>
+                <h3 class="text-2xl font-black text-slate-900 uppercase">Assessment Hub</h3>
+                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Proficiency evaluations and technical skill-gap assessments.</p>
+                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
+            </button>
 
-            <a href="vsm-assessment.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Assessment</strong></a>
-            <a href="vsm-concepts.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Concepts</strong></a>
-            <a href="vsm-concepts-crm.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM CRM</strong></a>
-            <a href="activities-vsm.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>VSM Activities</strong></a>
-            <a href="gemba-walk-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>Gemba Walk</strong></a>
-            <a href="current-state-and-future-state.html" class="bg-white p-4 rounded shadow border-l-4 border-green-600 hover:bg-green-50"><strong>Current/Future State</strong></a>
+            <button onclick="window.location.href='vsm.html'" 
+                    class="group bg-white border-b-8 border-blue-900 p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all active:scale-95 text-left">
+                <div class="text-4xl mb-4 text-blue-900">🛠️</div>
+                <h3 class="text-2xl font-black text-slate-900 uppercase">VSM Activities</h3>
+                <p class="text-slate-500 text-sm mt-2 font-medium leading-relaxed">Value Stream Mapping and lean process optimization tools.</p>
+                <div class="mt-6 text-blue-900 font-black text-xs uppercase tracking-widest group-hover:translate-x-2 transition-transform">Launch Asset →</div>
+            </button>
 
-            <a href="mttf-mtbf-ver-11.0.html" class="bg-white p-4 rounded shadow border-l-4 border-red-500 hover:bg-red-50"><strong>MTTF / MTBF</strong></a>
-            <a href="assessments-portal.html" class="bg-white p-4 rounded shadow border-l-4 border-red-500 hover:bg-red-50"><strong>Assessments Hub</strong></a>
         </div>
-    </div>
+    </main>
+
+    <footer class="p-8 text-center bg-slate-50 border-t border-slate-200">
+        <p class="text-slate-400 font-black tracking-[0.4em] uppercase text-[10px]">MECTS • SET • GO • LEAN</p>
+    </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme" };
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs",
+            authDomain: "mects-login-lss-msme.firebaseapp.com",
+            projectId: "mects-login-lss-msme",
+            appId: "1:338870341775:web:f5a5e783ae59a538b725c8"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
-        window.logout = () => signOut(auth).then(() => window.location.replace("index.html"));
+
+        // Security Check
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.replace("index.html");
+            }
+        });
+
+        // Logout
+        window.logout = () => {
+            signOut(auth).then(() => {
+                window.location.replace("index.html");
+            });
+        };
     </script>
 </body>
 </html>
