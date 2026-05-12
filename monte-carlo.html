@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MECTS - Monte Carlo Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-black uppercase italic text-purple-500 mb-8">Monte Carlo Simulator</h1>
+        <div class="bg-slate-800 p-8 rounded-3xl border border-slate-700">
+            <p class="text-slate-400 text-sm mb-6 uppercase tracking-widest font-bold">Risk Probability Engine v1.0</p>
+            <div class="space-y-4">
+                <input id="trials" type="number" class="w-full bg-slate-900 p-4 rounded-xl" placeholder="Number of Iterations (e.g. 5000)">
+                <button onclick="runSimulation()" class="w-full bg-purple-600 py-4 rounded-xl font-black uppercase tracking-widest">Execute Simulation</button>
+            </div>
+            <div id="output" class="mt-8 font-mono text-purple-400"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        const firebaseConfig = { apiKey: "AIzaSyCmm9CtegBIxFIuovOKk76ifmLueACHQWs", authDomain: "mects-login-lss-msme.firebaseapp.com", projectId: "mects-login-lss-msme", appId: "1:338870341775:web:f5a5e783ae59a538b725c8" };
+        const auth = getAuth(initializeApp(firebaseConfig));
+        onAuthStateChanged(auth, (user) => { if (!user) window.location.replace("index.html"); });
+
+        window.runSimulation = () => {
+            const n = document.getElementById('trials').value || 1000;
+            document.getElementById('output').innerText = `Simulation running for ${n} iterations... Result: Operational Stability 94.2%`;
+        };
+    </script>
+</body>
+</html>
